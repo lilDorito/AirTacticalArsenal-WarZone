@@ -189,8 +189,8 @@ src/main/java/com/synarsis/airtacticalarsenal
 │   ├── shader/                 night vision shader
 │   ├── model/ renderer/ sound/ rendering and audio
 ├── command/                    /ata command
-├── compat/                     Create / TacZ / Superb Warfare / AshVehicle
-├── mixins/compat/              optional AshVehicle hooks (loaded only if installed)
+├── compat/                     Create / TacZ / SuperbWarfare / AshVehicles
+├── mixins/compat/              optional AshVehicles hooks (loaded only if installed)
 ├── config/                     ata-common.toml spec
 ├── chunk/                      forced chunk loading for long flights
 └── network/                    client-server packets
