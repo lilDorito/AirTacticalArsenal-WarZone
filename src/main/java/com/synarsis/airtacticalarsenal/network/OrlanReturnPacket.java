@@ -34,12 +34,12 @@ public class OrlanReturnPacket {
             Entity entity = level.getEntity(entityId);
 
             if (!(entity instanceof OrlanEntity orlan)) {
-                player.displayClientMessage(Component.literal("§cДрон не найден!"), true);
+                player.displayClientMessage(Component.translatable("message.ata.orlan.drone_not_found"), true);
                 return;
             }
 
             if (!orlan.isOwnedBy(player)) {
-                player.displayClientMessage(Component.literal("§cЭто не ваш дрон!"), true);
+                player.displayClientMessage(Component.translatable("message.ata.orlan.not_yours"), true);
                 return;
             }
 
@@ -47,12 +47,12 @@ public class OrlanReturnPacket {
             if (phase == OrlanEntity.FlightPhase.RETURNING
                     || phase == OrlanEntity.FlightPhase.LANDING
                     || phase == OrlanEntity.FlightPhase.LANDED) {
-                player.displayClientMessage(Component.literal("§eДрон уже возвращается"), true);
+                player.displayClientMessage(Component.translatable("message.ata.orlan.already_returning"), true);
                 return;
             }
 
             orlan.forceReturn();
-            player.displayClientMessage(Component.literal("§aОрлан-10 возвращается на базу"), true);
+            player.displayClientMessage(Component.translatable("message.ata.orlan.returning"), true);
         });
         ctx.get().setPacketHandled(true);
     }

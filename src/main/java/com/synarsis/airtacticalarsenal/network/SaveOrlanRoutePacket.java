@@ -49,22 +49,26 @@ public class SaveOrlanRoutePacket {
             OrlanLauncherEntity launcher = findLauncher(level, launcherPos);
 
             if (launcher == null) {
-                player.displayClientMessage(Component.literal("§cПУ не найдена!"), true);
+                player.displayClientMessage(Component.translatable("message.ata.launcher.not_found"), true);
                 return;
             }
 
             double playerDistance = player.position().distanceTo(launcher.position());
             if (playerDistance > 30.0) {
-                player.displayClientMessage(Component.literal("§cПУ слишком далеко! Макс. 30 блоков"), true);
+                player.displayClientMessage(Component.translatable("message.ata.launcher.too_far_30"), true);
                 return;
             }
 
+            if (!com.synarsis.airtacticalarsenal.util.RouteLimits.check(player,
+                    com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), waypoints), com.synarsis.airtacticalarsenal.util.RouteLimits.orlanMax())) {
+                return;
+            }
             launcher.setSavedRoute(waypoints);
 
             if (waypoints.isEmpty()) {
-                player.displayClientMessage(Component.literal("§eМаршрут очищен"), true);
+                player.displayClientMessage(Component.translatable("message.ata.route.cleared"), true);
             } else {
-                player.displayClientMessage(Component.literal("§aМаршрут сохранён (" + waypoints.size() + " точек)"), true);
+                player.displayClientMessage(Component.translatable("message.ata.route.saved", waypoints.size()), true);
             }
         });
         ctx.get().setPacketHandled(true);

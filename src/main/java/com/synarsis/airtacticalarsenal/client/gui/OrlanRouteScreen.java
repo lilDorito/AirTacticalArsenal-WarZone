@@ -1,5 +1,7 @@
 package com.synarsis.airtacticalarsenal.client.gui;
 
+import com.synarsis.airtacticalarsenal.util.Tr;
+
 import com.synarsis.airtacticalarsenal.client.radar.RouteTerrainRenderer;
 import com.synarsis.airtacticalarsenal.network.NetworkHandler;
 import com.synarsis.airtacticalarsenal.network.RequestRouteMapPacket;
@@ -23,10 +25,16 @@ import java.util.List;
 import java.util.function.Consumer;
 
 @OnlyIn(Dist.CLIENT)
-public class OrlanRouteScreen extends Screen {
+public class OrlanRouteScreen extends AtaScaledScreen {
 
     private static final int GUI_WIDTH = 520;
     private static final int GUI_HEIGHT = 460;
+    
+    @Override
+    protected int designWidth() { return GUI_WIDTH; }
+
+    @Override
+    protected int designHeight() { return GUI_HEIGHT; }
     private static final int PROFILE_HEIGHT = 100;
     private static final int MAP_SIZE = 300;
     private static final int MAP_MARGIN = 15;
@@ -34,9 +42,7 @@ public class OrlanRouteScreen extends Screen {
     private static final int BG_COLOR = 0xE0101010;
     private static final int BORDER_COLOR = 0xFF006400;
     private static final int LAUNCHER_COLOR = 0xFFFFFF00;
-    private static final int WAYPOINT_COLOR = 0xFF00FF00;
     private static final int TARGET_COLOR = 0xFF00CCFF;
-    private static final int ROUTE_LINE_COLOR = 0xAA00FF00;
     private static final int PLAYER_COLOR = 0xFF4488FF;
     private static final int DRONE_COLOR = 0xFFFF4444;
 
@@ -44,7 +50,6 @@ public class OrlanRouteScreen extends Screen {
     private static final int MAX_FIRST_POINT_DISTANCE = 700;
     private static final int MIN_BETWEEN_POINTS_DISTANCE = 250;
     private static final int MIN_TARGET_DISTANCE = 800;
-    private static final int MAX_FLIGHT_DISTANCE = 12000;
 
     private final java.util.Map<Integer, Integer> segmentMaxHeights = new java.util.HashMap<>();
 
@@ -198,7 +203,7 @@ public class OrlanRouteScreen extends Screen {
             this.addWidget(this.nextLauncherBtn);
 
             this.applyAllBtn = Button.builder(
-                    Component.literal("ВСЕМ ТАКОЙ"),
+                    Component.translatable("gui.ata.route.apply_all"),
                     button -> applyToAll())
                 .bounds(rightPanel, guiTop + GUI_HEIGHT - 85, GUI_WIDTH - MAP_MARGIN - MAP_SIZE - 10 - MAP_MARGIN, 20)
                 .build();
@@ -209,21 +214,21 @@ public class OrlanRouteScreen extends Screen {
         int btnW = (panelW - 5) / 2;
 
         this.clearButton = Button.builder(
-                Component.literal("\u041e\u0427\u0418\u0421\u0422\u0418\u0422\u042c"),
+                Component.translatable("gui.ata.route.clear"),
                 button -> { currentRoute().clear(); autoPlaceFirstWaypoint(currentEditIndex); })
             .bounds(rightPanel, guiTop + GUI_HEIGHT - 60, panelW, 20)
             .build();
         this.addWidget(this.clearButton);
 
         this.saveButton = Button.builder(
-                Component.literal("\u0421\u041e\u0425\u0420\u0410\u041d\u0418\u0422\u042c"),
+                Component.translatable("gui.ata.route.save"),
                 button -> onSaveClicked())
             .bounds(rightPanel, guiTop + GUI_HEIGHT - 35, btnW, 20)
             .build();
         this.addWidget(this.saveButton);
 
         this.backButton = Button.builder(
-                Component.literal("\u041d\u0410\u0417\u0410\u0414"),
+                Component.translatable("gui.ata.route.back"),
                 button -> Minecraft.getInstance().setScreen(parentScreen))
             .bounds(rightPanel + btnW + 5, guiTop + GUI_HEIGHT - 35, btnW, 20)
             .build();
@@ -263,7 +268,7 @@ public class OrlanRouteScreen extends Screen {
             int wx = Integer.parseInt(coordXField.getValue().trim());
             int wz = Integer.parseInt(coordZField.getValue().trim());
             if (currentRoute().size() >= MAX_WAYPOINTS) {
-                setStatus("§cМакс. " + MAX_WAYPOINTS + " точек!");
+                setStatus(Tr.s("gui.ata.route.max_points", MAX_WAYPOINTS));
                 return;
             }
             BlockPos lPos = currentLauncherPos();
@@ -272,11 +277,11 @@ public class OrlanRouteScreen extends Screen {
                     double distToLauncher = Math.sqrt(
                             Math.pow(wx - lPos.getX(), 2) + Math.pow(wz - lPos.getZ(), 2));
                     if (distToLauncher < MIN_FIRST_POINT_DISTANCE) {
-                        setStatus("§cМин. до первой точки: " + MIN_FIRST_POINT_DISTANCE + " бл!");
+                        setStatus(Tr.s("gui.ata.route.min_first", MIN_FIRST_POINT_DISTANCE));
                         return;
                     }
                     if (distToLauncher > MAX_FIRST_POINT_DISTANCE) {
-                        setStatus("§cМакс. до первой точки: " + MAX_FIRST_POINT_DISTANCE + " бл!");
+                        setStatus(Tr.s("gui.ata.route.max_first", MAX_FIRST_POINT_DISTANCE));
                         return;
                     }
                 }
@@ -285,19 +290,24 @@ public class OrlanRouteScreen extends Screen {
                 double distToPrev = Math.sqrt(
                         Math.pow(wx - prevPoint.getX(), 2) + Math.pow(wz - prevPoint.getZ(), 2));
                 if (distToPrev < MIN_BETWEEN_POINTS_DISTANCE) {
-                    setStatus("§cМин. между точками: " + MIN_BETWEEN_POINTS_DISTANCE + " бл!");
+                    setStatus(Tr.s("gui.ata.route.min_between", MIN_BETWEEN_POINTS_DISTANCE));
                     return;
                 }
             }
             BlockPos newPoint = new BlockPos(wx, DEFAULT_WAYPOINT_ALT, wz);
             currentRoute().add(newPoint);
+            if (calculateTotalDistance() > com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan()) {
+                currentRoute().remove(currentRoute().size() - 1);
+                setStatus(Tr.s("gui.ata.route.exceeds_max", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan()));
+                return;
+            }
             int wpIdx = currentRoute().size() - 1;
             requestSegmentHeightForWaypoint(wpIdx);
             coordXField.setValue("");
             coordZField.setValue("");
-            setStatus("§aТочка добавлена: [" + wx + ", " + wz + "]");
+            setStatus(Tr.s("gui.ata.route.point_added", wx, wz));
         } catch (NumberFormatException e) {
-            setStatus("§cВведите числовые координаты X и Z!");
+            setStatus(Tr.s("gui.ata.route.enter_numbers"));
         }
     }
 
@@ -338,7 +348,7 @@ public class OrlanRouteScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClickedScaled(double mouseX, double mouseY, int button) {
         if (button == 0 && isOnProfile(mouseX, mouseY) && !currentRoute().isEmpty()) {
             int wpIdx = findNearestWaypointOnProfile(mouseX);
             if (wpIdx >= 0) {
@@ -360,11 +370,11 @@ public class OrlanRouteScreen extends Screen {
                             double distToLauncher = Math.sqrt(
                                     Math.pow(wx - lPos.getX(), 2) + Math.pow(wz - lPos.getZ(), 2));
                             if (distToLauncher < MIN_FIRST_POINT_DISTANCE) {
-                                setStatus("§cМин. расстояние до первой точки: " + MIN_FIRST_POINT_DISTANCE + " бл!");
+                                setStatus(Tr.s("gui.ata.route.min_first_long", MIN_FIRST_POINT_DISTANCE));
                                 return true;
                             }
                             if (distToLauncher > MAX_FIRST_POINT_DISTANCE) {
-                                setStatus("§cМакс. расстояние до первой точки: " + MAX_FIRST_POINT_DISTANCE + " бл!");
+                                setStatus(Tr.s("gui.ata.route.max_first_long", MAX_FIRST_POINT_DISTANCE));
                                 return true;
                             }
                         }
@@ -373,17 +383,22 @@ public class OrlanRouteScreen extends Screen {
                         double distToPrev = Math.sqrt(
                                 Math.pow(wx - prevPoint.getX(), 2) + Math.pow(wz - prevPoint.getZ(), 2));
                         if (distToPrev < MIN_BETWEEN_POINTS_DISTANCE) {
-                            setStatus("§cМин. расстояние между точками: " + MIN_BETWEEN_POINTS_DISTANCE + " бл!");
+                            setStatus(Tr.s("gui.ata.route.min_between_long", MIN_BETWEEN_POINTS_DISTANCE));
                             return true;
                         }
                     }
 
                     currentRoute().add(newPoint);
+                    if (calculateTotalDistance() > com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan()) {
+                        currentRoute().remove(currentRoute().size() - 1);
+                        setStatus(Tr.s("gui.ata.route.exceeds_max", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan()));
+                        return true;
+                    }
                     int wpIdx = currentRoute().size() - 1;
                     requestSegmentHeightForWaypoint(wpIdx);
                     return true;
                 } else {
-                    setStatus("§cМакс. " + MAX_WAYPOINTS + " точек!");
+                    setStatus(Tr.s("gui.ata.route.max_points", MAX_WAYPOINTS));
                 }
             } else if (button == 1) {
 
@@ -398,11 +413,11 @@ public class OrlanRouteScreen extends Screen {
                 return true;
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClickedScaled(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleasedScaled(double mouseX, double mouseY, int button) {
         if (button == 0 && draggingWaypointIndex >= 0) {
             draggingWaypointIndex = -1;
             return true;
@@ -411,11 +426,11 @@ public class OrlanRouteScreen extends Screen {
             isDragging = false;
             return true;
         }
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleasedScaled(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    public boolean mouseDraggedScaled(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (button == 0 && draggingWaypointIndex >= 0) {
             updateWaypointAltFromMouse(draggingWaypointIndex, mouseY);
             return true;
@@ -425,12 +440,12 @@ public class OrlanRouteScreen extends Screen {
             viewCenterZ -= dragY * scale;
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDraggedScaled(mouseX, mouseY, button, dragX, dragY);
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        if (!isOnMap(mouseX, mouseY)) return super.mouseScrolled(mouseX, mouseY, delta);
+    public boolean mouseScrolledScaled(double mouseX, double mouseY, double delta) {
+        if (!isOnMap(mouseX, mouseY)) return super.mouseScrolledScaled(mouseX, mouseY, delta);
         double factor = delta > 0 ? 0.8 : 1.25;
         scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * factor));
         return true;
@@ -447,7 +462,7 @@ public class OrlanRouteScreen extends Screen {
                 allRoutes.set(i, new ArrayList<>(current));
             }
         }
-        setStatus("§aМаршрут применён ко всем ПУ");
+        setStatus(Tr.s("gui.ata.route.applied_all"));
     }
 
     private int findNearestWaypointOnProfile(double mouseX) {
@@ -581,7 +596,7 @@ public class OrlanRouteScreen extends Screen {
         for (int i = 0; i < allRoutes.size(); i++) {
             List<BlockPos> route = allRoutes.get(i);
             if (route.size() < 2) {
-                setStatus("§cДобавьте цель маршрута (минимум 2 точки)!");
+                setStatus(Tr.s("gui.ata.route.need_target"));
                 return;
             }
             BlockPos lPos = launcherPositions.get(i);
@@ -589,7 +604,7 @@ public class OrlanRouteScreen extends Screen {
             double distToTarget = Math.sqrt(
                 Math.pow(target.getX() - lPos.getX(), 2) + Math.pow(target.getZ() - lPos.getZ(), 2));
             if (droneEntityId == -1 && distToTarget < MIN_TARGET_DISTANCE) {
-                setStatus("§cЦель должна быть минимум " + MIN_TARGET_DISTANCE + " бл. от ПУ!");
+                setStatus(Tr.s("gui.ata.route.target_min", MIN_TARGET_DISTANCE));
                 return;
             }
         }
@@ -601,7 +616,7 @@ public class OrlanRouteScreen extends Screen {
 
         int saved = 0;
         for (List<BlockPos> r : allRoutes) if (!r.isEmpty()) saved++;
-        setStatus("§aСохранено: " + saved + "/" + launcherPositions.size());
+        setStatus(Tr.s("gui.ata.route.saved_count", saved, launcherPositions.size()));
 
         if (onSaveCallback != null) {
             onSaveCallback.accept(allRoutes);
@@ -639,7 +654,7 @@ public class OrlanRouteScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void renderScaled(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(g);
 
         int guiLeft = (this.width - GUI_WIDTH) / 2;
@@ -654,7 +669,7 @@ public class OrlanRouteScreen extends Screen {
         g.fill(guiLeft, guiTop, guiLeft + 2, guiTop + GUI_HEIGHT, BORDER_COLOR);
         g.fill(guiLeft + GUI_WIDTH - 2, guiTop, guiLeft + GUI_WIDTH, guiTop + GUI_HEIGHT, BORDER_COLOR);
 
-        String title = launcherPositions.size() > 1 ? "МАРШРУТЫ ОРЛАНОВ" : "МАРШРУТ ОРЛАНА";
+        String title = launcherPositions.size() > 1 ? Tr.s("gui.ata.route.title_orlan_multi") : Tr.s("gui.ata.route.title_orlan");
         int titleW = this.font.width(title);
         g.drawString(this.font, title, guiLeft + (GUI_WIDTH - titleW) / 2, guiTop + 6, BORDER_COLOR, false);
 
@@ -684,7 +699,7 @@ public class OrlanRouteScreen extends Screen {
             g.drawString(this.font, String.format("[%d, %d]", wx, wz), mouseX + 12, mouseY - 4, 0xCCCCCC, false);
         }
 
-        super.render(g, mouseX, mouseY, partialTick);
+        super.renderScaled(g, mouseX, mouseY, partialTick);
     }
 
     private boolean isInsideMap(int sx, int sy) {
@@ -752,7 +767,7 @@ public class OrlanRouteScreen extends Screen {
                                 Vec3 dpos = droneEnt.position();
                                 int distBlocks = (int) Math.sqrt(
                                         Math.pow(wp.getX() - dpos.x, 2) + Math.pow(wp.getZ() - dpos.z, 2));
-                                g.drawString(this.font, "→" + distBlocks + " бл.", wx + 5, wz + 24, DRONE_COLOR, false);
+                                g.drawString(this.font, Tr.s("gui.ata.route.seg_dist", distBlocks), wx + 5, wz + 24, DRONE_COLOR, false);
                             }
                         }
                     }
@@ -770,14 +785,14 @@ public class OrlanRouteScreen extends Screen {
                             int puZ = worldToMapZ(realPu.getZ());
                             if (isInsideMap(puX, puZ)) {
                                 drawMarker(g, puX, puZ, LAUNCHER_COLOR, isCurrent ? 5 : 4);
-                                g.drawString(this.font, "ПУ", puX + 6, puZ - 4, LAUNCHER_COLOR, false);
+                                g.drawString(this.font, Tr.s("gui.ata.route.launcher_abbr"), puX + 6, puZ - 4, LAUNCHER_COLOR, false);
                             }
                         }
                     }
                 }
             } else if (isInsideMap(lx, lz)) {
                 drawMarker(g, lx, lz, mColor, isCurrent ? 5 : 4);
-                String label = launcherPositions.size() > 1 ? "ПУ" + (li + 1) : "ПУ";
+                String label = launcherPositions.size() > 1 ? Tr.s("gui.ata.route.launcher_n", li + 1) : Tr.s("gui.ata.route.launcher_abbr");
                 g.drawString(this.font, label, lx + 6, lz - 4, mColor, false);
             }
         }
@@ -788,7 +803,7 @@ public class OrlanRouteScreen extends Screen {
             int pz = worldToMapZ(ppos.z);
             if (isInsideMap(px, pz)) {
                 drawMarker(g, px, pz, PLAYER_COLOR, 3);
-                g.drawString(this.font, "Вы", px + 5, pz - 4, PLAYER_COLOR, false);
+                g.drawString(this.font, Tr.s("gui.ata.route.you"), px + 5, pz - 4, PLAYER_COLOR, false);
             }
         }
 
@@ -800,7 +815,7 @@ public class OrlanRouteScreen extends Screen {
                 int dz = worldToMapZ(dpos.z);
                 if (isInsideMap(dx, dz)) {
                     drawMarker(g, dx, dz, DRONE_COLOR, 4);
-                    g.drawString(this.font, "Орлан", dx + 5, dz - 4, DRONE_COLOR, false);
+                    g.drawString(this.font, Tr.s("gui.ata.route.orlan"), dx + 5, dz - 4, DRONE_COLOR, false);
                     g.drawString(this.font, "Y:" + (int) dpos.y, dx + 5, dz + 6, 0xAABBBBBB, false);
                 }
             }
@@ -811,7 +826,7 @@ public class OrlanRouteScreen extends Screen {
         g.fill(mapX - 1, mapY, mapX, mapY + MAP_SIZE, 0xFF333333);
         g.fill(mapX + MAP_SIZE, mapY, mapX + MAP_SIZE + 1, mapY + MAP_SIZE, 0xFF333333);
 
-        g.drawString(this.font, String.format("1px = %.0f бл.", scale), mapX + 2, mapY + MAP_SIZE + 3, 0x888888, false);
+        g.drawString(this.font, Tr.s("gui.ata.route.scale", scale), mapX + 2, mapY + MAP_SIZE + 3, 0x888888, false);
     }
 
     private void renderTerrainTexture(GuiGraphics g, int mapX, int mapY) {
@@ -861,13 +876,13 @@ public class OrlanRouteScreen extends Screen {
             String loadText;
             int loadColor = 0xFF40FF80;
             if (terrainRenderer.isQueued()) {
-                loadText = "В очереди: #" + terrainRenderer.getQueuePosition();
+                loadText = Tr.s("gui.ata.map.queued", terrainRenderer.getQueuePosition());
                 loadColor = 0xFFffcc40;
             } else if (terrainRenderer.isBuilding()) {
                 int pct = (int)(terrainRenderer.getBuildProgress() * 100);
-                loadText = "Сканирование: " + pct + "%";
+                loadText = Tr.s("gui.ata.map.scanning", pct);
             } else {
-                loadText = "Загрузка карты...";
+                loadText = Tr.s("gui.ata.map.loading");
             }
             int tw = this.font.width(loadText);
             g.drawString(this.font, loadText, mapX + (MAP_SIZE - tw) / 2, mapY + MAP_SIZE / 2 - 4, loadColor, false);
@@ -906,26 +921,26 @@ public class OrlanRouteScreen extends Screen {
         int y = guiTop + 25;
 
         if (launcherPositions.size() > 1) {
-            String label = "ПУ #" + (currentEditIndex + 1) + "/" + launcherPositions.size();
+            String label = Tr.s("gui.ata.route.editing", currentEditIndex + 1, launcherPositions.size());
             g.drawString(this.font, label, x + 25, y, MULTI_COLORS[currentEditIndex % MULTI_COLORS.length], false);
             y += 18;
         }
 
-        g.drawString(this.font, "МАРШРУТ:", x, y, 0xAAAAAA, false);
+        g.drawString(this.font, Tr.s("gui.ata.route.route_label"), x, y, 0xAAAAAA, false);
         y += 12;
 
         List<BlockPos> route = currentRoute();
         BlockPos lPos = currentLauncherPos();
 
         if (route.isEmpty()) {
-            g.drawString(this.font, "§7(пусто)", x, y, 0x666666, false);
-            g.drawString(this.font, "§7ЛКМ - точка", x, y + 12, 0x555555, false);
-            g.drawString(this.font, "§7ПКМ - удалить", x, y + 22, 0x555555, false);
-            g.drawString(this.font, "§7Скролл - зум", x, y + 32, 0x555555, false);
-            g.drawString(this.font, "§7СКМ - панорама", x, y + 42, 0x555555, false);
+            g.drawString(this.font, Tr.s("gui.ata.route.empty"), x, y, 0x666666, false);
+            g.drawString(this.font, Tr.s("gui.ata.route.hint_lmb"), x, y + 12, 0x555555, false);
+            g.drawString(this.font, Tr.s("gui.ata.route.hint_rmb"), x, y + 22, 0x555555, false);
+            g.drawString(this.font, Tr.s("gui.ata.route.hint_scroll"), x, y + 32, 0x555555, false);
+            g.drawString(this.font, Tr.s("gui.ata.route.hint_mmb"), x, y + 42, 0x555555, false);
             y += 56;
-            g.drawString(this.font, "§7Последняя = центр", x, y, 0x555555, false);
-            g.drawString(this.font, "§7патрулирования", x, y + 10, 0x555555, false);
+            g.drawString(this.font, Tr.s("gui.ata.route.last_is_center"), x, y, 0x555555, false);
+            g.drawString(this.font, Tr.s("gui.ata.route.patrol_center"), x, y + 10, 0x555555, false);
         } else {
             int maxVisible = 6;
             int startIdx = Math.max(0, route.size() - maxVisible);
@@ -942,19 +957,22 @@ public class OrlanRouteScreen extends Screen {
             y += 6;
 
             double totalDist = calculateTotalDistance();
-            g.drawString(this.font, String.format("\u0414\u0438\u0441\u0442: %.0f \u0431\u043b.", totalDist), x, y, 0xAAAAAA, false);
+            g.drawString(this.font, Tr.s("gui.ata.route.total_dist", totalDist), x, y, 0xAAAAAA, false);
+            y += 13;
+            g.drawString(this.font, Tr.s("gui.ata.route.max", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan()),
+                    x, y, 0x666666, false);
             y += 14;
 
             BlockPos first = route.get(0);
             boolean inZone = LauncherZoneValidator.isTargetInValidZone(lPos, currentLauncherYaw(), first);
             if (!inZone) {
-                g.drawString(this.font, "\u00a7c\u0412\u043d\u0435 \u0437\u043e\u043d\u044b \u041f\u0423!", x, y, 0xFF5555, false);
+                g.drawString(this.font, Tr.s("gui.ata.route.out_of_zone"), x, y, 0xFF5555, false);
             }
         }
 
         y = guiTop + GUI_HEIGHT - 100;
         boolean hasDrone = currentEditIndex < hasDroneList.size() && hasDroneList.get(currentEditIndex);
-        String droneStatus = hasDrone ? "§aДРОН ГОТОВ" : "§cНЕТ ДРОНА";
+        String droneStatus = hasDrone ? Tr.s("gui.ata.route.drone_ready") : Tr.s("gui.ata.route.no_drone");
         g.drawString(this.font, droneStatus, x, y, hasDrone ? 0x55FF55 : 0xFF5555, false);
     }
 
@@ -1032,7 +1050,7 @@ public class OrlanRouteScreen extends Screen {
         List<BlockPos> route = currentRoute();
         if (route.isEmpty()) {
             g.fill(px, py, px + pw, py + ph, 0xCC0A0A0A);
-            g.drawString(this.font, "\u0414\u043e\u0431\u0430\u0432\u044c\u0442\u0435 \u0442\u043e\u0447\u043a\u0438 \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430", px + pw / 2 - 55, py + ph / 2 - 4, 0x555555, false);
+            g.drawString(this.font, Tr.s("gui.ata.route.add_points"), px + pw / 2 - 55, py + ph / 2 - 4, 0x555555, false);
             return;
         }
 
@@ -1156,7 +1174,7 @@ public class OrlanRouteScreen extends Screen {
             int wpLabelW = this.font.width(wpLabel);
             int wpLabelX = Math.max(px + 1, Math.min(sx - wpLabelW / 2, px + pw - wpLabelW - 1));
             g.drawString(this.font, wpLabel, wpLabelX, py + ph - 10, labelColor, false);
-            String yText = isLast ? "\u041f\u0410\u0422\u0420\u0423\u041b\u042c" : (wpAlt + "m");
+            String yText = isLast ? Tr.s("gui.ata.route.patrol_tag") : (wpAlt + "m");
             int yTextW = this.font.width(yText);
             int labelX = sx - yTextW / 2;
             if (labelX < px + 1) labelX = px + 1;
@@ -1172,7 +1190,7 @@ public class OrlanRouteScreen extends Screen {
         g.fill(px, py + ph - 1, px + pw, py + ph, 0xFF334433);
         g.fill(px, py, px + 1, py + ph, 0xFF334433);
         g.fill(px + pw - 1, py, px + pw, py + ph, 0xFF334433);
-        String profileTitle = "\u041f\u0420\u041e\u0424\u0418\u041b\u042c \u0420\u0415\u041b\u042c\u0415\u0424\u0410";
+        String profileTitle = Tr.s("gui.ata.route.terrain_profile");
         g.drawString(this.font, profileTitle, px + pw / 2 - this.font.width(profileTitle) / 2, py - 10, 0xAA55CC55, false);
     }
 

@@ -24,10 +24,7 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> ORLAN_ENGINE = registerSoundEvent("orlan_engine");
 
     public static final RegistryObject<SoundEvent> ISKANDER_LAUNCH = registerSoundEvent("iskander_launch");
-    public static final RegistryObject<SoundEvent> ISKANDER_FLIGHT = registerSoundEvent("iskander_flight");
-    public static final RegistryObject<SoundEvent> ISKANDER_EXPLOSION = registerSoundEvent("iskander_explosion");
     public static final RegistryObject<SoundEvent> ISKANDER_PREPARING = registerSoundEvent("iskander_preparing");
-    public static final RegistryObject<SoundEvent> ISKANDER_TERMINAL = registerSoundEvent("iskander_terminal");
 
     private static RegistryObject<SoundEvent> registerSoundEvent(String name) {
         ResourceLocation id = new ResourceLocation(ShahedMod.MOD_ID, name);

@@ -19,8 +19,6 @@ public class OpenUnifiedTerminalPacket {
     private final boolean hasLauncher;
     private final int launcherCount;
     private final int freeLaunchers;
-    private final int launchCostShahed;
-    private final int launchCostIskander;
     private final int targetY;
     private final boolean blacklistEnabled;
     private final boolean whitelistEnabled;
@@ -34,7 +32,7 @@ public class OpenUnifiedTerminalPacket {
     public OpenUnifiedTerminalPacket(BlockPos terminalPos, List<BlockPos> launcherPositions, List<Boolean> launcherLoadedStates,
                                      List<Boolean> launcherLaunchingStates,
                                      boolean hasLauncher, int launcherCount, int freeLaunchers, 
-                                     int launchCostShahed, int launchCostIskander, int targetY,
+                                     int targetY,
                                      boolean blacklistEnabled, boolean whitelistEnabled,
                                      List<String> blacklistZones, List<String> whitelistZones,
                                      List<BlockPos> launcherTargets, List<Double> launcherDistances, List<Double> launcherCEPs) {
@@ -45,8 +43,6 @@ public class OpenUnifiedTerminalPacket {
         this.hasLauncher = hasLauncher;
         this.launcherCount = launcherCount;
         this.freeLaunchers = freeLaunchers;
-        this.launchCostShahed = launchCostShahed;
-        this.launchCostIskander = launchCostIskander;
         this.targetY = targetY;
         this.blacklistEnabled = blacklistEnabled;
         this.whitelistEnabled = whitelistEnabled;
@@ -77,8 +73,6 @@ public class OpenUnifiedTerminalPacket {
         this.hasLauncher = buf.readBoolean();
         this.launcherCount = buf.readInt();
         this.freeLaunchers = buf.readInt();
-        this.launchCostShahed = buf.readInt();
-        this.launchCostIskander = buf.readInt();
         this.targetY = buf.readInt();
         this.blacklistEnabled = buf.readBoolean();
         this.whitelistEnabled = buf.readBoolean();
@@ -130,8 +124,6 @@ public class OpenUnifiedTerminalPacket {
         buf.writeBoolean(hasLauncher);
         buf.writeInt(launcherCount);
         buf.writeInt(freeLaunchers);
-        buf.writeInt(launchCostShahed);
-        buf.writeInt(launchCostIskander);
         buf.writeInt(targetY);
         buf.writeBoolean(blacklistEnabled);
         buf.writeBoolean(whitelistEnabled);
@@ -179,8 +171,6 @@ public class OpenUnifiedTerminalPacket {
     public boolean hasLauncher() { return hasLauncher; }
     public int getLauncherCount() { return launcherCount; }
     public int getFreeLaunchers() { return freeLaunchers; }
-    public int getLaunchCostShahed() { return launchCostShahed; }
-    public int getLaunchCostIskander() { return launchCostIskander; }
     public int getTargetY() { return targetY; }
     public boolean isBlacklistEnabled() { return blacklistEnabled; }
     public boolean isWhitelistEnabled() { return whitelistEnabled; }

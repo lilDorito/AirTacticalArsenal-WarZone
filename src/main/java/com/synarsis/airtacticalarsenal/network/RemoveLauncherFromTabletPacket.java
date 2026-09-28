@@ -71,7 +71,7 @@ public class RemoveLauncherFromTabletPacket {
                     removed = ControlTabletItem.removeLinkedLauncher(tablet, launcherPos);
                 }
                 if (removed) {
-                    player.displayClientMessage(Component.literal("§eПУ отвязана от планшета"), true);
+                    player.displayClientMessage(Component.translatable("message.ata.tablet.launcher_unlinked"), true);
                 }
             }
         });

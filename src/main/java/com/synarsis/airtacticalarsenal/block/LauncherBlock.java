@@ -15,7 +15,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.BlockGetter;
@@ -146,18 +145,6 @@ public class LauncherBlock extends Block implements EntityBlock {
             return true;
         }
         return false;
-    }
-
-    private java.util.List<BlockPos> getAll5x5Positions(BlockPos centerPos) {
-        java.util.List<BlockPos> positions = new java.util.ArrayList<>();
-        for (int x = -2; x <= 2; x++) {
-            for (int z = -2; z <= 2; z++) {
-                if (x != 0 || z != 0) {
-                    positions.add(centerPos.offset(x, 0, z));
-                }
-            }
-        }
-        return positions;
     }
 
     private void createMultiblock(Level level, BlockPos centerPos, Direction facing) {

@@ -7,7 +7,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
@@ -61,24 +60,24 @@ public class LaunchShahedRoutePacket {
             ShahedLauncherEntity launcher = findLauncher(level, launcherPos);
 
             if (launcher == null) {
-                player.displayClientMessage(Component.literal("§cПУ не найдена!"), true);
+                player.displayClientMessage(Component.translatable("message.ata.launcher.not_found"), true);
                 return;
             }
 
             if (!launcher.hasDrone()) {
-                player.displayClientMessage(Component.literal("§cНа ПУ нет дрона!"), true);
+                player.displayClientMessage(Component.translatable("message.ata.launcher.no_drone"), true);
                 return;
             }
 
             double playerDistance = player.position().distanceTo(launcher.position());
             if (playerDistance > 100.0) {
-                player.displayClientMessage(Component.literal("§cПУ слишком далеко!"), true);
+                player.displayClientMessage(Component.translatable("message.ata.launcher.too_far"), true);
                 return;
             }
 
             double targetDistance = launcher.position().distanceTo(Vec3.atCenterOf(finalTarget));
             if (targetDistance < 50) {
-                player.displayClientMessage(Component.literal("§cЦель слишком близко! Минимум 50 блоков."), true);
+                player.displayClientMessage(Component.translatable("message.ata.launch.target_too_close_50"), true);
                 return;
             }
 
@@ -87,12 +86,15 @@ public class LaunchShahedRoutePacket {
             if (!LauncherZoneValidator.isTargetInValidZone(launcher.blockPosition(), launcherYaw, firstTarget)) {
                 double angle = LauncherZoneValidator.calculateDeviationAngle(
                     Vec3.atCenterOf(launcher.blockPosition()), launcherYaw, Vec3.atCenterOf(firstTarget));
-                player.displayClientMessage(Component.literal(String.format(
-                    "§cПервая точка маршрута вне зоны! Угол: %.0f° (макс: %.0f°)", 
-                    angle, LauncherZoneValidator.MAX_DEVIATION_ANGLE)), true);
+                player.displayClientMessage(Component.translatable("message.ata.launch.first_point_out_of_zone",
+                    String.format("%.0f", angle), String.format("%.0f", LauncherZoneValidator.MAX_DEVIATION_ANGLE)), true);
                 return;
             }
 
+            if (!com.synarsis.airtacticalarsenal.util.RouteLimits.check(player,
+                    com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), waypoints, finalTarget), com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax())) {
+                return;
+            }
             launcher.startLaunchSequenceWithRoute(player, finalTarget, diveMode, waypoints);
         });
         ctx.get().setPacketHandled(true);

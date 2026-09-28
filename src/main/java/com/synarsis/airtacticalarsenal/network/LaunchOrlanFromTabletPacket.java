@@ -8,7 +8,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
@@ -51,18 +50,18 @@ public class LaunchOrlanFromTabletPacket {
             OrlanLauncherEntity launcher = findLauncher(level, launcherPos);
 
             if (launcher == null) {
-                player.displayClientMessage(Component.literal("§cПУ не найдена!"), true);
+                player.displayClientMessage(Component.translatable("message.ata.launcher.not_found"), true);
                 return;
             }
 
             if (!launcher.hasDrone()) {
-                player.displayClientMessage(Component.literal("§cНа ПУ нет Орлана!"), true);
+                player.displayClientMessage(Component.translatable("message.ata.launcher.no_orlan"), true);
                 return;
             }
 
             double playerDistance = player.position().distanceTo(launcher.position());
             if (playerDistance > 30.0) {
-                player.displayClientMessage(Component.literal("§cПУ слишком далеко! Макс. 30 блоков"), true);
+                player.displayClientMessage(Component.translatable("message.ata.launcher.too_far_30"), true);
                 return;
             }
 
@@ -86,7 +85,7 @@ public class LaunchOrlanFromTabletPacket {
                     Math.pow(firstTarget.getX() - launcher.blockPosition().getX(), 2) +
                             Math.pow(firstTarget.getZ() - launcher.blockPosition().getZ(), 2));
             if (firstDistance < 600) {
-                player.displayClientMessage(Component.literal("§cПервая точка слишком близко! Минимум 600 блоков."),
+                player.displayClientMessage(Component.translatable("message.ata.orlan.first_point_too_close"),
                         true);
                 return;
             }
@@ -95,14 +94,21 @@ public class LaunchOrlanFromTabletPacket {
             if (!LauncherZoneValidator.isTargetInValidZone(launcher.blockPosition(), launcherYaw, firstTarget)) {
                 double angle = LauncherZoneValidator.calculateDeviationAngle(
                         Vec3.atCenterOf(launcher.blockPosition()), launcherYaw, Vec3.atCenterOf(firstTarget));
-                player.displayClientMessage(Component.literal(String.format(
-                        "§cЦель вне зоны запуска! Угол: %.0f° (макс: %.0f°)",
-                        angle, LauncherZoneValidator.MAX_DEVIATION_ANGLE)), true);
+                player.displayClientMessage(Component.translatable("message.ata.launch.out_of_zone",
+                        String.format("%.0f", angle), String.format("%.0f", LauncherZoneValidator.MAX_DEVIATION_ANGLE)), true);
                 return;
             }
 
             if (!level.getFluidState(launcher.blockPosition()).isEmpty()) {
-                player.displayClientMessage(Component.literal("§cЗапуск невозможен под водой!"), true);
+                player.displayClientMessage(Component.translatable("message.ata.launch.underwater"), true);
+                return;
+            }
+
+            java.util.List<BlockPos> fullRoute = new java.util.ArrayList<>();
+            if (waypoints != null) fullRoute.addAll(waypoints);
+            fullRoute.add(targetPos);
+            if (!com.synarsis.airtacticalarsenal.util.RouteLimits.check(player,
+                    com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), fullRoute), com.synarsis.airtacticalarsenal.util.RouteLimits.orlanMax())) {
                 return;
             }
 
@@ -119,7 +125,7 @@ public class LaunchOrlanFromTabletPacket {
             launcher.removeDrone();
 
             player.displayClientMessage(
-                    Component.literal("§aОрлан-10 запущен! Цель: [" + targetPos.getX() + ", " + targetPos.getZ() + "]"),
+                    Component.translatable("message.ata.orlan.launched", targetPos.getX(), targetPos.getZ()),
                     true);
         });
         ctx.get().setPacketHandled(true);

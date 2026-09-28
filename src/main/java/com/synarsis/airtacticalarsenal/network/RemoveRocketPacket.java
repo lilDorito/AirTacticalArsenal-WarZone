@@ -1,6 +1,5 @@
 package com.synarsis.airtacticalarsenal.network;
 
-import com.synarsis.airtacticalarsenal.block.IskanderRocketBlock;
 import com.synarsis.airtacticalarsenal.block.LauncherBlock;
 import com.synarsis.airtacticalarsenal.block.entity.IskanderRocketBlockEntity;
 import com.synarsis.airtacticalarsenal.item.ModItems;

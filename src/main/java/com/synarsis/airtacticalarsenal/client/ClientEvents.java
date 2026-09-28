@@ -30,6 +30,10 @@ public class ClientEvents {
         event.registerEntityRenderer(ModEntities.ORLAN.get(), OrlanRenderer::new);
         event.registerEntityRenderer(ModEntities.ORLAN_LAUNCHER.get(), OrlanLauncherRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ISKANDER_ROCKET.get(), IskanderRocketBlockRenderer::new);
+        if (com.synarsis.airtacticalarsenal.block.ShahedRadarBlock.SBW_LOOK) {
+            event.registerBlockEntityRenderer(ModBlockEntities.SHAHED_RADAR.get(),
+                    com.synarsis.airtacticalarsenal.client.renderer.ShahedRadarRenderer::new);
+        }
         System.out.println("[ATA] Renderers registered for ShahedEntity, IskanderEntity, ShahedLauncher, PaintStand, Orlan and IskanderRocketBlock!");
     }
 

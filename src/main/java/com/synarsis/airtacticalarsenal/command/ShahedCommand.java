@@ -86,9 +86,9 @@ public class ShahedCommand {
                                                             targetPos);
                                                     iskander.isLegitSpawn = true;
                                                     level.addFreshEntity(iskander);
-                                                    context.getSource().sendSuccess(() -> Component.literal(
-                                                            "§a[Искандер-М] Баллистическая ракета запущена! Цель: "
-                                                                    + targetPos.getX() + ", " + targetPos.getZ()),
+                                                    context.getSource().sendSuccess(() -> Component.translatable(
+                                                            "command.ata.iskander.launched",
+                                                            targetPos.getX(), targetPos.getZ()),
                                                             true);
                                                     return 1;
                                                 })))))
@@ -98,38 +98,10 @@ public class ShahedCommand {
                                     .withStyle(s -> s.withColor(0xFFFF55)), false);
                             context.getSource()
                                     .sendSuccess(() -> Component
-                                            .translatable("command.ata.config.spawn_x",
-                                                    Component.literal(String.valueOf(ShahedConfig.SPAWN_X.get()))
-                                                            .withStyle(s -> s.withColor(0x55FFFF)))
-                                            .withStyle(s -> s.withColor(0xAAAAAA)), false);
-                            context.getSource()
-                                    .sendSuccess(() -> Component
-                                            .translatable("command.ata.config.spawn_y",
-                                                    Component.literal(String.valueOf(ShahedConfig.SPAWN_Y.get()))
-                                                            .withStyle(s -> s.withColor(0x55FFFF)))
-                                            .withStyle(s -> s.withColor(0xAAAAAA)), false);
-                            context.getSource()
-                                    .sendSuccess(() -> Component
-                                            .translatable("command.ata.config.spawn_z",
-                                                    Component.literal(String.valueOf(ShahedConfig.SPAWN_Z.get()))
-                                                            .withStyle(s -> s.withColor(0x55FFFF)))
-                                            .withStyle(s -> s.withColor(0xAAAAAA)), false);
-                            context.getSource()
-                                    .sendSuccess(() -> Component
                                             .translatable("command.ata.config.target_y",
                                                     Component.literal(String.valueOf(ShahedConfig.TARGET_Y_LEVEL.get()))
                                                             .withStyle(s -> s.withColor(0x55FFFF)))
                                             .withStyle(s -> s.withColor(0xAAAAAA)), false);
-                            context.getSource()
-                                    .sendSuccess(
-                                            () -> Component
-                                                    .translatable("command.ata.config.cost",
-                                                            Component
-                                                                    .literal(String.valueOf(
-                                                                            ShahedConfig.LAUNCH_COST_COINS.get()))
-                                                                    .withStyle(s -> s.withColor(0x55FFFF)))
-                                                    .withStyle(s -> s.withColor(0xAAAAAA)),
-                                            false);
                             context.getSource()
                                     .sendSuccess(() -> Component
                                             .translatable("command.ata.config.particles",
@@ -172,39 +144,6 @@ public class ShahedCommand {
                                             .withStyle(s -> s.withColor(0xAAAAAA)), false);
                             return 1;
                         })
-                        .then(Commands.literal("spawnX")
-                                .then(Commands.argument("value", IntegerArgumentType.integer(-30000000, 30000000))
-                                        .executes(context -> {
-                                            int value = IntegerArgumentType.getInteger(context, "value");
-                                            ShahedConfig.SPAWN_X.set(value);
-                                            context.getSource()
-                                                    .sendSuccess(() -> Component
-                                                            .translatable("command.ata.config.spawn_x.set", value)
-                                                            .withStyle(s -> s.withColor(0x55FF55)), true);
-                                            return 1;
-                                        })))
-                        .then(Commands.literal("spawnY")
-                                .then(Commands.argument("value", IntegerArgumentType.integer(100, 320))
-                                        .executes(context -> {
-                                            int value = IntegerArgumentType.getInteger(context, "value");
-                                            ShahedConfig.SPAWN_Y.set(value);
-                                            context.getSource()
-                                                    .sendSuccess(() -> Component
-                                                            .translatable("command.ata.config.spawn_y.set", value)
-                                                            .withStyle(s -> s.withColor(0x55FF55)), true);
-                                            return 1;
-                                        })))
-                        .then(Commands.literal("spawnZ")
-                                .then(Commands.argument("value", IntegerArgumentType.integer(-30000000, 30000000))
-                                        .executes(context -> {
-                                            int value = IntegerArgumentType.getInteger(context, "value");
-                                            ShahedConfig.SPAWN_Z.set(value);
-                                            context.getSource()
-                                                    .sendSuccess(() -> Component
-                                                            .translatable("command.ata.config.spawn_z.set", value)
-                                                            .withStyle(s -> s.withColor(0x55FF55)), true);
-                                            return 1;
-                                        })))
                         .then(Commands.literal("targetY")
                                 .then(Commands.argument("value", IntegerArgumentType.integer(-64, 320))
                                         .executes(context -> {
@@ -213,17 +152,6 @@ public class ShahedCommand {
                                             context.getSource()
                                                     .sendSuccess(() -> Component
                                                             .translatable("command.ata.config.target_y.set", value)
-                                                            .withStyle(s -> s.withColor(0x55FF55)), true);
-                                            return 1;
-                                        })))
-                        .then(Commands.literal("cost")
-                                .then(Commands.argument("value", IntegerArgumentType.integer(0, 64))
-                                        .executes(context -> {
-                                            int value = IntegerArgumentType.getInteger(context, "value");
-                                            ShahedConfig.LAUNCH_COST_COINS.set(value);
-                                            context.getSource()
-                                                    .sendSuccess(() -> Component
-                                                            .translatable("command.ata.config.cost.set", value)
                                                             .withStyle(s -> s.withColor(0x55FF55)), true);
                                             return 1;
                                         })))
@@ -441,7 +369,7 @@ public class ShahedCommand {
                                     WorldMapData mapData = WorldMapData.get(level);
                                     mapData.clear();
                                     WorldMapScanner.getInstance().startScan(level);
-                                    context.getSource().sendSuccess(() -> Component.literal("Map rescan started")
+                                    context.getSource().sendSuccess(() -> Component.translatable("command.ata.map.rescan_started")
                                             .withStyle(s -> s.withColor(0x55FF55)), true);
                                     return 1;
                                 }))
@@ -463,7 +391,7 @@ public class ShahedCommand {
                                                         mapData.getCoastlinePointCount()))
                                                 .withStyle(s -> s.withColor(0x55FF55)), false);
                                     } else {
-                                        context.getSource().sendSuccess(() -> Component.literal("Map not scanned")
+                                        context.getSource().sendSuccess(() -> Component.translatable("command.ata.map.not_scanned")
                                                 .withStyle(s -> s.withColor(0xFF5555)), false);
                                     }
                                     return 1;

@@ -49,18 +49,23 @@ public class UpdateOrlanRoutePacket {
             Entity entity = level.getEntity(orlanEntityId);
 
             if (!(entity instanceof OrlanEntity orlan)) {
-                player.displayClientMessage(Component.literal("§cОрлан не найден!"), true);
+                player.displayClientMessage(Component.translatable("message.ata.orlan.not_found"), true);
                 return;
             }
 
             OrlanEntity.FlightPhase phase = orlan.getFlightPhase();
             if (phase != OrlanEntity.FlightPhase.CRUISING && phase != OrlanEntity.FlightPhase.PATROLLING) {
-                player.displayClientMessage(Component.literal("§cОрлан не в полёте! Фаза: " + phase), true);
+                player.displayClientMessage(Component.translatable("message.ata.orlan.not_flying", phase.name()), true);
                 return;
             }
 
             if (newWaypoints.isEmpty()) {
-                player.displayClientMessage(Component.literal("§cМаршрут пуст!"), true);
+                player.displayClientMessage(Component.translatable("message.ata.route.empty"), true);
+                return;
+            }
+
+            BlockPos routeStart = orlan.getLauncherPos() != null ? orlan.getLauncherPos() : orlan.blockPosition();
+            if (!com.synarsis.airtacticalarsenal.util.RouteLimits.check(player, com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(routeStart, newWaypoints), com.synarsis.airtacticalarsenal.util.RouteLimits.orlanMax())) {
                 return;
             }
 
@@ -72,7 +77,7 @@ public class UpdateOrlanRoutePacket {
             orlan.updateRouteInFlight(newTarget, intermediateWaypoints);
 
             player.displayClientMessage(
-                    Component.literal("§aМаршрут обновлён! " + newWaypoints.size() + " точек"), true);
+                    Component.translatable("message.ata.orlan.route_updated", newWaypoints.size()), true);
         });
         ctx.get().setPacketHandled(true);
     }

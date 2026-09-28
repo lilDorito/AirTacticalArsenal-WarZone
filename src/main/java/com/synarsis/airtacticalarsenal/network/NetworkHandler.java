@@ -7,7 +7,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    private static final String PROTOCOL_VERSION = "6";
+    private static final String PROTOCOL_VERSION = "11";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(com.synarsis.airtacticalarsenal.ShahedMod.MOD_ID, "main"),
             () -> PROTOCOL_VERSION,
@@ -247,6 +247,16 @@ public class NetworkHandler {
                 .decoder(SegmentMaxHeightPacket::new)
                 .consumerMainThread(SegmentMaxHeightPacket::handle)
                 .add();
+        INSTANCE.messageBuilder(RouteLimitsPacket.class, id++)
+                .encoder(RouteLimitsPacket::toBytes)
+                .decoder(RouteLimitsPacket::new)
+                .consumerMainThread(RouteLimitsPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(LanguagePolicyPacket.class, id++)
+                .encoder(LanguagePolicyPacket::toBytes)
+                .decoder(LanguagePolicyPacket::new)
+                .consumerMainThread(LanguagePolicyPacket::handle)
+                .add();
     }
 
     public static <MSG> void sendToServer(MSG message) {
@@ -255,6 +265,10 @@ public class NetworkHandler {
 
     public static <MSG> void sendToPlayer(ServerPlayer player, MSG message) {
         INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), message);
+    }
+
+    public static <MSG> void sendToDimension(net.minecraft.world.level.Level level, MSG message) {
+        INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), message);
     }
 
     public static <MSG> void sendToAllPlayers(MSG message) {

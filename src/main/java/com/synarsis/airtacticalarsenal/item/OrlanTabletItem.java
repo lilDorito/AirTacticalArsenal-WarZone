@@ -17,7 +17,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -48,7 +47,7 @@ public class OrlanTabletItem extends Item {
             if (!launchers.isEmpty()) {
                 clearAllLaunchers(stack);
                 if (!level.isClientSide) {
-                    player.displayClientMessage(Component.literal("§eВсе привязки ПУ сброшены"), true);
+                    player.displayClientMessage(Component.translatable("message.ata.tablet.links_reset"), true);
                 }
                 return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
             }
@@ -234,26 +233,26 @@ public class OrlanTabletItem extends Item {
 
         List<BlockPos> launchers = getLinkedLaunchers(stack);
 
-        tooltip.add(Component.literal("§b✈ Планшет разведки Орлан-10"));
+        tooltip.add(Component.translatable("tooltip.ata.orlan_tablet.title"));
         tooltip.add(Component.literal(""));
 
         if (!launchers.isEmpty()) {
-            tooltip.add(Component.literal("§aПривязано ПУ: §f" + launchers.size() + "/" + MAX_LAUNCHERS));
+            tooltip.add(Component.translatable("tooltip.ata.tablet.linked", launchers.size(), MAX_LAUNCHERS));
             for (int i = 0; i < Math.min(launchers.size(), 3); i++) {
                 BlockPos pos = launchers.get(i);
                 tooltip.add(Component.literal("§7  " + (i + 1) + ". [" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + "]"));
             }
             if (launchers.size() > 3) {
-                tooltip.add(Component.literal("§7  ... и ещё " + (launchers.size() - 3)));
+                tooltip.add(Component.translatable("tooltip.ata.tablet.and_more", launchers.size() - 3));
             }
         } else {
-            tooltip.add(Component.literal("§7Нет привязанных ПУ"));
+            tooltip.add(Component.translatable("tooltip.ata.tablet.none_linked"));
         }
 
         tooltip.add(Component.literal(""));
-        tooltip.add(Component.literal("§eПКМ по ПУ§7 - привязать ПУ"));
-        tooltip.add(Component.literal("§eПКМ§7 - управление / камера"));
-        tooltip.add(Component.literal("§eShift + ПКМ§7 - сбросить привязки"));
+        tooltip.add(Component.translatable("tooltip.ata.tablet.link_hint"));
+        tooltip.add(Component.translatable("tooltip.ata.orlan_tablet.open"));
+        tooltip.add(Component.translatable("tooltip.ata.orlan_tablet.reset"));
     }
 
     @Override

@@ -116,32 +116,6 @@
       }
     ]
   },
-  "iskander_flight": {
-    "subtitle": "subtitles.ata.iskander_flight",
-    "sounds": [
-      {
-        "name": "ata:iskander_flight",
-        "stream": true,
-        "volume": 1.2,
-        "pitch": 1.0,
-        "weight": 1,
-        "attenuation_distance": 350
-      }
-    ]
-  },
-  "iskander_explosion": {
-    "subtitle": "subtitles.ata.iskander_explosion",
-    "sounds": [
-      {
-        "name": "ata:iskander_explosion",
-        "stream": false,
-        "volume": 2.0,
-        "pitch": 0.9,
-        "weight": 1,
-        "attenuation_distance": 500
-      }
-    ]
-  },
   "iskander_preparing": {
     "subtitle": "subtitles.ata.iskander_preparing",
     "sounds": [
@@ -152,19 +126,6 @@
         "pitch": 1.0,
         "weight": 1,
         "attenuation_distance": 70
-      }
-    ]
-  },
-  "iskander_terminal": {
-    "subtitle": "subtitles.ata.iskander_terminal",
-    "sounds": [
-      {
-        "name": "ata:iskander_terminal",
-        "stream": false,
-        "volume": 1.8,
-        "pitch": 1.2,
-        "weight": 1,
-        "attenuation_distance": 450
       }
     ]
   }

@@ -32,6 +32,11 @@ public class ModBlockEntities {
             BlockEntityType.Builder.of(LauncherBlockEntity::new, ModBlocks.LAUNCHER.get())
                 .build(null));
 
+    public static final RegistryObject<BlockEntityType<ShahedRadarBlockEntity>> SHAHED_RADAR =
+        BLOCK_ENTITIES.register("shahed_radar", () ->
+            BlockEntityType.Builder.of(ShahedRadarBlockEntity::new, ModBlocks.SHAHED_RADAR.get())
+                .build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

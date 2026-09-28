@@ -2,7 +2,6 @@ package com.synarsis.airtacticalarsenal.client.sound;
 
 import com.synarsis.airtacticalarsenal.sound.ModSounds;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;
@@ -14,7 +13,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class IskanderPreparingSoundClient extends AbstractTickableSoundInstance {
     private final BlockPos blockPos;
-    private boolean shouldStop = false;
     private boolean stopped = false;
     private long startTime;
     private long creationTime;

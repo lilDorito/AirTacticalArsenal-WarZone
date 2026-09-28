@@ -53,10 +53,10 @@ public class SetLauncherTargetPacket {
                 launcher.setTarget(targetPos);
 
                 if (targetPos != null) {
-                    player.displayClientMessage(Component.literal("§aЦель установлена: [" 
-                        + targetPos.getX() + ", " + targetPos.getY() + ", " + targetPos.getZ() + "]"), true);
+                    player.displayClientMessage(Component.translatable("message.ata.target_set",
+                        targetPos.getX(), targetPos.getY(), targetPos.getZ()), true);
                 } else {
-                    player.displayClientMessage(Component.literal("§eЦель сброшена"), true);
+                    player.displayClientMessage(Component.translatable("message.ata.target_cleared"), true);
                 }
             }
         });

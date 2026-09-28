@@ -34,7 +34,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.level.Explosion;
 import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
@@ -59,8 +58,6 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         DIVING 
     }
 
-    private static final int WARMUP_DURATION_TICKS = 100; 
-
     private static final double LAUNCH_INITIAL_SPEED = 0.3; 
     private static final double LAUNCH_ACCELERATION = 0.02; 
     private static final double LAUNCH_MAX_SPEED = 1.2; 
@@ -75,9 +72,6 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
     private static final double HEIGHT_CORRECTION_FACTOR = 0.15; 
 
-    private static final double DIVE_ACTIVATION_DISTANCE = 20.0; 
-    private static final double DIVE_TRANSITION_DISTANCE = 40.0; 
-    private static final double DIVE_ANGLE_DEG = 75.0; 
     private static final double DIVE_ACCELERATION = 0.08; 
 
     private static final EntityDataAccessor<BlockPos> TARGET_POS = SynchedEntityData.defineId(ShahedEntity.class,
@@ -138,7 +132,6 @@ public class ShahedEntity extends Projectile implements GeoEntity {
     private double targetAltitude = 165.0; 
 
     private static final float EXPLOSION_POWER = 12.0f;
-    private static final float EXPLOSION_RADIUS = 25.0f;
     private boolean isDiving = false;
     private float diveProgress = 0.0f;
     private double diveDistance = 300.0;
@@ -159,14 +152,10 @@ public class ShahedEntity extends Projectile implements GeoEntity {
     private float maxHealth = 100.0f;
     private Entity lastAttacker = null;
     private int damageSmokeTicks = 0;
-    private int criticalSmokeTicks = 0;
 
     private double lerpX, lerpY, lerpZ;
     private float lerpYRot, lerpXRot;
     private int lerpSteps = 0;
-
-    private double previousY = 0;
-    private boolean wasDescending = false;
 
     public ShahedEntity(EntityType<? extends ShahedEntity> type, Level level) {
         super(type, level);
@@ -425,13 +414,13 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
         if (!this.initialPacketSent) {
             this.initialPacketSent = true;
-            NetworkHandler.sendToAllPlayers(new ShahedSpawnPacket(this.getId(), this.position(), target, mode));
+            NetworkHandler.sendToDimension(this.level(), new ShahedSpawnPacket(this.getId(), this.position(), target, mode));
         }
 
         this.syncTickCounter++;
         if (this.syncTickCounter >= SYNC_INTERVAL) {
             this.syncTickCounter = 0;
-            NetworkHandler.sendToAllPlayers(new ShahedSpawnPacket(this.getId(), this.position(), target, mode));
+            NetworkHandler.sendToDimension(this.level(), new ShahedSpawnPacket(this.getId(), this.position(), target, mode));
         }
     }
 
@@ -690,7 +679,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
         if (!this.level().isClientSide) {
             Vec3 pos = this.position();
-            NetworkHandler.sendToAllPlayers(new ShahedExplosionPacket(pos));
+            NetworkHandler.sendToDimension(this.level(), new ShahedExplosionPacket(pos));
 
             if (this.level() instanceof ServerLevel serverLevel && ShahedConfig.areExplosionParticlesEnabled()) {
                 float mult = ShahedConfig.getParticleMultiplier() / 100.0f;
@@ -778,8 +767,12 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
             Entity owner = this.getOwner();
 
-            AABB explosionBox = new AABB(pos.x - EXPLOSION_RADIUS, pos.y - EXPLOSION_RADIUS, pos.z - EXPLOSION_RADIUS,
-                    pos.x + EXPLOSION_RADIUS, pos.y + EXPLOSION_RADIUS, pos.z + EXPLOSION_RADIUS);
+            double coreDamage   = ShahedConfig.getShahedCoreDamage();
+            double coreRadius   = ShahedConfig.getShahedCoreRadius();
+            double damageRadius = ShahedConfig.getShahedDamageRadius();
+
+            AABB explosionBox = new AABB(pos.x - damageRadius, pos.y - damageRadius, pos.z - damageRadius,
+                    pos.x + damageRadius, pos.y + damageRadius, pos.z + damageRadius);
             List<Entity> entities = this.level().getEntities(this, explosionBox);
             DamageSource damageSource;
             if (owner instanceof LivingEntity livingOwner) {
@@ -791,78 +784,33 @@ public class ShahedEntity extends Projectile implements GeoEntity {
                 if (entity == this)
                     continue;
                 double distance = entity.position().distanceTo(pos);
-                if (distance > EXPLOSION_RADIUS)
+                float damage = ShahedConfig.explosionFalloff(distance, coreDamage, coreRadius, damageRadius);
+                if (damage <= 0.0f)
                     continue;
 
-                if (entity instanceof Player targetPlayer) {
-
-                    float damage = 0.0f;
-                    if (distance <= 10.0) {
-                        damage = 800.0f; 
-                    } else if (distance <= 16.0) {
-                        damage = 150.0f; 
-                    } else if (distance <= 21.0) {
-                        damage = 60.0f;  
-                    } else if (distance <= 25.0) {
-                        damage = 20.0f;  
-                    }
-                    if (damage > 0.0f) {
-                        damage *= (float) ShahedConfig.getShahedExplosionPlayerMultiplier();
-                        targetPlayer.hurt(damageSource, damage);
-                        targetPlayer.hurtMarked = true;
-                    }
-                } else if (com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.isVehicle(entity)) {
-
-                    float damage;
-                    if (distance <= 7.0) {
-                        damage = 1100.0f; 
-                    } else if (distance <= 15.0) {
-                        damage = 650.0f;  
-                    } else if (distance <= 20.0) {
-                        damage = 380.0f;  
-                    } else {
-                        damage = 150.0f;  
-                    }
-                    damage *= (float) ShahedConfig.getShahedExplosionVehicleMultiplier();
-                    entity.hurt(damageSource, damage);
-                    entity.hurtMarked = true;
+                if (entity instanceof Player) {
+                    damage *= (float) ShahedConfig.getShahedExplosionPlayerMultiplier();
                 } else {
-
-                    float damage;
-                    if (distance <= 7.0) {
-                        damage = 1100.0f;
-                    } else if (distance <= 15.0) {
-                        damage = 650.0f;
-                    } else if (distance <= 20.0) {
-                        damage = 380.0f;
-                    } else {
-                        damage = 150.0f;
-                    }
                     damage *= (float) ShahedConfig.getShahedExplosionEntityMultiplier();
+                }
+                if (damage > 0.0f) {
                     entity.hurt(damageSource, damage);
                     entity.hurtMarked = true;
                 }
             }
 
             LivingEntity explosionOwner = (owner instanceof LivingEntity) ? (LivingEntity) owner : null;
-            if (ShahedConfig.doExplosionsBreakBlocks()) {
-
-                this.level().explode(this, this.damageSources().explosion(this, explosionOwner), null,
-                        pos.x, pos.y, pos.z, EXPLOSION_POWER, false, Level.ExplosionInteraction.TNT);
-
-                float smoothPower = EXPLOSION_POWER * 0.35f;
-                double off = 2.0;
-                this.level().explode(this, this.damageSources().explosion(this, explosionOwner), null,
-                        pos.x + off, pos.y, pos.z + off, smoothPower, false, Level.ExplosionInteraction.TNT);
-                this.level().explode(this, this.damageSources().explosion(this, explosionOwner), null,
-                        pos.x - off, pos.y, pos.z + off, smoothPower, false, Level.ExplosionInteraction.TNT);
-                this.level().explode(this, this.damageSources().explosion(this, explosionOwner), null,
-                        pos.x + off, pos.y, pos.z - off, smoothPower, false, Level.ExplosionInteraction.TNT);
-                this.level().explode(this, this.damageSources().explosion(this, explosionOwner), null,
-                        pos.x - off, pos.y, pos.z - off, smoothPower, false, Level.ExplosionInteraction.TNT);
-            } else {
+            com.synarsis.airtacticalarsenal.event.ExplosionGuard.begin();
+            try {
                 this.level().explode(this, this.damageSources().explosion(this, explosionOwner), null,
                         pos.x, pos.y, pos.z, EXPLOSION_POWER, false, Level.ExplosionInteraction.NONE);
+                if (ShahedConfig.doExplosionsBreakBlocks() && this.level() instanceof ServerLevel craterLevel) {
+                    com.synarsis.airtacticalarsenal.util.RoundCrater.carve(craterLevel, this,
+                            this.damageSources().explosion(this, explosionOwner), pos,
+                            ShahedConfig.getShahedCraterRadius(), this.random);
+                }
+            } finally {
+                com.synarsis.airtacticalarsenal.event.ExplosionGuard.end();
             }
 
             if (this.level() instanceof ServerLevel sl) {
@@ -1397,7 +1345,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
     private void spawnShootdownEffects(Vec3 pos) {
 
-        NetworkHandler.sendToAllPlayers(new ShahedExplosionPacket(pos));
+        NetworkHandler.sendToDimension(this.level(), new ShahedExplosionPacket(pos));
 
         if (this.level() instanceof ServerLevel serverLevel && ShahedConfig.areExplosionParticlesEnabled()) {
             float mult = ShahedConfig.getParticleMultiplier() / 100.0f;
@@ -1575,148 +1523,6 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
         com.synarsis.airtacticalarsenal.event.OrlanCameraExplosionHelper.sendParticleToFarCameraPlayers(
                 level, particle, x, y, z, count, xOffset, yOffset, zOffset, speed);
-    }
-
-    private void spawnFlightParticles() {
-        if (!(this.level() instanceof ServerLevel serverLevel))
-            return;
-
-        Vec3 pos = this.position();
-        Vec3 motion = this.getDeltaMovement();
-
-        boolean hasNearbyPlayer = false;
-        for (ServerPlayer player : serverLevel.players()) {
-            if (player.position().distanceTo(pos) < 256.0) {
-                hasNearbyPlayer = true;
-                break;
-            }
-        }
-
-        if (!hasNearbyPlayer) {
-            this.previousY = this.getY();
-            return;
-        }
-
-        switch (this.flightPhase) {
-            case LAUNCHING:
-
-                spawnLaunchParticles(serverLevel, pos, motion);
-                break;
-            case CLIMBING:
-
-                spawnClimbParticles(serverLevel, pos, motion, this.getY());
-                break;
-            case CRUISING:
-
-                spawnContrailParticles(serverLevel, pos, motion);
-                break;
-            case DIVING:
-
-                spawnDiveParticles(serverLevel, pos, motion);
-                break;
-        }
-
-        this.previousY = this.getY();
-    }
-
-    private void spawnLaunchParticles(ServerLevel level, Vec3 pos, Vec3 motion) {
-
-        Vec3 enginePos = pos.subtract(motion.normalize().scale(1.5));
-
-        for (ServerPlayer player : level.players()) {
-
-            level.sendParticles(player, ParticleTypes.FLAME, true,
-                    enginePos.x, enginePos.y, enginePos.z,
-                    5, 0.2, 0.2, 0.2, 0.08);
-
-            level.sendParticles(player, ParticleTypes.LAVA, true,
-                    enginePos.x, enginePos.y, enginePos.z,
-                    2, 0.15, 0.15, 0.15, 0.05);
-
-            level.sendParticles(player, ParticleTypes.LARGE_SMOKE, true,
-                    enginePos.x - motion.x * 0.5, enginePos.y - motion.y * 0.5, enginePos.z - motion.z * 0.5,
-                    3, 0.3, 0.3, 0.3, 0.02);
-
-            if (this.tickCount % 3 == 0) {
-                level.sendParticles(player, ParticleTypes.FIREWORK, true,
-                        enginePos.x, enginePos.y, enginePos.z,
-                        2, 0.1, 0.1, 0.1, 0.15);
-            }
-        }
-    }
-
-    private void spawnClimbParticles(ServerLevel level, Vec3 pos, Vec3 motion, double currentY) {
-        Vec3 enginePos = pos.subtract(motion.normalize().scale(1.2));
-
-        double climbStart = this.launchStartY + 30.0; 
-        double transitionProgress = (currentY - climbStart) / (this.targetAltitude - climbStart);
-        transitionProgress = Math.max(0, Math.min(1, transitionProgress));
-
-        for (ServerPlayer player : level.players()) {
-
-            if (transitionProgress < 0.7) {
-                int flameCount = (int) (3 * (1 - transitionProgress));
-                if (flameCount > 0) {
-                    level.sendParticles(player, ParticleTypes.FLAME, true,
-                            enginePos.x, enginePos.y, enginePos.z,
-                            flameCount, 0.15, 0.15, 0.15, 0.05);
-                }
-            }
-
-            int cloudCount = (int) (3 * transitionProgress) + 1;
-            level.sendParticles(player, ParticleTypes.CLOUD, true,
-                    enginePos.x, enginePos.y, enginePos.z,
-                    cloudCount, 0.2, 0.2, 0.2, 0.01);
-
-            level.sendParticles(player, ParticleTypes.SMOKE, true,
-                    enginePos.x - motion.x * 0.3, enginePos.y - motion.y * 0.3, enginePos.z - motion.z * 0.3,
-                    2, 0.25, 0.25, 0.25, 0.01);
-        }
-    }
-
-    private void spawnContrailParticles(ServerLevel level, Vec3 pos, Vec3 motion) {
-
-        Vec3 trailPos = pos.subtract(motion.normalize().scale(1.0));
-
-        for (ServerPlayer player : level.players()) {
-
-            level.sendParticles(player, ParticleTypes.CLOUD, true,
-                    trailPos.x, trailPos.y, trailPos.z,
-                    3, 0.15, 0.15, 0.15, 0.001); 
-
-            level.sendParticles(player, ParticleTypes.CLOUD, true,
-                    trailPos.x + (this.random.nextDouble() - 0.5) * 0.3,
-                    trailPos.y + (this.random.nextDouble() - 0.5) * 0.3,
-                    trailPos.z + (this.random.nextDouble() - 0.5) * 0.3,
-                    2, 0.1, 0.1, 0.1, 0.001);
-
-            if (this.tickCount % 2 == 0) {
-                level.sendParticles(player, ParticleTypes.SNOWFLAKE, true,
-                        trailPos.x, trailPos.y, trailPos.z,
-                        1, 0.2, 0.2, 0.2, 0.001);
-            }
-        }
-    }
-
-    private void spawnDiveParticles(ServerLevel level, Vec3 pos, Vec3 motion) {
-        Vec3 enginePos = pos.subtract(motion.normalize().scale(0.8));
-
-        for (ServerPlayer player : level.players()) {
-
-            level.sendParticles(player, ParticleTypes.SMOKE, true,
-                    enginePos.x, enginePos.y, enginePos.z,
-                    3, 0.2, 0.2, 0.2, 0.03);
-
-            level.sendParticles(player, ParticleTypes.FIREWORK, true,
-                    pos.x, pos.y, pos.z,
-                    2, 0.3, 0.3, 0.3, 0.1);
-
-            if (this.tickCount % 5 == 0) {
-                level.sendParticles(player, ParticleTypes.FLAME, true,
-                        enginePos.x, enginePos.y, enginePos.z,
-                        1, 0.1, 0.1, 0.1, 0.02);
-            }
-        }
     }
 
     public String getShahedColor() {

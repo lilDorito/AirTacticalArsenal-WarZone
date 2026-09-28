@@ -1,0 +1,16 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.synarsis.airtacticalarsenal.mixins.compat",
+  "plugin": "com.synarsis.airtacticalarsenal.mixins.compat.AtaCompatMixinPlugin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "ashvehicle.AshAircraftLockMixin"
+  ],
+  "client": [
+    "ashvehicle.AshTargetHighlighterMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

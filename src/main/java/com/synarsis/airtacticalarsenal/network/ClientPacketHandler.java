@@ -47,7 +47,8 @@ public class ClientPacketHandler {
 
         ShahedEngineSoundClient existingSound = activeSounds.get(entityId);
         if (existingSound != null) {
-            if (existingSound.isStopped()) {
+            if (existingSound.isStopped() || !mc.getSoundManager().isActive(existingSound)) {
+                existingSound.discard();
                 activeSounds.remove(entityId);
             } else {
                 existingSound.updateDronePosition(currentPos);
@@ -162,7 +163,9 @@ public class ClientPacketHandler {
         Iterator<Map.Entry<Integer, ShahedEngineSoundClient>> iterator = activeSounds.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<Integer, ShahedEngineSoundClient> entry = iterator.next();
-            if (entry.getValue().isStopped()) {
+            ShahedEngineSoundClient sound = entry.getValue();
+            if (sound.isStopped() || !Minecraft.getInstance().getSoundManager().isActive(sound)) {
+                sound.discard();
                 iterator.remove();
             }
         }
@@ -205,8 +208,6 @@ public class ClientPacketHandler {
                     packet.hasLauncher(),
                     packet.getLauncherCount(),
                     packet.getFreeLaunchers(),
-                    packet.getLaunchCostShahed(),
-                    packet.getLaunchCostIskander(),
                     packet.getTargetY(),
                     packet.isBlacklistEnabled(),
                     packet.isWhitelistEnabled(),
@@ -265,7 +266,9 @@ public class ClientPacketHandler {
         OrlanEngineSoundClient existingSound = activeOrlanSounds.get(entityId);
 
         if (!isLanded) {
-            if (existingSound == null || existingSound.isStopped()) {
+            if (existingSound == null || existingSound.isStopped()
+                    || !mc.getSoundManager().isActive(existingSound)) {
+                if (existingSound != null) existingSound.forceStop();
                 OrlanEngineSoundClient sound = new OrlanEngineSoundClient(entityId, x, y, z);
                 activeOrlanSounds.put(entityId, sound);
                 mc.execute(sound::start);

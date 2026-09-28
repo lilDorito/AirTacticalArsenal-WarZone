@@ -110,7 +110,7 @@ public class CreateCompat {
         anyCreateDetected = !detectedModIds.isEmpty();
 
         if (anyCreateDetected) {
-            LOGGER.info("[ATA] Обнаружены моды экосистемы Create: {}. Защита активирована.", detectedModIds);
+            LOGGER.info("[ATA] Create ecosystem mods detected: {}. Block protection enabled.", detectedModIds);
         }
     }
 
@@ -203,8 +203,8 @@ public class CreateCompat {
         }
 
         if (!registered) {
-            LOGGER.warn("[ATA] Не удалось зарегистрировать блоки как неподвижные для Create. " +
-                    "Блоки ATA могут быть перемещены контрапциями.");
+            LOGGER.warn("[ATA] Could not register blocks as unmovable for Create. " +
+                    "ATA blocks may be moved by contraptions.");
         }
     }
 
@@ -257,13 +257,13 @@ public class CreateCompat {
                 );
 
                 registerMethod.invoke(null, checkProxy);
-                LOGGER.info("[ATA] BlockMovementChecks: {} блоков ATA помечены как UNMOVABLE (API: {})",
+                LOGGER.info("[ATA] BlockMovementChecks: {} ATA blocks marked UNMOVABLE (API: {})",
                         blockSet.size(), apiPath);
                 return true;
 
             } catch (ClassNotFoundException ignored) {
             } catch (Exception e) {
-                LOGGER.debug("[ATA] Ошибка при использовании {}: {}", apiPath, e.getMessage());
+                LOGGER.debug("[ATA] Error while using {}: {}", apiPath, e.getMessage());
             }
         }
         return false;
@@ -333,14 +333,14 @@ public class CreateCompat {
                 }
 
                 if (count > 0) {
-                    LOGGER.info("[ATA] ContraptionMovementSetting: {} блоков ATA помечены как UNMOVABLE (API: {})",
+                    LOGGER.info("[ATA] ContraptionMovementSetting: {} ATA blocks marked UNMOVABLE (API: {})",
                             count, settingPath);
                     return true;
                 }
 
             } catch (ClassNotFoundException ignored) {
             } catch (Exception e) {
-                LOGGER.debug("[ATA] Ошибка при использовании {}: {}", settingPath, e.getMessage());
+                LOGGER.debug("[ATA] Error while using {}: {}", settingPath, e.getMessage());
             }
         }
         return false;

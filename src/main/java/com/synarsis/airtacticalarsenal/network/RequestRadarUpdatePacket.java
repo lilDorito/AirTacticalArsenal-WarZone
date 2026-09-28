@@ -1,6 +1,7 @@
 package com.synarsis.airtacticalarsenal.network;
 
 import com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat;
+import com.synarsis.airtacticalarsenal.config.ShahedConfig;
 import com.synarsis.airtacticalarsenal.entity.ShahedEntity;
 import com.synarsis.airtacticalarsenal.entity.IskanderEntity;
 import com.synarsis.airtacticalarsenal.entity.OrlanEntity;
@@ -20,7 +21,6 @@ import java.util.function.Supplier;
 public class RequestRadarUpdatePacket {
     private final BlockPos radarPos;
     private static final int RADAR_RANGE = 1500;
-    private static final double RADAR_MIN_ALTITUDE = 90.0;
 
     public RequestRadarUpdatePacket(BlockPos radarPos) {
         this.radarPos = radarPos;
@@ -43,13 +43,20 @@ public class RequestRadarUpdatePacket {
             ServerLevel level = player.serverLevel();
             Vec3 radarCenter = Vec3.atCenterOf(radarPos);
 
+            double top = Math.max(level.getMaxBuildHeight(), ShahedConfig.getIskanderMaxFlightHeight()) + 64;
             AABB searchBox = new AABB(
-                radarCenter.x - RADAR_RANGE, radarCenter.y - 64, radarCenter.z - RADAR_RANGE,
-                radarCenter.x + RADAR_RANGE, radarCenter.y + 350, radarCenter.z + RADAR_RANGE
+                radarCenter.x - RADAR_RANGE, level.getMinBuildHeight(), radarCenter.z - RADAR_RANGE,
+                radarCenter.x + RADAR_RANGE, top, radarCenter.z + RADAR_RANGE
             );
 
             List<RadarUpdatePacket.TargetData> targets = new ArrayList<>();
+            int minAltitudeCfg = ShahedConfig.getRadarMinAltitude();
+            if (!com.synarsis.airtacticalarsenal.block.ShahedRadarBlock.hasOpenSky(level, radarPos)) {
+                NetworkHandler.sendToPlayer(player, new RadarUpdatePacket(radarPos, targets, minAltitudeCfg, false));
+                return;
+            }
             double rangeSquared = (double) RADAR_RANGE * RADAR_RANGE;
+            int minAltitude = ShahedConfig.getRadarMinAltitude();
 
             for (Entity entity : level.getEntities(null, searchBox)) {
                 byte type = -1;
@@ -66,7 +73,7 @@ public class RequestRadarUpdatePacket {
                 double dz = entity.getZ() - radarCenter.z;
                 if (dx * dx + dz * dz > rangeSquared) continue;
 
-                if (type != 1 && entity.getY() < RADAR_MIN_ALTITUDE) continue;
+                if (type != 1 && entity.getY() < minAltitude) continue;
 
                 Vec3 delta = entity.getDeltaMovement();
                 float speed = (float) Math.sqrt(delta.x * delta.x + delta.z * delta.z);
@@ -75,7 +82,7 @@ public class RequestRadarUpdatePacket {
                 ));
             }
 
-            NetworkHandler.sendToPlayer(player, new RadarUpdatePacket(radarPos, targets));
+            NetworkHandler.sendToPlayer(player, new RadarUpdatePacket(radarPos, targets, minAltitude, true));
         });
         return true;
     }

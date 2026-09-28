@@ -1,7 +1,6 @@
 package com.synarsis.airtacticalarsenal.block;
 
 import com.synarsis.airtacticalarsenal.block.entity.LauncherBlockEntity;
-import com.synarsis.airtacticalarsenal.block.entity.ModBlockEntities;
 import com.synarsis.airtacticalarsenal.block.entity.UnifiedTerminalBlockEntity;
 import com.synarsis.airtacticalarsenal.config.ShahedConfig;
 import com.synarsis.airtacticalarsenal.network.NetworkHandler;
@@ -108,8 +107,6 @@ public class UnifiedTerminalBlock extends Block implements EntityBlock {
                 }
             }
 
-            int launchCostShahed = ShahedConfig.LAUNCH_COST_COINS.get();
-            int launchCostIskander = ShahedConfig.getIskanderLaunchCost();
             int targetY = ShahedConfig.TARGET_Y_LEVEL.get();
             boolean blacklistEnabled = ShahedConfig.isBlacklistEnabled();
             boolean whitelistEnabled = ShahedConfig.isWhitelistEnabled();
@@ -135,7 +132,7 @@ public class UnifiedTerminalBlock extends Block implements EntityBlock {
 
             NetworkHandler.sendToPlayer(serverPlayer, new OpenUnifiedTerminalPacket(
                 pos, launchers, loadedStates, launchingStates, hasLauncher, launcherCount, freeLaunchers, 
-                launchCostShahed, launchCostIskander, targetY, blacklistEnabled, whitelistEnabled, 
+                targetY, blacklistEnabled, whitelistEnabled, 
                 blacklistZones, whitelistZones, launcherTargets, launcherDistances, launcherCEPs));
             return InteractionResult.SUCCESS;
         }

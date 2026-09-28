@@ -1,22 +1,23 @@
 modLoader="javafml"
 loaderVersion="[47,)"
-license="All Rights Reserved"
+license="Air Tactical Arsenal License (custom, non-commercial) - see LICENSE"
 
 [[mods]]
 modId="ata"
-version="1.1.0"
-displayName="Air Tactical Arsenal"
+version="${file.jarVersion}"
+displayName="Air Tactical Arsenal WarZone"
 description='''
 Adds tactical drones, missiles, radar systems and alert sirens to Minecraft.
+Unofficial fork of "Air Tactical Arsenal by Synarsis", adapted by lilDorito for the WarZone milsim modpack.
+Not affiliated with or endorsed by Synarsis. Non-commercial use only - see LICENSE.
 '''
-logoFile="logo.png"
-credits="For KrutEvent"
-authors="synarsis"
+credits="Air Tactical Arsenal by Synarsis (original mod, made for KrutEvent). WarZone fork by lilDorito."
+authors="Synarsis, lilDorito (WarZone fork)"
 
 [[dependencies.ata]]
 modId="forge"
 mandatory=true
-versionRange="[47,)"
+versionRange="[47.2,)"
 ordering="NONE"
 side="BOTH"
 
@@ -30,9 +31,9 @@ side="BOTH"
 [[dependencies.ata]]
 modId="geckolib"
 mandatory=true
-versionRange="[4.4,)"
+versionRange="[4.4.9,)"
 ordering="AFTER"
 side="BOTH"
 
 [[mixins]]
-config="ata.mixins.json"
+config="ata.compat.mixins.json"

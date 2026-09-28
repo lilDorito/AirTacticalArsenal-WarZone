@@ -1,5 +1,6 @@
 package com.synarsis.airtacticalarsenal.compat;
 
+import com.synarsis.airtacticalarsenal.config.ShahedConfig;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.fml.ModList;
@@ -46,8 +47,51 @@ public class SuperbWarfareCompat {
         return vvpLoaded;
     }
 
+    private static final String SW_AIR_IFACE        = SW_PKG + ".entity.vehicle.base.AirEntity";
+    private static final String SW_AIRCRAFT_IFACE   = SW_PKG + ".entity.vehicle.base.AircraftEntity";
+    private static final String SW_HELICOPTER_IFACE = SW_PKG + ".entity.vehicle.base.HelicopterEntity";
+    private static final String SW_DRONE_CLASS      = SW_PKG + ".entity.vehicle.DroneEntity";
+    private static boolean swClassesResolved = false;
+    private static Class<?> swAir, swAircraft, swHelicopter, swDrone;
+
+    private static Class<?> tryLoad(String name) {
+        try {
+            return Class.forName(name, false, SuperbWarfareCompat.class.getClassLoader());
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static void resolveSwClasses() {
+        if (swClassesResolved) return;
+        swClassesResolved = true;
+        if (!isLoaded()) return;
+        swAir        = tryLoad(SW_AIR_IFACE);
+        swAircraft   = tryLoad(SW_AIRCRAFT_IFACE);
+        swHelicopter = tryLoad(SW_HELICOPTER_IFACE);
+        swDrone      = tryLoad(SW_DRONE_CLASS);
+    }
+
     public static byte getRadarType(Entity entity) {
+        ResourceLocation regKey = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType());
+
+        if (regKey != null) {
+            String id = regKey.toString();
+            if (ShahedConfig.getRadarExcludedIds().contains(id))   return -1;
+            if (ShahedConfig.getRadarDroneIds().contains(id))      return TYPE_SW_DRONE;
+            if (ShahedConfig.getRadarHelicopterIds().contains(id)) return TYPE_SW_HELICOPTER;
+            if (ShahedConfig.getRadarPlaneIds().contains(id))      return TYPE_SW_PLANE;
+        }
+
         if (!isLoaded() && !isVvpLoaded()) return -1;
+
+        if (isLoaded()) {
+            resolveSwClasses();
+            if (swHelicopter != null && swHelicopter.isInstance(entity)) return TYPE_SW_HELICOPTER;
+            if (swAircraft   != null && swAircraft.isInstance(entity))   return TYPE_SW_PLANE;
+            if (swDrone      != null && swDrone.isInstance(entity))      return TYPE_SW_DRONE;
+            if (swAir        != null && swAir.isInstance(entity))        return TYPE_SW_PLANE;
+        }
 
         String pkg = entity.getClass().getName();
         boolean isSW  = isLoaded()    && pkg.startsWith(SW_PKG);
@@ -57,7 +101,6 @@ public class SuperbWarfareCompat {
         byte byHierarchy = classifyByHierarchy(entity);
         if (byHierarchy >= 0) return byHierarchy;
 
-        ResourceLocation regKey = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType());
         if (regKey != null) {
             byte byReg = classifyByRegistryPath(regKey.getPath());
             if (byReg >= 0) return byReg;
@@ -105,29 +148,5 @@ public class SuperbWarfareCompat {
             className.equals(VVP_PKG + ".entity.vehicle.CobraEntity")||
             className.equals(VVP_PKG + ".entity.vehicle.Nh90Entity")) return TYPE_SW_HELICOPTER;
         return -1;
-    }
-
-    public static boolean isVehicle(Entity entity) {
-        if (!isLoaded() && !isVvpLoaded()) return false;
-        String pkg = entity.getClass().getName();
-        boolean isSW  = isLoaded()    && pkg.startsWith(SW_PKG);
-        boolean isVVP = isVvpLoaded() && pkg.startsWith(VVP_PKG);
-        if (!isSW && !isVVP) return false;
-
-        Class<?> clazz = entity.getClass();
-        while (clazz != null && clazz != Object.class) {
-            if (clazz.getSimpleName().toLowerCase().contains("vehicle")) return true;
-            clazz = clazz.getSuperclass();
-        }
-        return false;
-    }
-
-    public static String getTypeName(byte type) {
-        return switch (type) {
-            case TYPE_SW_HELICOPTER -> "ВЕРТОЛЁТ";
-            case TYPE_SW_PLANE      -> "САМОЛЁТ";
-            case TYPE_SW_DRONE      -> "БПЛА";
-            default -> "?";
-        };
     }
 }

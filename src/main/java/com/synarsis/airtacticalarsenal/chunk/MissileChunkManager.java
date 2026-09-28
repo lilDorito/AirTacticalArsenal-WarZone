@@ -2,21 +2,15 @@ package com.synarsis.airtacticalarsenal.chunk;
 
 import com.synarsis.airtacticalarsenal.ShahedMod;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraftforge.common.world.ForgeChunkManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MissileChunkManager {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(MissileChunkManager.class);
-    private static final ResourceLocation TICKET_ID = new ResourceLocation(ShahedMod.MOD_ID, "missile_chunk");
 
     private static final int CHUNK_LOAD_RADIUS = 1;
 

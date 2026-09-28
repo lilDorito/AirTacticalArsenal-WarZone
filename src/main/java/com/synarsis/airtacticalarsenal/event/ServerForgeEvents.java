@@ -35,6 +35,17 @@ public class ServerForgeEvents {
     }
 
     @SubscribeEvent
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            NetworkHandler.sendToPlayer(serverPlayer, new com.synarsis.airtacticalarsenal.network.LanguagePolicyPacket(
+                    com.synarsis.airtacticalarsenal.config.ShahedConfig.isClientLanguageAllowed()));
+            NetworkHandler.sendToPlayer(serverPlayer, new com.synarsis.airtacticalarsenal.network.RouteLimitsPacket(
+                    com.synarsis.airtacticalarsenal.config.ShahedConfig.getShahedMaxRouteDistance(),
+                    com.synarsis.airtacticalarsenal.config.ShahedConfig.getOrlanMaxRouteDistance()));
+        }
+    }
+
+    @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
 

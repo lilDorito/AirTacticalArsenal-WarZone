@@ -48,3 +48,4 @@ replay_pid*.log
 
 # Vendored third-party jars (TacZ etc) — see libs/README.txt
 libs/*.jar
+javac.*.args

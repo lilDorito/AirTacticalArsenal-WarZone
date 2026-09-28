@@ -6,7 +6,6 @@ import com.synarsis.airtacticalarsenal.item.IskanderItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -66,26 +65,26 @@ public class LoadingHatchBlock extends Block implements EntityBlock {
         BlockPos launcherPos = hatch.getParentLauncher();
 
         if (launcherPos == null) {
-            player.sendSystemMessage(Component.literal("§cОшибка: ПУ не найдена!"));
+            player.sendSystemMessage(Component.translatable("message.ata.hatch.no_launcher"));
             return InteractionResult.FAIL;
         }
 
         if (heldItem.getItem() instanceof IskanderItem) {
             if (hatch.isLoaded()) {
-                player.sendSystemMessage(Component.literal("§cПУ уже загружена!"));
+                player.sendSystemMessage(Component.translatable("message.ata.hatch_full"));
                 return InteractionResult.FAIL;
             }
 
             BlockEntity launcherBECheck = world.getBlockEntity(launcherPos);
             if (launcherBECheck instanceof LauncherBlockEntity launcherCheck && launcherCheck.isInFlight()) {
-                player.sendSystemMessage(Component.literal("§cС этой ПУ уже запущен Искандер!"));
+                player.sendSystemMessage(Component.translatable("message.ata.hatch.iskander_in_flight"));
                 return InteractionResult.FAIL;
             }
 
             BlockState launcherState = world.getBlockState(launcherPos);
             if (launcherState.getBlock() instanceof LauncherBlock launcher) {
                 if (launcher.isBlocked(world, launcherPos)) {
-                    player.sendSystemMessage(Component.literal("§cПУ заблокирована! Уберите препятствия сверху."));
+                    player.sendSystemMessage(Component.translatable("message.ata.hatch.blocked"));
                     return InteractionResult.FAIL;
                 }
             }
@@ -96,8 +95,8 @@ public class LoadingHatchBlock extends Block implements EntityBlock {
 
             heldItem.shrink(1);
 
-            player.sendSystemMessage(Component.literal("§aРакета загружена в ПУ [" 
-                + launcherPos.getX() + ", " + launcherPos.getY() + ", " + launcherPos.getZ() + "]"));
+            player.sendSystemMessage(Component.translatable("message.ata.rocket_loaded",
+                launcherPos.getX(), launcherPos.getY(), launcherPos.getZ()));
 
             BlockState launcherState2 = world.getBlockState(launcherPos);
             if (launcherState2.getBlock() instanceof LauncherBlock launcher) {
@@ -118,7 +117,7 @@ public class LoadingHatchBlock extends Block implements EntityBlock {
 
         if (heldItem.isEmpty()) {
             if (!hatch.isLoaded()) {
-                player.sendSystemMessage(Component.literal("§eПУ пуста. Загрузите ракету."));
+                player.sendSystemMessage(Component.translatable("message.ata.hatch_empty"));
                 return InteractionResult.FAIL;
             }
 
@@ -126,7 +125,7 @@ public class LoadingHatchBlock extends Block implements EntityBlock {
             BlockEntity rocketBE = world.getBlockEntity(rocketPos);
             if (rocketBE instanceof com.synarsis.airtacticalarsenal.block.entity.IskanderRocketBlockEntity rocketEntity) {
                 if (rocketEntity.isLaunching()) {
-                    player.sendSystemMessage(Component.literal("§cНельзя выгрузить ракету во время запуска!"));
+                    player.sendSystemMessage(Component.translatable("message.ata.hatch.cannot_unload_launching"));
                     return InteractionResult.FAIL;
                 }
             }
@@ -136,8 +135,8 @@ public class LoadingHatchBlock extends Block implements EntityBlock {
                 player.drop(rocket, false);
             }
 
-            player.sendSystemMessage(Component.literal("§aРакета выгружена из ПУ [" 
-                + launcherPos.getX() + ", " + launcherPos.getY() + ", " + launcherPos.getZ() + "]"));
+            player.sendSystemMessage(Component.translatable("message.ata.rocket_unloaded",
+                launcherPos.getX(), launcherPos.getY(), launcherPos.getZ()));
 
             BlockPos rocketBlockPos = launcherPos.above();
             BlockState rocketState = world.getBlockState(rocketBlockPos);

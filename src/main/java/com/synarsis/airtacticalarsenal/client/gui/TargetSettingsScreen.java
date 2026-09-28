@@ -1,5 +1,7 @@
 package com.synarsis.airtacticalarsenal.client.gui;
 
+import com.synarsis.airtacticalarsenal.util.Tr;
+
 import com.synarsis.airtacticalarsenal.config.ShahedConfig;
 import com.synarsis.airtacticalarsenal.network.NetworkHandler;
 import com.synarsis.airtacticalarsenal.network.SetLauncherTargetPacket;
@@ -18,10 +20,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 @OnlyIn(Dist.CLIENT)
-public class TargetSettingsScreen extends Screen {
+public class TargetSettingsScreen extends AtaScaledScreen {
 
     private static final int GUI_WIDTH = 350;
     private static final int GUI_HEIGHT = 215;
+    
+    @Override
+    protected int designWidth() { return GUI_WIDTH; }
+
+    @Override
+    protected int designHeight() { return GUI_HEIGHT; }
 
     private final UnifiedTerminalScreen parentScreen;
     private final BlockPos launcherPos;
@@ -47,7 +55,7 @@ public class TargetSettingsScreen extends Screen {
     private String errorMessage = "";
 
     public TargetSettingsScreen(UnifiedTerminalScreen parent, BlockPos launcherPos, BlockPos terminalPos) {
-        super(Component.literal("Настройка цели"));
+        super(Component.translatable("gui.ata.target_settings.screen_title"));
         this.parentScreen = parent;
         this.launcherPos = launcherPos;
         this.terminalPos = terminalPos;
@@ -94,26 +102,26 @@ public class TargetSettingsScreen extends Screen {
         this.zCoordInput.setResponder(value -> recalculateParameters());
         this.addWidget(this.zCoordInput);
 
-        this.routeNameField = new EditBox(this.font, rightX + 65, guiTop + 90, 105, 18, Component.literal("Имя цели"));
+        this.routeNameField = new EditBox(this.font, rightX + 65, guiTop + 90, 105, 18, Component.translatable("gui.ata.target_name"));
         this.routeNameField.setMaxLength(20);
         if (selectedSavedRouteIndex >= 0 && selectedSavedRouteIndex < cachedSavedRoutes.size()) {
             this.routeNameField.setValue(cachedSavedRoutes.get(selectedSavedRouteIndex).name);
         }
         this.addWidget(this.routeNameField);
 
-        this.saveWaypointButton = Button.builder(Component.literal("СОХРАНИТЬ В СПИСОК"), b -> onSaveWaypoint())
+        this.saveWaypointButton = Button.builder(Component.translatable("gui.ata.target_settings.save_to_list"), b -> onSaveWaypoint())
                 .bounds(rightX, guiTop + 115, 110, 20).build();
         this.addWidget(this.saveWaypointButton);
 
-        this.deleteWaypointButton = Button.builder(Component.literal("УДАЛИТЬ"), b -> onDeleteWaypoint())
+        this.deleteWaypointButton = Button.builder(Component.translatable("gui.ata.button.delete_caps"), b -> onDeleteWaypoint())
                 .bounds(rightX + 115, guiTop + 115, 55, 20).build();
         this.addWidget(this.deleteWaypointButton);
 
-        this.cancelButton = Button.builder(Component.literal("ОТМЕНА"), b -> onCancel())
+        this.cancelButton = Button.builder(Component.translatable("gui.ata.button.cancel_caps"), b -> onCancel())
                 .bounds(rightX, guiTop + 180, 80, 20).build();
         this.addWidget(this.cancelButton);
 
-        this.saveButton = Button.builder(Component.literal("ПРИМЕНИТЬ"), b -> onSave())
+        this.saveButton = Button.builder(Component.translatable("gui.ata.button.apply_caps"), b -> onSave())
                 .bounds(rightX + 90, guiTop + 180, 80, 20).build();
         this.addWidget(this.saveButton);
 
@@ -260,7 +268,7 @@ public class TargetSettingsScreen extends Screen {
         } catch (NumberFormatException e) {
             calculatedDistance = 0;
             calculatedCEP = 0;
-            errorMessage = "§cНекорректные данные!";
+            errorMessage = Tr.s("gui.ata.target_settings.invalid");
             if (saveButton != null)
                 saveButton.active = false;
         }
@@ -283,12 +291,12 @@ public class TargetSettingsScreen extends Screen {
             Minecraft.getInstance().setScreen(parentScreen);
 
         } catch (NumberFormatException e) {
-            errorMessage = "§cОшибка сохранения!";
+            errorMessage = Tr.s("gui.ata.target_settings.save_error");
         }
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderScaled(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(guiGraphics);
         int guiLeft = (this.width - GUI_WIDTH) / 2;
         int guiTop = (this.height - GUI_HEIGHT) / 2;
@@ -307,9 +315,9 @@ public class TargetSettingsScreen extends Screen {
         guiGraphics.fill(guiLeft + 8, guiTop + 28, guiLeft + 10, guiTop + 152, 0xFF444444);
         guiGraphics.fill(guiLeft + 140, guiTop + 28, guiLeft + 142, guiTop + 152, 0xFF444444);
 
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        super.renderScaled(guiGraphics, mouseX, mouseY, partialTick);
 
-        String title = String.format("НАСТРОЙКА ЦЕЛИ [%d, %d, %d]",
+        String title = Tr.s("gui.ata.target_settings.header",
                 launcherPos.getX(), launcherPos.getY(), launcherPos.getZ());
         int titleWidth = this.font.width(title);
         guiGraphics.drawString(this.font, title, guiLeft + (GUI_WIDTH - titleWidth) / 2, guiTop + 10, borderColor,
@@ -318,9 +326,9 @@ public class TargetSettingsScreen extends Screen {
         guiGraphics.fill(guiLeft + 10, guiTop + 22, guiLeft + GUI_WIDTH - 10, guiTop + 23, borderColor);
 
         int rightX = guiLeft + 160;
-        guiGraphics.drawString(this.font, "Коорд. X:", rightX, guiTop + 45, 0xFFFFFF, false);
-        guiGraphics.drawString(this.font, "Коорд. Z:", rightX, guiTop + 70, 0xFFFFFF, false);
-        guiGraphics.drawString(this.font, "Имя цели:", rightX, guiTop + 95, 0xAAAAAA, false);
+        guiGraphics.drawString(this.font, Tr.s("gui.ata.coord_x_short"), rightX, guiTop + 45, 0xFFFFFF, false);
+        guiGraphics.drawString(this.font, Tr.s("gui.ata.coord_z_short"), rightX, guiTop + 70, 0xFFFFFF, false);
+        guiGraphics.drawString(this.font, Tr.s("gui.ata.target_name_label"), rightX, guiTop + 95, 0xAAAAAA, false);
 
         int sepY = guiTop + 142;
         guiGraphics.fill(rightX, sepY, guiLeft + GUI_WIDTH - 10, sepY + 1, 0xFF444444);
@@ -329,18 +337,18 @@ public class TargetSettingsScreen extends Screen {
         int maxDist = ShahedConfig.getIskanderMaxRange();
 
         if (calculatedDistance > 0) {
-            String distStr = String.format("Дист.: %.0f бл.", calculatedDistance);
+            String distStr = Tr.s("gui.ata.target_settings.dist", calculatedDistance);
             guiGraphics.drawString(this.font, distStr, rightX, sepY + 8, 0xAAAAAA, false);
 
-            String cepStr = String.format("КВО: ±%.0f", calculatedCEP);
+            String cepStr = Tr.s("gui.ata.target_settings.cep", calculatedCEP);
             guiGraphics.drawString(this.font, cepStr, rightX, sepY + 20, 0xAAAAAA, false);
 
-            String rangeStr = String.format("Мин: %d Макс: %d", minDist, maxDist);
+            String rangeStr = Tr.s("gui.ata.target_settings.range", minDist, maxDist);
             int rangeColor = (calculatedDistance < minDist || calculatedDistance > maxDist) ? 0xFF5555 : 0x55FF55;
             guiGraphics.drawString(this.font, rangeStr, rightX + 65, sepY + 20, rangeColor, false);
         } else {
-            guiGraphics.drawString(this.font, "Дист.: ----", rightX, sepY + 8, 0x888888, false);
-            guiGraphics.drawString(this.font, "КВО: ----", rightX, sepY + 20, 0x888888, false);
+            guiGraphics.drawString(this.font, Tr.s("gui.ata.target_settings.dist_none"), rightX, sepY + 8, 0x888888, false);
+            guiGraphics.drawString(this.font, Tr.s("gui.ata.target_settings.cep_none"), rightX, sepY + 20, 0x888888, false);
         }
 
         this.xCoordInput.render(guiGraphics, mouseX, mouseY, partialTick);
@@ -369,7 +377,7 @@ public class TargetSettingsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolledScaled(double mouseX, double mouseY, double delta) {
         int guiLeft = (this.width - GUI_WIDTH) / 2;
         int guiTop = (this.height - GUI_HEIGHT) / 2;
         if (mouseX >= guiLeft + 8 && mouseX <= guiLeft + 142 && mouseY >= guiTop + 28 && mouseY <= guiTop + 152) {
@@ -380,7 +388,7 @@ public class TargetSettingsScreen extends Screen {
             }
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolledScaled(mouseX, mouseY, delta);
     }
 
     @Override

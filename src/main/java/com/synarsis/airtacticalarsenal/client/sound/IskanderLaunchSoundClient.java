@@ -25,7 +25,6 @@ public class IskanderLaunchSoundClient extends AbstractTickableSoundInstance {
     private long explosionTime = 0L;
     private float pitchAtExplosion = 1.0f;
     private float volumeAtExplosion = 1.0f;
-    private static final double MAX_SOUND_DISTANCE = 200.0;
 
     private Vec3 currentRocketPos;
     private boolean isLateJoin = false;

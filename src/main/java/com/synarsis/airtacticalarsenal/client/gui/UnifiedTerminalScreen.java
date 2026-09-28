@@ -1,5 +1,7 @@
 package com.synarsis.airtacticalarsenal.client.gui;
 
+import com.synarsis.airtacticalarsenal.util.Tr;
+
 import com.synarsis.airtacticalarsenal.config.ShahedConfig;
 import com.synarsis.airtacticalarsenal.item.ModItems;
 import com.synarsis.airtacticalarsenal.network.LaunchRocketPacket;
@@ -21,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 @OnlyIn(Dist.CLIENT)
-public class UnifiedTerminalScreen extends Screen {
+public class UnifiedTerminalScreen extends AtaScaledScreen {
 
     public enum LauncherState {
         EMPTY,      
@@ -31,6 +33,12 @@ public class UnifiedTerminalScreen extends Screen {
     }
     private static final int GUI_WIDTH = 320;
     private static final int GUI_HEIGHT = 320;
+    
+    @Override
+    protected int designWidth() { return GUI_WIDTH; }
+
+    @Override
+    protected int designHeight() { return GUI_HEIGHT; }
     private static final int ROCKET_PREP_TICKS = 140;
 
     private final BlockPos terminalPos;
@@ -39,8 +47,6 @@ public class UnifiedTerminalScreen extends Screen {
     private final boolean hasLauncher;
     private final int launcherCount;
     private final int freeLaunchers;
-    private final int launchCostShahed;
-    private final int launchCostIskander;
     private final int targetY;
     private final boolean blacklistEnabled;
     private final boolean whitelistEnabled;
@@ -58,7 +64,6 @@ public class UnifiedTerminalScreen extends Screen {
     private final Map<BlockPos, LauncherState> launcherStateMap = new HashMap<>();
     private final Map<BlockPos, int[]> launcherTimersMap = new HashMap<>(); 
 
-    private int selectedLauncherIndex = -1;
     private String errorMessage = "";
     private int playerCoins = 0;
     private int playerRockets = 0;
@@ -68,7 +73,7 @@ public class UnifiedTerminalScreen extends Screen {
     public UnifiedTerminalScreen(BlockPos terminalPos, List<BlockPos> launcherPositions, List<Boolean> loadedStates,
                                  List<Boolean> launchingStates,
                                  boolean hasLauncher, int launcherCount, int freeLaunchers, 
-                                 int launchCostShahed, int launchCostIskander, int targetY,
+                                 int targetY,
                                  boolean blacklistEnabled, boolean whitelistEnabled,
                                  List<String> blacklistZones, List<String> whitelistZones) {
         super(Component.translatable("gui.ata.unified_terminal.title"));
@@ -77,8 +82,6 @@ public class UnifiedTerminalScreen extends Screen {
         this.hasLauncher = hasLauncher;
         this.launcherCount = launcherCount;
         this.freeLaunchers = freeLaunchers;
-        this.launchCostShahed = launchCostShahed;
-        this.launchCostIskander = launchCostIskander;
         this.targetY = targetY;
         this.blacklistEnabled = blacklistEnabled;
         this.whitelistEnabled = whitelistEnabled;
@@ -216,7 +219,7 @@ public class UnifiedTerminalScreen extends Screen {
 
             boolean showButtons = (state == LauncherState.EMPTY || state == LauncherState.LOADED);
 
-            Button targetBtn = Button.builder(Component.literal("ЦЕЛЬ"),
+            Button targetBtn = Button.builder(Component.translatable("gui.ata.unified_terminal.target_btn"),
                     button -> openTargetSettings(launcherIdx))
                     .bounds(buttonRightEdge - targetBtnWidth, buttonY, targetBtnWidth, 16)
                     .build();
@@ -228,7 +231,7 @@ public class UnifiedTerminalScreen extends Screen {
             boolean hasTarget = launcherTargets.containsKey(launcherPos);
             boolean canLaunch = state == LauncherState.LOADED && hasTarget;
 
-            Button launchBtn = Button.builder(Component.literal("ПУСК"),
+            Button launchBtn = Button.builder(Component.translatable("gui.ata.unified_terminal.launch_btn"),
                     button -> onLaunchRocket(launcherIdx))
                     .bounds(buttonRightEdge - targetBtnWidth - buttonSpacing - launchBtnWidth, buttonY, launchBtnWidth, 16)
                     .build();
@@ -320,7 +323,7 @@ public class UnifiedTerminalScreen extends Screen {
 
         BlockPos target = launcherTargets.get(launcherPos);
         if (target == null) {
-            this.errorMessage = "§cЦель не задана! Нажмите ЦЕЛЬ для настройки.";
+            this.errorMessage = Tr.s("gui.ata.unified_terminal.no_target");
             return;
         }
 
@@ -393,7 +396,7 @@ public class UnifiedTerminalScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderScaled(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(guiGraphics);
         int guiLeft = (this.width - GUI_WIDTH) / 2;
         int guiTop = (this.height - GUI_HEIGHT) / 2;
@@ -407,21 +410,21 @@ public class UnifiedTerminalScreen extends Screen {
         guiGraphics.fill(guiLeft, guiTop, guiLeft + 2, guiTop + GUI_HEIGHT, borderColor);
         guiGraphics.fill(guiLeft + GUI_WIDTH - 2, guiTop, guiLeft + GUI_WIDTH, guiTop + GUI_HEIGHT, borderColor);
 
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        super.renderScaled(guiGraphics, mouseX, mouseY, partialTick);
 
-        String title = "ТЕРМИНАЛ УПРАВЛЕНИЯ ИСКАНДЕР-М";
+        String title = Tr.s("gui.ata.unified_terminal.header");
         int titleWidth = this.font.width(title);
         guiGraphics.drawString(this.font, title, guiLeft + (GUI_WIDTH - titleWidth) / 2, guiTop + 10, borderColor, false);
 
         guiGraphics.fill(guiLeft + 10, guiTop + 28, guiLeft + GUI_WIDTH - 10, guiTop + 29, borderColor);
 
         double cruiseSpeed = ShahedConfig.getIskanderCruiseSpeed() * 20;
-        String speedStr = String.format("Скорость ракеты: %.1f бл/с", cruiseSpeed);
+        String speedStr = Tr.s("gui.ata.unified_terminal.missile_speed", cruiseSpeed);
         guiGraphics.drawString(this.font, speedStr, guiLeft + 20, guiTop + 38, 0xAAAAAA, false);
 
         int minDist = ShahedConfig.getIskanderMinDistance();
         int maxDist = ShahedConfig.getIskanderMaxRange();
-        String rangeStr = String.format("Дальность: %d - %d блоков", minDist, maxDist);
+        String rangeStr = Tr.s("gui.ata.unified_terminal.range", minDist, maxDist);
         guiGraphics.drawString(this.font, rangeStr, guiLeft + 20, guiTop + 50, 0xAAAAAA, false);
 
         guiGraphics.fill(guiLeft + 10, guiTop + 65, guiLeft + GUI_WIDTH - 10, guiTop + 66, 0xFF444444);
@@ -435,10 +438,10 @@ public class UnifiedTerminalScreen extends Screen {
             }
             int freeLaunchersCount = totalLaunchers - loadedCount;
 
-            String launcherTitle = "Пусковые установки:";
+            String launcherTitle = Tr.s("gui.ata.unified_terminal.launchers_title");
             guiGraphics.drawString(this.font, launcherTitle, guiLeft + 20, guiTop + 72, 0xFFAA00, false);
 
-            String stats = String.format("Всего: %d | Занято: %d | Свободно: %d", 
+            String stats = Tr.s("gui.ata.unified_terminal.stats", 
                 totalLaunchers, loadedCount, freeLaunchersCount);
             guiGraphics.drawString(this.font, stats, guiLeft + 130, guiTop + 72, 0x55FF55, false);
 
@@ -456,7 +459,7 @@ public class UnifiedTerminalScreen extends Screen {
 
                 guiGraphics.fill(guiLeft + 15, y, guiLeft + GUI_WIDTH - 15, y + entryHeight - 4, 0xFF222222);
 
-                String posStr = String.format("ПУ #%d [%d, %d, %d]", idx + 1, pos.getX(), pos.getY(), pos.getZ());
+                String posStr = Tr.s("gui.ata.unified_terminal.launcher_pos", idx + 1, pos.getX(), pos.getY(), pos.getZ());
                 guiGraphics.drawString(this.font, posStr, guiLeft + 20, y + 3, 0xCCCCCC, false);
 
                 LauncherState state = getLauncherState(idx);
@@ -469,20 +472,20 @@ public class UnifiedTerminalScreen extends Screen {
                     case COUNTDOWN -> {
                         int remainingTicks = timers[1] - timers[0];
                         int remainingSeconds = (int) Math.ceil(remainingTicks / 20.0);
-                        status = String.format("▶ Старт через: %d сек", remainingSeconds);
+                        status = Tr.s("gui.ata.unified_terminal.starting_in", remainingSeconds);
                         statusColor = 0xFFFF00;
                     }
                     case IN_FLIGHT -> {
                         int flightSeconds = timers[2] / 20;
-                        status = String.format("▶ В полёте: %d сек", flightSeconds);
+                        status = Tr.s("gui.ata.unified_terminal.in_flight_for", flightSeconds);
                         statusColor = 0xFFA500;
                     }
                     case LOADED -> {
-                        status = "► ЗАРЯЖЕНО: Искандер-М";
+                        status = Tr.s("gui.ata.unified_terminal.loaded_status");
                         statusColor = 0x55FF55;
                     }
                     default -> {
-                        status = "► ПУСТО";
+                        status = Tr.s("gui.ata.unified_terminal.empty_status");
                         statusColor = 0xFF5555;
                     }
                 }
@@ -492,12 +495,12 @@ public class UnifiedTerminalScreen extends Screen {
                 if (state == LauncherState.EMPTY || state == LauncherState.LOADED) {
                     BlockPos target = launcherTargets.get(pos);
                     if (target != null) {
-                        targetText = String.format("Цель: [X: %d, Z: %d]", target.getX(), target.getZ());
+                        targetText = Tr.s("gui.ata.unified_terminal.target_xz", target.getX(), target.getZ());
                     } else {
-                        targetText = "Цель: не задана";
+                        targetText = Tr.s("gui.ata.unified_terminal.target_unset");
                     }
                 } else {
-                    targetText = "Цель: в полёте";
+                    targetText = Tr.s("gui.ata.unified_terminal.target_in_flight");
                 }
                 guiGraphics.drawString(this.font, targetText, guiLeft + 20, y + 25, 0xAAAAAA, false);
 
@@ -506,18 +509,18 @@ public class UnifiedTerminalScreen extends Screen {
                     BlockPos target = launcherTargets.get(pos);
                     if (target != null) {
                         Double dist = launcherDistances.get(pos);
-                        distText = String.format("Дистанция: %.0f блоков", dist != null ? dist : 0.0);
+                        distText = Tr.s("gui.ata.unified_terminal.dist_blocks", dist != null ? dist : 0.0);
                     } else {
-                        distText = "Дистанция: -";
+                        distText = Tr.s("gui.ata.unified_terminal.dist_dash");
                     }
                 } else {
-                    distText = "Дистанция: ---";
+                    distText = Tr.s("gui.ata.unified_terminal.dist_dashes");
                 }
                 guiGraphics.drawString(this.font, distText, guiLeft + 20, y + 36, 0xAAAAAA, false);
             }
 
             if (launcherPositions.isEmpty()) {
-                guiGraphics.drawString(this.font, "Нет подключенных ПУ", guiLeft + 20, startY + 10, 0xFF5555, false);
+                guiGraphics.drawString(this.font, Tr.s("gui.ata.unified_terminal.no_launchers"), guiLeft + 20, startY + 10, 0xFF5555, false);
             }
         }
 
@@ -535,13 +538,13 @@ public class UnifiedTerminalScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolledScaled(double mouseX, double mouseY, double delta) {
 
         if (launcherPositions.size() > 4) {
             scrollOffset = Math.max(0, Math.min(scrollOffset - (int)delta, launcherPositions.size() - 4));
             rebuildLauncherButtons();
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolledScaled(mouseX, mouseY, delta);
     }
 
     @Override

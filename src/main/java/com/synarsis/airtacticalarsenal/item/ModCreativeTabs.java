@@ -17,7 +17,7 @@ public class ModCreativeTabs {
     public static final RegistryObject<CreativeModeTab> ATA_TAB = CREATIVE_MODE_TABS.register("ata_tab",
             () -> CreativeModeTab.builder()
                     .icon(() -> new ItemStack(ModBlocks.UNIFIED_TERMINAL.get()))
-                    .title(Component.translatable("itemGroup.ata"))
+                    .title(Component.literal("Air Tactical Arsenal WarZone"))
                     .displayItems((parameters, output) -> {
                         output.accept(ModBlocks.SHAHED_RADAR.get());
                         output.accept(ModBlocks.SIREN.get());

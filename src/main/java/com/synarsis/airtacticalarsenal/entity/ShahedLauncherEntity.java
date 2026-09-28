@@ -13,7 +13,6 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -186,13 +185,13 @@ public class ShahedLauncherEntity extends Entity implements GeoEntity {
                 if (added) {
                     int count = ControlTabletItem.getLauncherCount(held);
                     player.displayClientMessage(Component
-                            .literal("§aПУ подключена [" + count + "/" + ControlTabletItem.MAX_LAUNCHERS + "]"), true);
+                            .translatable("message.ata.shahed_launcher.linked", count, ControlTabletItem.MAX_LAUNCHERS), true);
                 } else {
                     if (ControlTabletItem.getLauncherCount(held) >= ControlTabletItem.MAX_LAUNCHERS) {
                         player.displayClientMessage(
-                                Component.literal("§cМакс. количество ПУ: " + ControlTabletItem.MAX_LAUNCHERS), true);
+                                Component.translatable("message.ata.launcher.max_linked", ControlTabletItem.MAX_LAUNCHERS), true);
                     } else {
-                        player.displayClientMessage(Component.literal("§eПУ уже подключена"), true);
+                        player.displayClientMessage(Component.translatable("message.ata.launcher.already_linked"), true);
                     }
                 }
             }
@@ -206,7 +205,7 @@ public class ShahedLauncherEntity extends Entity implements GeoEntity {
 
         if (held.getItem() instanceof ShahedItem) {
             if (hasDrone()) {
-                player.displayClientMessage(Component.literal("§cНа ПУ уже установлен дрон!"), true);
+                player.displayClientMessage(Component.translatable("message.ata.launcher.drone_already_mounted"), true);
                 return InteractionResult.FAIL;
             }
 

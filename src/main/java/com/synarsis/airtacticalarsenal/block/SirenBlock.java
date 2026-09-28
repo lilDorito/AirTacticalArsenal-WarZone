@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 
 public class SirenBlock extends Block {
+    private static final int SIREN_LOOP_TICKS = 572;
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
 
     public SirenBlock(Properties properties) {
@@ -36,6 +37,8 @@ public class SirenBlock extends Block {
 
                 if (powered) {
                     level.scheduleTick(pos, this, 1);
+                } else {
+                    NetworkHandler.sendToDimension(level, new SirenSoundPacket(pos, true));
                 }
             }
         }
@@ -44,8 +47,8 @@ public class SirenBlock extends Block {
     @Override
     public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
         if (state.getValue(POWERED)) {
-            NetworkHandler.sendToAllPlayers(new SirenSoundPacket(pos));
-            level.scheduleTick(pos, this, 500);
+            NetworkHandler.sendToDimension(level, new SirenSoundPacket(pos));
+            level.scheduleTick(pos, this, SIREN_LOOP_TICKS);
         }
     }
 
@@ -62,7 +65,7 @@ public class SirenBlock extends Block {
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock())) {
             if (!level.isClientSide) {
-                NetworkHandler.sendToAllPlayers(new SirenSoundPacket(pos, true));
+                NetworkHandler.sendToDimension(level, new SirenSoundPacket(pos, true));
             }
         }
         super.onRemove(state, level, pos, newState, isMoving);

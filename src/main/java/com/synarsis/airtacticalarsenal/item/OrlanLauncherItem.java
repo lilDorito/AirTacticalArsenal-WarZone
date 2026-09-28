@@ -72,13 +72,13 @@ public class OrlanLauncherItem extends Item implements GeoItem {
         BlockPos placePos = face == Direction.UP ? clickedPos.above() : clickedPos.relative(face);
 
         if (!serverLevel.isEmptyBlock(placePos)) {
-            player.displayClientMessage(Component.literal("§cМесто занято!"), true);
+            player.displayClientMessage(Component.translatable("message.ata.place.occupied"), true);
             return InteractionResult.FAIL;
         }
 
         BlockState support = serverLevel.getBlockState(placePos.below());
         if (!support.isFaceSturdy(serverLevel, placePos.below(), Direction.UP)) {
-            player.displayClientMessage(Component.literal("§cНужна твёрдая поверхность!"), true);
+            player.displayClientMessage(Component.translatable("message.ata.place.need_solid"), true);
             return InteractionResult.FAIL;
         }
 
@@ -86,7 +86,7 @@ public class OrlanLauncherItem extends Item implements GeoItem {
         List<OrlanLauncherEntity> nearbyLaunchers = serverLevel.getEntitiesOfClass(
                 OrlanLauncherEntity.class, checkArea, e -> e.isAlive());
         if (!nearbyLaunchers.isEmpty()) {
-            player.displayClientMessage(Component.literal("§cСлишком близко к другой ПУ! Мин. 5 блоков"), true);
+            player.displayClientMessage(Component.translatable("message.ata.place.too_close_launcher"), true);
             return InteractionResult.FAIL;
         }
 
@@ -106,7 +106,7 @@ public class OrlanLauncherItem extends Item implements GeoItem {
 
         if (!serverLevel.noCollision(launcher)) {
             launcher.discard();
-            player.displayClientMessage(Component.literal("§cНедостаточно места!"), true);
+            player.displayClientMessage(Component.translatable("message.ata.place.not_enough_space"), true);
             return InteractionResult.FAIL;
         }
 
@@ -122,10 +122,10 @@ public class OrlanLauncherItem extends Item implements GeoItem {
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.literal("§7Мобильная пусковая установка"));
-        tooltip.add(Component.literal("§7для БПЛА Орлан-10"));
+        tooltip.add(Component.translatable("tooltip.ata.launcher.mobile"));
+        tooltip.add(Component.translatable("tooltip.ata.orlan_launcher.for"));
         tooltip.add(Component.literal(""));
-        tooltip.add(Component.literal("§7ПКМ по блоку - разместить"));
+        tooltip.add(Component.translatable("tooltip.ata.place_hint"));
         super.appendHoverText(stack, level, tooltip, flag);
     }
 }

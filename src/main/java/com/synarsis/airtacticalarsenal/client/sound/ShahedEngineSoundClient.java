@@ -28,7 +28,6 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance {
     private float pitchAtExplosion = 1.0f;
     private float volumeAtExplosion = 1.0f;
     private static final double CRUISE_SPEED = 1.5;
-    private static final double MAX_SOUND_DISTANCE = 500.0;
     private double diveDistance;
     private double diveTransitionDistance;
     private double modeSwitchDistance;
@@ -51,7 +50,7 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance {
 
     private int ticksAlive = 0;
     private int ticksEntityNotFound = 0;
-    private static final int MAX_LIFETIME_TICKS = 6000; 
+    private static final int MAX_LIFETIME_TICKS = 2 * 60 * 60 * 20;
     private static final int MAX_ENTITY_NOT_FOUND_TICKS = 200; 
 
     private Vec3 lastServerPos = null;
@@ -447,6 +446,10 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance {
         if (!this.exploded) {
             this.shouldStop = true;
         }
+    }
+
+    public void discard() {
+        this.forceStop();
     }
 
     public void markEntityRemovedLocally() {

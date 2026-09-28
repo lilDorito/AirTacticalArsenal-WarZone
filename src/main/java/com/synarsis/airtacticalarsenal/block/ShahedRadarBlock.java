@@ -1,5 +1,6 @@
 package com.synarsis.airtacticalarsenal.block;
 
+import com.synarsis.airtacticalarsenal.block.entity.ShahedRadarBlockEntity;
 import com.synarsis.airtacticalarsenal.entity.ShahedEntity;
 import com.synarsis.airtacticalarsenal.entity.IskanderEntity;
 import com.synarsis.airtacticalarsenal.network.NetworkHandler;
@@ -18,8 +19,12 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
@@ -28,10 +33,20 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.fml.ModList;
 
 import java.util.List;
 
-public class ShahedRadarBlock extends Block {
+public class ShahedRadarBlock extends Block implements EntityBlock {
+
+    public static final boolean SBW_LOOK = ModList.get().isLoaded("superbwarfare");
+
+    private static final VoxelShape FUMO_SHAPE = Shapes.or(
+            Block.box(1.0, 0.0, 1.0, 15.0, 6.0, 15.0),
+            Block.box(6.0, 6.0, 6.0, 10.0, 58.0, 10.0));
 
     @Override
     public PushReaction getPistonPushReaction(BlockState state) {
@@ -51,6 +66,21 @@ public class ShahedRadarBlock extends Block {
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING, POWER);
+    }
+
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SBW_LOOK ? FUMO_SHAPE : Shapes.block();
+    }
+
+    @Override
+    public RenderShape getRenderShape(BlockState state) {
+        return SBW_LOOK ? RenderShape.ENTITYBLOCK_ANIMATED : RenderShape.MODEL;
+    }
+
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new ShahedRadarBlockEntity(pos, state);
     }
 
     @Override
@@ -96,14 +126,33 @@ public class ShahedRadarBlock extends Block {
 
         ServerTerrainScanner.getOrCreate(pos, level);
 
+        if (!level.getChunkAt(pos).getBlockEntities().containsKey(pos)) {
+            level.getBlockEntity(pos);
+            level.getChunkSource().blockChanged(pos);
+        }
+
         level.scheduleTick(pos, this, 20);
     }
 
+    public static boolean hasOpenSky(Level level, BlockPos pos) {
+        if (!com.synarsis.airtacticalarsenal.config.ShahedConfig.isRadarOpenSkyRequired()) return true;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, pos.getX() + dx, pos.getZ() + dz);
+                if (top > pos.getY() + 1) return false;
+            }
+        }
+        return true;
+    }
+
     private int calculateSignalStrength(ServerLevel level, BlockPos pos) {
+        if (!hasOpenSky(level, pos)) return 0;
         Vec3 radarCenter = Vec3.atCenterOf(pos);
+        double top = Math.max(level.getMaxBuildHeight(),
+                com.synarsis.airtacticalarsenal.config.ShahedConfig.getIskanderMaxFlightHeight()) + 64;
         AABB searchBox = new AABB(
-            radarCenter.x - RADAR_RANGE, radarCenter.y - 64, radarCenter.z - RADAR_RANGE,
-            radarCenter.x + RADAR_RANGE, radarCenter.y + 400, radarCenter.z + RADAR_RANGE
+            radarCenter.x - RADAR_RANGE, level.getMinBuildHeight(), radarCenter.z - RADAR_RANGE,
+            radarCenter.x + RADAR_RANGE, top, radarCenter.z + RADAR_RANGE
         );
 
         double closestDistance = Double.MAX_VALUE;

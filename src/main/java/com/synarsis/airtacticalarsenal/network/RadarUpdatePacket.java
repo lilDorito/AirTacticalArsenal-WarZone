@@ -15,6 +15,8 @@ import java.util.function.Supplier;
 public class RadarUpdatePacket {
     private final BlockPos radarPos;
     private final List<TargetData> targets;
+    private final int minAltitude;
+    private final boolean openSky;
 
     public static class TargetData {
         public final int entityId;
@@ -32,13 +34,17 @@ public class RadarUpdatePacket {
         }
     }
 
-    public RadarUpdatePacket(BlockPos radarPos, List<TargetData> targets) {
+    public RadarUpdatePacket(BlockPos radarPos, List<TargetData> targets, int minAltitude, boolean openSky) {
         this.radarPos = radarPos;
         this.targets = targets;
+        this.minAltitude = minAltitude;
+        this.openSky = openSky;
     }
 
     public RadarUpdatePacket(FriendlyByteBuf buf) {
         this.radarPos = buf.readBlockPos();
+        this.minAltitude = buf.readInt();
+        this.openSky = buf.readBoolean();
         int count = buf.readInt();
         this.targets = new ArrayList<>();
         for (int i = 0; i < count; i++) {
@@ -54,6 +60,8 @@ public class RadarUpdatePacket {
 
     public void toBytes(FriendlyByteBuf buf) {
         buf.writeBlockPos(this.radarPos);
+        buf.writeInt(this.minAltitude);
+        buf.writeBoolean(this.openSky);
         buf.writeInt(this.targets.size());
         for (TargetData t : targets) {
             buf.writeInt(t.entityId);
@@ -69,13 +77,13 @@ public class RadarUpdatePacket {
     public boolean handle(Supplier<NetworkEvent.Context> supplier) {
         NetworkEvent.Context ctx = supplier.get();
         ctx.enqueueWork(() -> {
-            DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () -> handleClient(radarPos, targets));
+            DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () -> handleClient(radarPos, targets, minAltitude, openSky));
         });
         return true;
     }
 
     @OnlyIn(Dist.CLIENT)
-    private static void handleClient(BlockPos radarPos, List<TargetData> targets) {
-        com.synarsis.airtacticalarsenal.client.gui.ShahedRadarScreen.updateTargets(radarPos, targets);
+    private static void handleClient(BlockPos radarPos, List<TargetData> targets, int minAltitude, boolean openSky) {
+        com.synarsis.airtacticalarsenal.client.gui.ShahedRadarScreen.updateTargets(radarPos, targets, minAltitude, openSky);
     }
 }

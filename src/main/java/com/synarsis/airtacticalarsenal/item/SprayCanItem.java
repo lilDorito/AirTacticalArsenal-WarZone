@@ -7,13 +7,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -23,7 +21,6 @@ import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
@@ -134,7 +131,7 @@ public class SprayCanItem extends Item implements GeoItem {
             if (hasWater(stack)) {
 
                 if (level.isClientSide) {
-                    player.displayClientMessage(Component.literal("§7Вода уже залита"), true);
+                    player.displayClientMessage(Component.translatable("message.ata.spray.water_already"), true);
                 }
                 return InteractionResult.FAIL;
             }
@@ -181,7 +178,7 @@ public class SprayCanItem extends Item implements GeoItem {
                     return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
                 } else {
                     if (level.isClientSide) {
-                        player.displayClientMessage(Component.literal("§7Вода уже залита"), true);
+                        player.displayClientMessage(Component.translatable("message.ata.spray.water_already"), true);
                     }
                     return InteractionResultHolder.pass(stack);
                 }
@@ -290,25 +287,25 @@ public class SprayCanItem extends Item implements GeoItem {
         int charge = getCharge(stack);
 
         if (charge > 0) {
-            tooltip.add(Component.literal("§7Заряд: §f" + charge + "§7/" + MAX_CHARGE));
+            tooltip.add(Component.translatable("tooltip.ata.spray.charge", charge, MAX_CHARGE));
         } else {
-            tooltip.add(Component.literal("§cПусто"));
+            tooltip.add(Component.translatable("tooltip.ata.spray.empty"));
         }
 
         if (hasWater(stack)) {
-            tooltip.add(Component.literal("§9💧 Вода залита"));
+            tooltip.add(Component.translatable("tooltip.ata.spray.has_water"));
         } else {
-            tooltip.add(Component.literal("§8💧 Нужна вода"));
+            tooltip.add(Component.translatable("tooltip.ata.spray.needs_water"));
         }
 
         tooltip.add(Component.literal(""));
-        tooltip.add(Component.literal("§7Зажать ПКМ - распылять"));
-        tooltip.add(Component.literal("§7Направить на стойку - покраска"));
+        tooltip.add(Component.translatable("tooltip.ata.spray.use"));
+        tooltip.add(Component.translatable("tooltip.ata.spray.paint"));
         tooltip.add(Component.literal(""));
-        tooltip.add(Component.literal("§eЗаправка:"));
-        tooltip.add(Component.literal("§71. ПКМ по воде - залить воду"));
-        tooltip.add(Component.literal("§72. Крафт + §fчёрный краситель§7 (1-10)"));
-        tooltip.add(Component.literal("§7   1 краситель = 10% (30 ед.)"));
+        tooltip.add(Component.translatable("tooltip.ata.spray.refill"));
+        tooltip.add(Component.translatable("tooltip.ata.spray.refill1"));
+        tooltip.add(Component.translatable("tooltip.ata.spray.refill2"));
+        tooltip.add(Component.translatable("tooltip.ata.spray.refill3"));
 
         super.appendHoverText(stack, level, tooltip, flag);
     }

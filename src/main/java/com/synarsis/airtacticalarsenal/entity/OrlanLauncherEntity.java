@@ -125,15 +125,15 @@ public class OrlanLauncherEntity extends Entity implements GeoEntity {
                 if (added) {
                     int count = OrlanTabletItem.getLinkedLaunchers(held).size();
                     player.displayClientMessage(
-                            Component.literal(
-                                    "§bПУ Орлана подключена [" + count + "/" + OrlanTabletItem.MAX_LAUNCHERS + "]"),
+                            Component.translatable(
+                                    "message.ata.orlan_launcher.linked", count, OrlanTabletItem.MAX_LAUNCHERS),
                             true);
                 } else {
                     if (OrlanTabletItem.getLinkedLaunchers(held).size() >= OrlanTabletItem.MAX_LAUNCHERS) {
                         player.displayClientMessage(
-                                Component.literal("§cМакс. количество ПУ: " + OrlanTabletItem.MAX_LAUNCHERS), true);
+                                Component.translatable("message.ata.launcher.max_linked", OrlanTabletItem.MAX_LAUNCHERS), true);
                     } else {
-                        player.displayClientMessage(Component.literal("§eПУ уже подключена"), true);
+                        player.displayClientMessage(Component.translatable("message.ata.launcher.already_linked"), true);
                     }
                 }
             }
@@ -146,7 +146,7 @@ public class OrlanLauncherEntity extends Entity implements GeoEntity {
 
         if (held.getItem() instanceof OrlanItem) {
             if (hasDrone()) {
-                player.displayClientMessage(Component.literal("§cНа ПУ уже установлен дрон!"), true);
+                player.displayClientMessage(Component.translatable("message.ata.launcher.drone_already_mounted"), true);
                 return InteractionResult.FAIL;
             }
 
@@ -157,7 +157,7 @@ public class OrlanLauncherEntity extends Entity implements GeoEntity {
                 held.shrink(1);
             }
 
-            player.displayClientMessage(Component.literal("§bОрлан-10 установлен на ПУ"), true);
+            player.displayClientMessage(Component.translatable("message.ata.orlan_launcher.mounted"), true);
             return InteractionResult.sidedSuccess(level().isClientSide);
         }
 
@@ -191,7 +191,7 @@ public class OrlanLauncherEntity extends Entity implements GeoEntity {
             spawnAtLocation(stack);
         }
         removeDrone();
-        player.displayClientMessage(Component.literal("§eОрлан-10 снят с ПУ"), true);
+        player.displayClientMessage(Component.translatable("message.ata.orlan_launcher.dismounted"), true);
     }
 
     private void dropStoredDroneAsItem() {

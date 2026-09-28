@@ -5,8 +5,8 @@ plugins {
     id 'net.minecraftforge.gradle' version '[6.0,6.2)'
 }
 
-version = '1.1.0'
-group = 'com.synarsis.airtacticalarsenal'
+version = project.mod_version
+group = project.mod_group
 
 base {
     archivesName = 'air-tactical-arsenal'
@@ -15,7 +15,7 @@ base {
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 minecraft {
-    mappings channel: 'official', version: '1.20.1'
+    mappings channel: 'official', version: project.minecraft_version
 
     runs {
         client {
@@ -23,7 +23,7 @@ minecraft {
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
             property 'forge.enabledGameTestNamespaces', 'ata'
-            arg '-mixin.config=ata.mixins.json'
+            arg '-mixin.config=ata.compat.mixins.json'
 
             mods {
                 ata {
@@ -37,7 +37,7 @@ minecraft {
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
             property 'forge.enabledGameTestNamespaces', 'ata'
-            arg '-mixin.config=ata.mixins.json'
+            arg '-mixin.config=ata.compat.mixins.json'
 
             mods {
                 ata {
@@ -52,20 +52,13 @@ repositories {
     maven {
         url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
     }
-    // TacZ (optional integration)
-    flatDir {
-        dirs 'libs'
-    }
 }
 
 dependencies {
-    minecraft 'net.minecraftforge:forge:1.20.1-47.2.20'
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
-    // GeckoLib для анимаций
-    implementation fg.deobf('software.bernie.geckolib:geckolib-forge-1.20.1:4.4.9')
-    
-    // TacZ (optional soft dependency для интеграции оружия)
-    compileOnly fileTree(dir: 'libs', include: ['tacz*.jar'])
+    implementation fg.deobf("software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}")
+
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -80,19 +73,21 @@ jar {
                 "Specification-Version": "1",
                 "Implementation-Title": project.name,
                 "Implementation-Version": project.jar.archiveVersion,
-                "Implementation-Vendor": "synarsis",
+                "Implementation-Vendor": "Synarsis (original), lilDorito (WarZone fork)",
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
-                "MixinConfigs": "ata.mixins.json"
+                "MixinConfigs": "ata.compat.mixins.json"
         ])
     }
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from sourceSets.main.output
+    from(rootProject.file('LICENSE'))
 }
 
 task thinJar(type: Jar) {
     archiveClassifier = 'thin'
     from sourceSets.main.output
+    from(rootProject.file('LICENSE'))
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
@@ -103,8 +98,9 @@ task thinJar(type: Jar) {
                 "Specification-Version": "1",
                 "Implementation-Title": project.name,
                 "Implementation-Version": version,
-                "Implementation-Vendor": "synarsis",
-                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+                "Implementation-Vendor": "Synarsis (original), lilDorito (WarZone fork)",
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+                "MixinConfigs": "ata.compat.mixins.json"
         ])
     }
 }

@@ -26,8 +26,6 @@ import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.Pose;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
@@ -58,7 +56,6 @@ public class IskanderEntity extends Projectile implements GeoEntity {
             EntityDataSerializers.FLOAT);
 
     private static final float EXPLOSION_POWER = 16.0f;
-    private static final float EXPLOSION_RADIUS = 40.0f;
     public static final int PHASE_PREPARING = 0;
     public static final int PHASE_LAUNCH = 1;
     public static final int PHASE_ACTIVE = 2;
@@ -77,8 +74,6 @@ public class IskanderEntity extends Projectile implements GeoEntity {
     private boolean kvoApplied = false;
     private boolean launchEndPosSet = false;
 
-    private static final double MAX_FLIGHT_HEIGHT = 800.0;
-
     private Vec3 lastLaunchVelocity = Vec3.ZERO;
     private int transitionTicks = 0;
     private static final int TRANSITION_DURATION = 60; 
@@ -88,7 +83,6 @@ public class IskanderEntity extends Projectile implements GeoEntity {
     private float targetXRot = -90;
     private float targetYRot = 0;
     private float savedYawToTarget = 0;
-    private static final float ROTATION_SMOOTHING = 0.08f;
 
     private double maxParabolicHeight = 0; 
     private double ballisticStartY = 0; 
@@ -374,31 +368,6 @@ public class IskanderEntity extends Projectile implements GeoEntity {
         }
     }
 
-    private double getTrajectorySlope(double progress) {
-        progress = Math.max(0, Math.min(1, progress));
-        if (diveStartProgress > 0.001 && progress <= diveStartProgress) {
-            double q = progress / diveStartProgress;
-            double parabolicSlope = 4.0 * maxParabolicHeight * (1.0 - 2.0 * q);
-            return (parabolicSlope + (diveStartY - ballisticStartY)) / diveStartProgress;
-        } else {
-
-            double denom = 1.0 - diveStartProgress;
-            if (denom < 0.001) return 0;
-            double q2 = Math.max(0, Math.min(1, (progress - diveStartProgress) / denom));
-
-            double arcSlopeEnd = (-4.0 * maxParabolicHeight + (diveStartY - ballisticStartY)) / diveStartProgress;
-            double m0 = arcSlopeEnd * denom;
-            double diveAngleRad = Math.toRadians(ShahedConfig.getIskanderDiveAngle());
-            double m1 = -Math.tan(diveAngleRad) * horizDive;
-
-            double dydq2 = (6 * q2 * q2 - 6 * q2) * diveStartY
-                    + (3 * q2 * q2 - 4 * q2 + 1) * m0
-                    + (-6 * q2 * q2 + 6 * q2) * ballisticTargetY
-                    + (3 * q2 * q2 - 2 * q2) * m1;
-            return dydq2 / denom; 
-        }
-    }
-
     private int findGroundLevel(BlockPos target) {
         if (this.level() == null)
             return target.getY();
@@ -626,7 +595,7 @@ public class IskanderEntity extends Projectile implements GeoEntity {
 
         if (!this.initialPacketSent) {
             this.initialPacketSent = true;
-            NetworkHandler.sendToAllPlayers(
+            NetworkHandler.sendToDimension(this.level(),
                     new IskanderSpawnPacket(this.getId(), this.position(), target, phase, flightTicks, launcherPos,
                             this.startPos, this.launchEndPos, this.finalTargetPos));
         }
@@ -634,7 +603,7 @@ public class IskanderEntity extends Projectile implements GeoEntity {
         this.syncTickCounter++;
         if (this.syncTickCounter >= SYNC_INTERVAL) {
             this.syncTickCounter = 0;
-            NetworkHandler.sendToAllPlayers(
+            NetworkHandler.sendToDimension(this.level(),
                     new IskanderSpawnPacket(this.getId(), this.position(), target, phase, flightTicks, launcherPos,
                             this.startPos, this.launchEndPos, this.finalTargetPos));
 
@@ -953,16 +922,8 @@ public class IskanderEntity extends Projectile implements GeoEntity {
         return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
     }
 
-    private double easeOutCubic(double t) {
-        return 1 - Math.pow(1 - t, 3);
-    }
-
     private double easeOutQuad(double t) {
         return 1 - (1 - t) * (1 - t);
-    }
-
-    private double easeInQuad(double t) {
-        return t * t;
     }
 
     private double easeInCubic(double t) {
@@ -1095,19 +1056,6 @@ public class IskanderEntity extends Projectile implements GeoEntity {
         }
     }
 
-    private float lerp(float start, float end, float t) {
-        return start + (end - start) * t;
-    }
-
-    private float lerpAngle(float start, float end, float t) {
-        float diff = end - start;
-        while (diff > 180)
-            diff -= 360;
-        while (diff < -180)
-            diff += 360;
-        return start + diff * t;
-    }
-
     @Override
     protected void onHitBlock(BlockHitResult result) {
         super.onHitBlock(result);
@@ -1137,7 +1085,7 @@ public class IskanderEntity extends Projectile implements GeoEntity {
             }
 
             Vec3 pos = this.position();
-            NetworkHandler.sendToAllPlayers(new IskanderExplosionPacket(pos));
+            NetworkHandler.sendToDimension(this.level(), new IskanderExplosionPacket(pos));
 
             if (this.level() instanceof ServerLevel serverLevel && ShahedConfig.areExplosionParticlesEnabled()) {
                 float mult = ShahedConfig.getParticleMultiplier() / 100.0f;
@@ -1173,10 +1121,12 @@ public class IskanderEntity extends Projectile implements GeoEntity {
 
             Entity owner = this.getOwner();
 
-            AABB explosionBox = new AABB(
-                    pos.x - EXPLOSION_RADIUS, pos.y - EXPLOSION_RADIUS, pos.z - EXPLOSION_RADIUS,
-                    pos.x + EXPLOSION_RADIUS, pos.y + EXPLOSION_RADIUS, pos.z + EXPLOSION_RADIUS);
+            double coreDamage   = ShahedConfig.getIskanderCoreDamage();
+            double coreRadius   = ShahedConfig.getIskanderCoreRadius();
+            double damageRadius = ShahedConfig.getIskanderDamageRadius();
 
+            AABB explosionBox = new AABB(pos.x - damageRadius, pos.y - damageRadius, pos.z - damageRadius,
+                    pos.x + damageRadius, pos.y + damageRadius, pos.z + damageRadius);
             List<Entity> entities = this.level().getEntities(this, explosionBox);
             DamageSource damageSource;
             if (owner instanceof LivingEntity livingOwner) {
@@ -1188,78 +1138,33 @@ public class IskanderEntity extends Projectile implements GeoEntity {
                 if (entity == this)
                     continue;
                 double distance = entity.position().distanceTo(pos);
-                if (distance > EXPLOSION_RADIUS)
+                float damage = ShahedConfig.explosionFalloff(distance, coreDamage, coreRadius, damageRadius);
+                if (damage <= 0.0f)
                     continue;
 
-                if (entity instanceof Player targetPlayer) {
-
-                    float damage = 0.0f;
-                    if (distance <= 8.0) {
-                        damage = 1000.0f; 
-                    } else if (distance <= 16.0) {
-                        damage = 250.0f; 
-                    } else if (distance <= 26.0) {
-                        damage = 80.0f;  
-                    } else if (distance <= 36.0) {
-                        damage = 30.0f;  
-                    }
-                    if (damage > 0.0f) {
-                        damage *= (float) ShahedConfig.getIskanderPlayerDamageMultiplier();
-                        targetPlayer.hurt(damageSource, damage);
-                        targetPlayer.hurtMarked = true;
-                    }
-                } else if (com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.isVehicle(entity)) {
-
-                    float damage;
-                    if (distance <= 4.0) {
-                        damage = 1500.0f; 
-                    } else if (distance <= 12.0) {
-                        damage = 900.0f;  
-                    } else if (distance <= 22.0) {
-                        damage = 450.0f;  
-                    } else {
-                        damage = 200.0f;  
-                    }
-                    damage *= (float) ShahedConfig.getIskanderVehicleDamageMultiplier();
-                    entity.hurt(damageSource, damage);
-                    entity.hurtMarked = true;
+                if (entity instanceof Player) {
+                    damage *= (float) ShahedConfig.getIskanderPlayerDamageMultiplier();
                 } else {
-
-                    float damage;
-                    if (distance <= 4.0) {
-                        damage = 1500.0f;
-                    } else if (distance <= 12.0) {
-                        damage = 900.0f;
-                    } else if (distance <= 22.0) {
-                        damage = 450.0f;
-                    } else {
-                        damage = 200.0f;
-                    }
                     damage *= (float) ShahedConfig.getIskanderEntityDamageMultiplier();
+                }
+                if (damage > 0.0f) {
                     entity.hurt(damageSource, damage);
                     entity.hurtMarked = true;
                 }
             }
 
             LivingEntity explosionOwner = (owner instanceof LivingEntity) ? (LivingEntity) owner : null;
-            if (ShahedConfig.doExplosionsBreakBlocks()) {
-
-                this.level().explode(this, this.damageSources().explosion(this, explosionOwner), null,
-                        pos.x, pos.y, pos.z, EXPLOSION_POWER, false, Level.ExplosionInteraction.TNT);
-
-                float smoothPower = EXPLOSION_POWER * 0.4f;
-                double off = 3.0;
-                this.level().explode(this, this.damageSources().explosion(this, explosionOwner), null,
-                        pos.x + off, pos.y, pos.z + off, smoothPower, false, Level.ExplosionInteraction.TNT);
-                this.level().explode(this, this.damageSources().explosion(this, explosionOwner), null,
-                        pos.x - off, pos.y, pos.z + off, smoothPower, false, Level.ExplosionInteraction.TNT);
-                this.level().explode(this, this.damageSources().explosion(this, explosionOwner), null,
-                        pos.x + off, pos.y, pos.z - off, smoothPower, false, Level.ExplosionInteraction.TNT);
-                this.level().explode(this, this.damageSources().explosion(this, explosionOwner), null,
-                        pos.x - off, pos.y, pos.z - off, smoothPower, false, Level.ExplosionInteraction.TNT);
-            } else {
+            com.synarsis.airtacticalarsenal.event.ExplosionGuard.begin();
+            try {
                 this.level().explode(this, this.damageSources().explosion(this, explosionOwner), null,
                         pos.x, pos.y, pos.z, EXPLOSION_POWER, false, Level.ExplosionInteraction.NONE);
+                if (ShahedConfig.doExplosionsBreakBlocks() && this.level() instanceof ServerLevel craterLevel) {
+                    com.synarsis.airtacticalarsenal.util.RoundCrater.carve(craterLevel, this,
+                            this.damageSources().explosion(this, explosionOwner), pos,
+                            ShahedConfig.getIskanderCraterRadius(), this.random);
+                }
+            } finally {
+                com.synarsis.airtacticalarsenal.event.ExplosionGuard.end();
             }
 
             if (this.level() instanceof ServerLevel sl) {
@@ -1294,16 +1199,6 @@ public class IskanderEntity extends Projectile implements GeoEntity {
     public Vec3 getStartPos() { return startPos; }
     public Vec3 getLaunchEndPos() { return launchEndPos; }
     public Vec3 getFinalTargetPos() { return finalTargetPos; }
-
-    public String getRadarSignature() {
-        int phase = getFlightPhase();
-        if (phase == PHASE_LAUNCH || phase == PHASE_ACTIVE) {
-            return "СВЕЧА";
-        } else if (phase == PHASE_TERMINAL) {
-            return "ПИКИРОВАНИЕ";
-        }
-        return "БАЛЛИСТИЧЕСКАЯ";
-    }
 
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
@@ -1458,95 +1353,5 @@ public class IskanderEntity extends Projectile implements GeoEntity {
 
         com.synarsis.airtacticalarsenal.event.OrlanCameraExplosionHelper.sendParticleToFarCameraPlayers(
                 level, particle, x, y, z, count, xOffset, yOffset, zOffset, speed);
-    }
-
-    private void spawnPreparingParticles(ServerLevel level, Vec3 pos) {
-        if (this.tickCount % 3 == 0) {
-            for (ServerPlayer player : level.players()) {
-                level.sendParticles(player, ParticleTypes.CAMPFIRE_COSY_SMOKE, true,
-                        pos.x, pos.y - 0.5 - MODEL_Y_OFFSET, pos.z,
-                        2, 0.3, 0.1, 0.3, 0.01);
-                level.sendParticles(player, ParticleTypes.SMOKE, true,
-                        pos.x, pos.y - 0.3 - MODEL_Y_OFFSET, pos.z,
-                        3, 0.4, 0.2, 0.4, 0.02);
-            }
-        }
-    }
-
-    private void spawnIskanderLaunchParticles(ServerLevel level, Vec3 pos, Vec3 motion) {
-        Vec3 enginePos = getEngineOffset(pos, motion);
-
-        sendParticlesForced(level, ParticleTypes.FLAME,
-                enginePos.x, enginePos.y, enginePos.z,
-                6, 0.25, 0.25, 0.25, 0.1);
-
-        sendParticlesForced(level, ParticleTypes.LAVA,
-                enginePos.x, enginePos.y, enginePos.z,
-                3, 0.2, 0.2, 0.2, 0.08);
-
-        Vec3 smokePos = getEngineOffset(pos, motion);
-        if (motion.lengthSqr() > 0.001) {
-            smokePos = smokePos.subtract(motion.normalize().scale(0.5));
-        }
-        sendParticlesForced(level, ParticleTypes.LARGE_SMOKE,
-                smokePos.x, smokePos.y, smokePos.z,
-                5, 0.4, 0.4, 0.4, 0.03);
-
-        if (this.tickCount % 2 == 0) {
-            sendParticlesForced(level, ParticleTypes.FIREWORK,
-                    enginePos.x, enginePos.y, enginePos.z,
-                    3, 0.15, 0.15, 0.15, 0.2);
-        }
-    }
-
-    private void spawnIskanderContrailParticles(ServerLevel level, Vec3 pos, Vec3 motion, double currentY) {
-        Vec3 trailPos = getEngineOffset(pos, motion);
-        double heightFactor = Math.min(1.0, Math.max(0, (currentY - 100) / 100.0));
-
-        if (currentY >= 200) {
-            sendParticlesForced(level, ParticleTypes.CLOUD,
-                    trailPos.x, trailPos.y, trailPos.z,
-                    4, 0.2, 0.2, 0.2, 0.001);
-
-            if (this.tickCount % 2 == 0) {
-                sendParticlesForced(level, ParticleTypes.SNOWFLAKE,
-                        trailPos.x, trailPos.y, trailPos.z,
-                        2, 0.25, 0.25, 0.25, 0.001);
-            }
-        } else if (currentY >= 100) {
-            int cloudCount = (int) (2 + 3 * heightFactor);
-            sendParticlesForced(level, ParticleTypes.CLOUD,
-                    trailPos.x, trailPos.y, trailPos.z,
-                    cloudCount, 0.15, 0.15, 0.15, 0.005);
-        } else {
-            if (this.tickCount % 3 == 0) {
-                sendParticlesForced(level, ParticleTypes.SMOKE,
-                        trailPos.x, trailPos.y, trailPos.z,
-                        2, 0.1, 0.1, 0.1, 0.01);
-            }
-        }
-    }
-
-    private void spawnIskanderTerminalParticles(ServerLevel level, Vec3 pos, Vec3 motion) {
-        Vec3 nosePos = getNoseOffset(pos, motion);
-        Vec3 enginePos = getEngineOffset(pos, motion);
-
-        sendParticlesForced(level, ParticleTypes.FLAME,
-                nosePos.x, nosePos.y, nosePos.z,
-                3, 0.15, 0.15, 0.15, 0.05);
-
-        sendParticlesForced(level, ParticleTypes.FIREWORK,
-                pos.x, pos.y - MODEL_Y_OFFSET, pos.z,
-                4, 0.3, 0.3, 0.3, 0.15);
-
-        sendParticlesForced(level, ParticleTypes.SMOKE,
-                enginePos.x, enginePos.y, enginePos.z,
-                3, 0.2, 0.2, 0.2, 0.02);
-
-        if (this.tickCount % 3 == 0) {
-            sendParticlesForced(level, ParticleTypes.LAVA,
-                    nosePos.x, nosePos.y, nosePos.z,
-                    2, 0.1, 0.1, 0.1, 0.1);
-        }
     }
 }

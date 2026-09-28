@@ -43,7 +43,7 @@ public class LaunchInterfaceCableItem extends Item {
             BlockPos centerPos = findLauncherCenter(level, pos, state);
             if (centerPos == null) {
                 if (!level.isClientSide) {
-                    player.sendSystemMessage(Component.literal("§cОшибка: Не удалось найти центр ПУ!"));
+                    player.sendSystemMessage(Component.translatable("message.ata.cable.center_not_found"));
                 }
                 return InteractionResult.FAIL;
             }
@@ -56,8 +56,8 @@ public class LaunchInterfaceCableItem extends Item {
                 nbt.putInt("launcherZ", centerPos.getZ());
                 nbt.putString("dimension", level.dimension().location().toString());
 
-                player.sendSystemMessage(Component.literal("§aПУ зарегистрирована: [" 
-                    + centerPos.getX() + ", " + centerPos.getY() + ", " + centerPos.getZ() + "]"));
+                player.sendSystemMessage(Component.translatable("message.ata.cable.registered",
+                    centerPos.getX(), centerPos.getY(), centerPos.getZ()));
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
         }
@@ -67,7 +67,7 @@ public class LaunchInterfaceCableItem extends Item {
 
             if (!nbt.getBoolean("hasLauncher")) {
                 if (!level.isClientSide) {
-                    player.sendSystemMessage(Component.literal("§cСначала зарегистрируйте ПУ (ПКМ по пусковой установке)!"));
+                    player.sendSystemMessage(Component.translatable("message.ata.cable.register_first"));
                 }
                 return InteractionResult.FAIL;
             }
@@ -82,14 +82,14 @@ public class LaunchInterfaceCableItem extends Item {
                 double distance = Math.sqrt(pos.distSqr(launcherPos));
 
                 if (distance > MAX_CABLE_DISTANCE) {
-                    player.sendSystemMessage(Component.literal(
-                        "§cОшибка: Слишком далеко! Расстояние: " + (int)distance + " блоков (макс. " + MAX_CABLE_DISTANCE + ")"));
+                    player.sendSystemMessage(Component.translatable(
+                        "message.ata.cable.too_far", (int) distance, MAX_CABLE_DISTANCE));
                     return InteractionResult.FAIL;
                 }
 
                 BlockState launcherState = level.getBlockState(launcherPos);
                 if (!(launcherState.getBlock() instanceof LauncherBlock)) {
-                    player.sendSystemMessage(Component.literal("§cОшибка: ПУ по сохранённым координатам не найдена!"));
+                    player.sendSystemMessage(Component.translatable("message.ata.cable.saved_launcher_missing"));
                     clearCableData(nbt);
                     return InteractionResult.FAIL;
                 }
@@ -99,8 +99,8 @@ public class LaunchInterfaceCableItem extends Item {
                     if (launcherEntity.hasConnectedTerminal()) {
                         BlockPos existingTerminal = launcherEntity.getConnectedTerminal();
                         if (!existingTerminal.equals(pos)) {
-                            player.sendSystemMessage(Component.literal("§cОшибка: Эта ПУ уже подключена к другому терминалу [" 
-                                + existingTerminal.getX() + ", " + existingTerminal.getY() + ", " + existingTerminal.getZ() + "]!"));
+                            player.sendSystemMessage(Component.translatable("message.ata.cable.linked_elsewhere",
+                                existingTerminal.getX(), existingTerminal.getY(), existingTerminal.getZ()));
                             clearCableData(nbt);
                             return InteractionResult.FAIL;
                         }
@@ -110,20 +110,20 @@ public class LaunchInterfaceCableItem extends Item {
                 BlockEntity be = level.getBlockEntity(pos);
                 if (be instanceof UnifiedTerminalBlockEntity terminal) {
                     if (terminal.isLauncherConnected(launcherPos)) {
-                        player.sendSystemMessage(Component.literal("§eЭта ПУ уже подключена к этому терминалу!"));
+                        player.sendSystemMessage(Component.translatable("message.ata.cable.already_linked_here"));
                     } else {
                         terminal.addConnectedLauncher(launcherPos);
 
                         if (launcherBE instanceof LauncherBlockEntity launcherEntity2) {
                             launcherEntity2.setConnectedTerminal(pos);
                         }
-                        player.sendSystemMessage(Component.literal("§aПУ подключена к терминалу успешно!"));
-                        player.sendSystemMessage(Component.literal("§7Подключено ПУ: " + terminal.getConnectedLauncherCount()));
+                        player.sendSystemMessage(Component.translatable("message.ata.cable.connected"));
+                        player.sendSystemMessage(Component.translatable("message.ata.cable.connected_count", terminal.getConnectedLauncherCount()));
                     }
 
                     clearCableData(nbt);
                 } else {
-                    player.sendSystemMessage(Component.literal("§cОшибка: Терминал повреждён!"));
+                    player.sendSystemMessage(Component.translatable("message.ata.cable.terminal_broken"));
                     return InteractionResult.FAIL;
                 }
             }
@@ -172,17 +172,17 @@ public class LaunchInterfaceCableItem extends Item {
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         CompoundTag nbt = stack.getTag();
         if (nbt != null && nbt.getBoolean("hasLauncher")) {
-            tooltip.add(Component.literal("§7Зарегистрирована ПУ:"));
+            tooltip.add(Component.translatable("tooltip.ata.cable.registered"));
             tooltip.add(Component.literal("§a[" + nbt.getInt("launcherX") 
                 + ", " + nbt.getInt("launcherY") 
                 + ", " + nbt.getInt("launcherZ") + "]"));
             tooltip.add(Component.literal(""));
-            tooltip.add(Component.literal("§7Shift + ПКМ по терминалу - подключить"));
+            tooltip.add(Component.translatable("tooltip.ata.cable.connect"));
         } else {
-            tooltip.add(Component.literal("§7ПКМ по ПУ - зарегистрировать"));
-            tooltip.add(Component.literal("§7Shift + ПКМ по терминалу - подключить"));
+            tooltip.add(Component.translatable("tooltip.ata.cable.register"));
+            tooltip.add(Component.translatable("tooltip.ata.cable.connect"));
             tooltip.add(Component.literal(""));
-            tooltip.add(Component.literal("§8Макс. дистанция: " + MAX_CABLE_DISTANCE + " блоков"));
+            tooltip.add(Component.translatable("tooltip.ata.cable.max_range", MAX_CABLE_DISTANCE));
         }
     }
 }

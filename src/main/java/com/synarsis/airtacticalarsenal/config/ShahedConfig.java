@@ -2,22 +2,16 @@ package com.synarsis.airtacticalarsenal.config;
 
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 
-@Mod.EventBusSubscriber
 public class ShahedConfig {
     public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
     public static final ForgeConfigSpec SPEC;
-    public static final ForgeConfigSpec.IntValue SPAWN_X;
-    public static final ForgeConfigSpec.IntValue SPAWN_Y;
-    public static final ForgeConfigSpec.IntValue SPAWN_Z;
     public static final ForgeConfigSpec.IntValue TARGET_Y_LEVEL;
-    public static final ForgeConfigSpec.IntValue LAUNCH_COST_COINS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> FORBIDDEN_ZONES;
     public static final ForgeConfigSpec.BooleanValue BLACKLIST_ENABLED;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> WHITELIST_ZONES;
@@ -30,21 +24,15 @@ public class ShahedConfig {
 
     public static final ForgeConfigSpec.DoubleValue SHAHED_CRUISE_SPEED;
     public static final ForgeConfigSpec.DoubleValue SHAHED_DIVE_SPEED;
-    public static final ForgeConfigSpec.IntValue SHAHED_MIN_DISTANCE;
-    public static final ForgeConfigSpec.IntValue SHAHED_MAX_RANGE;
-
-    public static final ForgeConfigSpec.IntValue ISKANDER_LAUNCH_COST;
 
     public static final ForgeConfigSpec.BooleanValue SHAHED_SHOOTDOWN_ENABLED;
     public static final ForgeConfigSpec.DoubleValue SHAHED_MAX_HEALTH;
     public static final ForgeConfigSpec.DoubleValue SHAHED_DAMAGE_MULTIPLIER;
     public static final ForgeConfigSpec.DoubleValue SHAHED_ENGINE_DAMAGE_MULTIPLIER;
     public static final ForgeConfigSpec.DoubleValue SHAHED_WARHEAD_DAMAGE_MULTIPLIER;
-    public static final ForgeConfigSpec.BooleanValue SHAHED_DISTANCE_FALLOFF;
     public static final ForgeConfigSpec.DoubleValue SHAHED_MIN_CALIBER_DAMAGE;
     public static final ForgeConfigSpec.BooleanValue SHAHED_SMOKE_ON_DAMAGE;
     public static final ForgeConfigSpec.BooleanValue SHAHED_CRITICAL_DETONATION;
-    public static final ForgeConfigSpec.DoubleValue ISKANDER_APEX_HEIGHT;
     public static final ForgeConfigSpec.DoubleValue ISKANDER_LAUNCH_SPEED;
     public static final ForgeConfigSpec.DoubleValue ISKANDER_CRUISE_SPEED;
     public static final ForgeConfigSpec.DoubleValue ISKANDER_TERMINAL_SPEED;
@@ -55,15 +43,30 @@ public class ShahedConfig {
     public static final ForgeConfigSpec.IntValue ISKANDER_MAX_RANGE;
     public static final ForgeConfigSpec.IntValue ISKANDER_MAX_FLIGHT_HEIGHT;
     public static final ForgeConfigSpec.DoubleValue ISKANDER_DIVE_ANGLE;
-    public static final ForgeConfigSpec.DoubleValue ISKANDER_APEX_PROGRESS;
-    public static final ForgeConfigSpec.DoubleValue ISKANDER_HORIZONTAL_TRANSITION_SPEED;
+    public static final ForgeConfigSpec.DoubleValue ISKANDER_CRATER_RADIUS;
+    public static final ForgeConfigSpec.DoubleValue SHAHED_CRATER_RADIUS;
+    public static final ForgeConfigSpec.IntValue SHAHED_MAX_ROUTE_DISTANCE;
+    public static final ForgeConfigSpec.IntValue ORLAN_MAX_ROUTE_DISTANCE;
+    public static final ForgeConfigSpec.IntValue ORLAN_FLIGHT_TIME_MINUTES;
 
     public static final ForgeConfigSpec.DoubleValue ISKANDER_PLAYER_DAMAGE_MULTIPLIER;
     public static final ForgeConfigSpec.DoubleValue ISKANDER_ENTITY_DAMAGE_MULTIPLIER;
-    public static final ForgeConfigSpec.DoubleValue ISKANDER_VEHICLE_DAMAGE_MULTIPLIER;
     public static final ForgeConfigSpec.DoubleValue SHAHED_EXPLOSION_PLAYER_MULTIPLIER;
     public static final ForgeConfigSpec.DoubleValue SHAHED_EXPLOSION_ENTITY_MULTIPLIER;
-    public static final ForgeConfigSpec.DoubleValue SHAHED_EXPLOSION_VEHICLE_MULTIPLIER;
+    public static final ForgeConfigSpec.DoubleValue SHAHED_CORE_DAMAGE;
+    public static final ForgeConfigSpec.DoubleValue SHAHED_CORE_RADIUS;
+    public static final ForgeConfigSpec.DoubleValue SHAHED_DAMAGE_RADIUS;
+    public static final ForgeConfigSpec.DoubleValue ISKANDER_CORE_DAMAGE;
+    public static final ForgeConfigSpec.DoubleValue ISKANDER_CORE_RADIUS;
+    public static final ForgeConfigSpec.DoubleValue ISKANDER_DAMAGE_RADIUS;
+    public static final ForgeConfigSpec.BooleanValue VANILLA_EXPLOSION_HURTS_ENTITIES;
+    public static final ForgeConfigSpec.IntValue RADAR_MIN_ALTITUDE;
+    public static final ForgeConfigSpec.BooleanValue RADAR_REQUIRES_OPEN_SKY;
+    public static final ForgeConfigSpec.BooleanValue ALLOW_CLIENT_LANGUAGE;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> RADAR_PLANE_IDS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> RADAR_HELICOPTER_IDS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> RADAR_DRONE_IDS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> RADAR_EXCLUDED_IDS;
 
     public static boolean isInForbiddenZone(int x, int z) {
         boolean inWhitelist = false;
@@ -140,21 +143,16 @@ public class ShahedConfig {
 
     public static double getShahedCruiseSpeed() { return SHAHED_CRUISE_SPEED.get(); }
     public static double getShahedDiveSpeed() { return SHAHED_DIVE_SPEED.get(); }
-    public static int getShahedMinDistance() { return SHAHED_MIN_DISTANCE.get(); }
-    public static int getShahedMaxRange() { return SHAHED_MAX_RANGE.get(); }
 
     public static boolean isShahedShootdownEnabled() { return SHAHED_SHOOTDOWN_ENABLED.get(); }
     public static double getShahedMaxHealth() { return SHAHED_MAX_HEALTH.get(); }
     public static double getShahedDamageMultiplier() { return SHAHED_DAMAGE_MULTIPLIER.get(); }
     public static double getShahedEngineDamageMultiplier() { return SHAHED_ENGINE_DAMAGE_MULTIPLIER.get(); }
     public static double getShahedWarheadDamageMultiplier() { return SHAHED_WARHEAD_DAMAGE_MULTIPLIER.get(); }
-    public static boolean isShahedDistanceFalloffEnabled() { return SHAHED_DISTANCE_FALLOFF.get(); }
     public static double getShahedMinCaliberDamage() { return SHAHED_MIN_CALIBER_DAMAGE.get(); }
     public static boolean isShahedSmokeOnDamageEnabled() { return SHAHED_SMOKE_ON_DAMAGE.get(); }
     public static boolean isShahedCriticalDetonationEnabled() { return SHAHED_CRITICAL_DETONATION.get(); }
 
-    public static int getIskanderLaunchCost() { return ISKANDER_LAUNCH_COST.get(); }
-    public static double getIskanderApexHeight() { return ISKANDER_APEX_HEIGHT.get(); }
     public static double getIskanderLaunchSpeed() { return ISKANDER_LAUNCH_SPEED.get(); }
     public static double getIskanderCruiseSpeed() { return ISKANDER_CRUISE_SPEED.get(); }
     public static double getIskanderTerminalSpeed() { return ISKANDER_TERMINAL_SPEED.get(); }
@@ -165,15 +163,38 @@ public class ShahedConfig {
     public static int getIskanderMaxRange() { return ISKANDER_MAX_RANGE.get(); }
     public static int getIskanderMaxFlightHeight() { return ISKANDER_MAX_FLIGHT_HEIGHT.get(); }
     public static double getIskanderDiveAngle() { return ISKANDER_DIVE_ANGLE.get(); }
-    public static double getIskanderApexProgress() { return ISKANDER_APEX_PROGRESS.get(); }
-    public static double getIskanderHorizontalTransitionSpeed() { return ISKANDER_HORIZONTAL_TRANSITION_SPEED.get(); }
+    public static double getIskanderCraterRadius() { return ISKANDER_CRATER_RADIUS.get(); }
+    public static double getShahedCraterRadius() { return SHAHED_CRATER_RADIUS.get(); }
+    public static int getShahedMaxRouteDistance() { return SHAHED_MAX_ROUTE_DISTANCE.get(); }
+    public static int getOrlanMaxRouteDistance() { return ORLAN_MAX_ROUTE_DISTANCE.get(); }
+    public static int getOrlanFlightTimeMinutes() { return ORLAN_FLIGHT_TIME_MINUTES.get(); }
 
     public static double getIskanderPlayerDamageMultiplier()  { return ISKANDER_PLAYER_DAMAGE_MULTIPLIER.get(); }
     public static double getIskanderEntityDamageMultiplier()  { return ISKANDER_ENTITY_DAMAGE_MULTIPLIER.get(); }
-    public static double getIskanderVehicleDamageMultiplier() { return ISKANDER_VEHICLE_DAMAGE_MULTIPLIER.get(); }
     public static double getShahedExplosionPlayerMultiplier() { return SHAHED_EXPLOSION_PLAYER_MULTIPLIER.get(); }
     public static double getShahedExplosionEntityMultiplier() { return SHAHED_EXPLOSION_ENTITY_MULTIPLIER.get(); }
-    public static double getShahedExplosionVehicleMultiplier(){ return SHAHED_EXPLOSION_VEHICLE_MULTIPLIER.get(); }
+    public static double getShahedCoreDamage()     { return SHAHED_CORE_DAMAGE.get(); }
+    public static double getShahedCoreRadius()     { return SHAHED_CORE_RADIUS.get(); }
+    public static double getShahedDamageRadius()   { return SHAHED_DAMAGE_RADIUS.get(); }
+    public static double getIskanderCoreDamage()   { return ISKANDER_CORE_DAMAGE.get(); }
+    public static double getIskanderCoreRadius()   { return ISKANDER_CORE_RADIUS.get(); }
+    public static double getIskanderDamageRadius() { return ISKANDER_DAMAGE_RADIUS.get(); }
+    public static boolean doesVanillaExplosionHurtEntities() { return VANILLA_EXPLOSION_HURTS_ENTITIES.get(); }
+
+    public static float explosionFalloff(double distance, double coreDamage, double coreRadius, double damageRadius) {
+        if (distance >= damageRadius) return 0.0f;
+        if (distance <= coreRadius) return (float) coreDamage;
+        double span = Math.max(0.001, damageRadius - coreRadius);
+        return (float) (coreDamage * (1.0 - (distance - coreRadius) / span));
+    }
+
+    public static int getRadarMinAltitude() { return RADAR_MIN_ALTITUDE.get(); }
+    public static boolean isRadarOpenSkyRequired() { return RADAR_REQUIRES_OPEN_SKY.get(); }
+    public static boolean isClientLanguageAllowed() { return ALLOW_CLIENT_LANGUAGE.get(); }
+    public static List<? extends String> getRadarPlaneIds()      { return RADAR_PLANE_IDS.get(); }
+    public static List<? extends String> getRadarHelicopterIds() { return RADAR_HELICOPTER_IDS.get(); }
+    public static List<? extends String> getRadarDroneIds()      { return RADAR_DRONE_IDS.get(); }
+    public static List<? extends String> getRadarExcludedIds()   { return RADAR_EXCLUDED_IDS.get(); }
 
     public static boolean isBlacklistEnabled() {
         return BLACKLIST_ENABLED.get();
@@ -199,19 +220,13 @@ public class ShahedConfig {
     }
 
     static {
-        BUILDER.push("Spawn Settings");
-        SPAWN_X = BUILDER.comment("Shahed spawn X coordinate").defineInRange("spawnX", 0, -30000000, 30000000);
-        SPAWN_Y = BUILDER.comment("Shahed spawn Y coordinate (height)").defineInRange("spawnY", 200, 100, 320);
-        SPAWN_Z = BUILDER.comment("Shahed spawn Z coordinate").defineInRange("spawnZ", 0, -30000000, 30000000);
+        BUILDER.push("Target Settings");
         TARGET_Y_LEVEL = BUILDER.comment("Target Y coordinate (attack height)").defineInRange("targetYLevel", 64, -64, 320);
-        BUILDER.pop();
-        BUILDER.push("Cost Settings");
-        LAUNCH_COST_COINS = BUILDER.comment("Launch cost in coins").defineInRange("launchCostCoins", 10, 0, 64);
         BUILDER.pop();
         BUILDER.push("Blacklist Zones");
         BLACKLIST_ENABLED = BUILDER.comment("Enable blacklist (forbidden zones)").define("blacklistEnabled", false);
         BUILDER.comment("Forbidden zones for attacks", "Format: \"x1,z1,x2,z2\" where x1,z1 - first corner, x2,z2 - second corner", "Example: \"0,0,100,100\" forbids area from 0,0 to 100,100");
-        FORBIDDEN_ZONES = BUILDER.defineList("forbiddenZones", Arrays.asList("160,771,-622,1011", "170,-1020,-420,-785", "-750,-600,-1145,-1015"), obj -> obj instanceof String);
+        FORBIDDEN_ZONES = BUILDER.defineList("forbiddenZones", Arrays.asList(), obj -> obj instanceof String);
         BUILDER.pop();
         BUILDER.push("Whitelist Zones");
         WHITELIST_ENABLED = BUILDER.comment("Enable whitelist (allowed zones)", "If enabled, attacks are ONLY allowed inside whitelist zones").define("whitelistEnabled", false);
@@ -231,8 +246,28 @@ public class ShahedConfig {
         BUILDER.push("Shahed Settings");
         SHAHED_CRUISE_SPEED = BUILDER.comment("Cruise speed in blocks/tick (30 blocks/sec = 1.5)").defineInRange("shahedCruiseSpeed", 1.5, 0.5, 10.0);
         SHAHED_DIVE_SPEED = BUILDER.comment("Dive speed in blocks/tick (72 blocks/sec = 3.6)").defineInRange("shahedDiveSpeed", 3.6, 1.0, 15.0);
-        SHAHED_MIN_DISTANCE = BUILDER.comment("Minimum launch distance in blocks").defineInRange("shahedMinDistance", 600, 50, 2000);
-        SHAHED_MAX_RANGE = BUILDER.comment("Maximum launch distance in blocks").defineInRange("shahedMaxRange", 12000, 1000, 30000);
+        SHAHED_CRATER_RADIUS = BUILDER.comment(
+                "Radius (blocks) of the round crater a Shahed digs (needs explosionBreaksBlocks = true).",
+                "Default 5 (~9 wide, ~3-4 deep); 0 = no crater (explosion effects only).")
+                .defineInRange("shahedCraterRadius", 5.0, 0.0, 20.0);
+        SHAHED_MAX_ROUTE_DISTANCE = BUILDER.comment(
+                "Maximum Shahed route length in blocks, measured from the launcher along all waypoints.",
+                "Enforced by the server; players get this value when they join (route screen shows it).",
+                "Note: the route map terrain covers about 10,000 blocks around the launcher.")
+                .defineInRange("shahedMaxRouteDistance", 10000, 1000, 20000);
+        BUILDER.pop();
+
+        BUILDER.push("Orlan Settings");
+        ORLAN_MAX_ROUTE_DISTANCE = BUILDER.comment(
+                "Maximum Orlan-10 route length in blocks, measured from the launcher along all waypoints",
+                "(also applies to route changes during flight). Enforced by the server, sent to players on join.",
+                "Keep it reachable within orlanFlightTimeMinutes: 10,000 blocks out (~7 min at 24 b/s)",
+                "plus the way back (~8.3 min at 20 b/s) is ~15.3 min.")
+                .defineInRange("orlanMaxRouteDistance", 10000, 1000, 20000);
+        ORLAN_FLIGHT_TIME_MINUTES = BUILDER.comment(
+                "Orlan-10 flight time in minutes. When it runs out the drone stops its mission and flies home.",
+                "Default 30: a full 10,000-block route leaves ~15 min of patrol at the last waypoint.")
+                .defineInRange("orlanFlightTimeMinutes", 30, 5, 120);
         BUILDER.pop();
 
         BUILDER.push("Anti-Air Defense (TacZ Integration)");
@@ -242,15 +277,12 @@ public class ShahedConfig {
         SHAHED_DAMAGE_MULTIPLIER = BUILDER.comment("Global damage multiplier for all weapons (1.0 = normal)").defineInRange("shahedDamageMultiplier", 1.0, 0.1, 10.0);
         SHAHED_ENGINE_DAMAGE_MULTIPLIER = BUILDER.comment("Damage multiplier for hits to engine (rear part)").defineInRange("shahedEngineDamageMultiplier", 1.5, 1.0, 5.0);
         SHAHED_WARHEAD_DAMAGE_MULTIPLIER = BUILDER.comment("Damage multiplier for hits to warhead (front part) - may cause detonation!").defineInRange("shahedWarheadDamageMultiplier", 2.0, 1.0, 10.0);
-        SHAHED_DISTANCE_FALLOFF = BUILDER.comment("Enable damage falloff based on distance (realistic)").define("shahedDistanceFalloff", true);
         SHAHED_MIN_CALIBER_DAMAGE = BUILDER.comment("Minimum damage threshold - shots below this are ignored (filters weak weapons)").defineInRange("shahedMinCaliberDamage", 2.0, 0.0, 20.0);
         SHAHED_SMOKE_ON_DAMAGE = BUILDER.comment("Show smoke effects when Shahed is damaged").define("shahedSmokeOnDamage", true);
         SHAHED_CRITICAL_DETONATION = BUILDER.comment("Warhead hits at low HP can cause premature detonation").define("shahedCriticalDetonation", true);
         BUILDER.pop();
 
         BUILDER.push("Iskander Settings");
-        ISKANDER_LAUNCH_COST = BUILDER.comment("Launch cost in coins for Iskander").defineInRange("iskanderLaunchCost", 50, 0, 640);
-        ISKANDER_APEX_HEIGHT = BUILDER.comment("Maximum flight height in blocks").defineInRange("iskanderApexHeight", 800.0, 100.0, 1500.0);
         ISKANDER_LAUNCH_SPEED = BUILDER.comment("Vertical speed during launch phase (blocks/tick)").defineInRange("iskanderLaunchSpeed", 2.5, 0.3, 8.0);
         ISKANDER_CRUISE_SPEED = BUILDER.comment("Horizontal speed during cruise/ballistic phase (blocks/tick, 4.0 = 80 blocks/sec)").defineInRange("iskanderCruiseSpeed", 4.0, 0.5, 30.0);
         ISKANDER_TERMINAL_SPEED = BUILDER.comment("Speed during terminal dive phase (blocks/tick)").defineInRange("iskanderTerminalSpeed", 5.0, 1.0, 40.0);
@@ -261,23 +293,67 @@ public class ShahedConfig {
         ISKANDER_MAX_RANGE = BUILDER.comment("Maximum launch distance for Iskander in blocks").defineInRange("iskanderMaxRange", 5000, 500, 10000);
         ISKANDER_MAX_FLIGHT_HEIGHT = BUILDER.comment("Maximum flight height in blocks absolute Y coordinate (e.g. 600 means missile apex will not exceed Y=600)").defineInRange("iskanderMaxFlightHeight", 600, 100, 1500);
         ISKANDER_DIVE_ANGLE = BUILDER.comment("Terminal dive angle in degrees (70-85 recommended)").defineInRange("iskanderDiveAngle", 75.0, 45.0, 89.0);
-        ISKANDER_APEX_PROGRESS = BUILDER.comment("Position of trajectory apex (0.3-0.6, where 0.5 = middle of flight)").defineInRange("iskanderApexProgress", 0.4, 0.2, 0.7);
-        ISKANDER_HORIZONTAL_TRANSITION_SPEED = BUILDER.comment("Speed of horizontal transition smoothing (0.05-0.3)").defineInRange("iskanderHorizontalTransitionSpeed", 0.1, 0.02, 0.5);
+        ISKANDER_CRATER_RADIUS = BUILDER.comment(
+                "Radius (blocks) of the round crater an Iskander digs (needs explosionBreaksBlocks = true).",
+                "The bowl is this radius wide and ~70% of it deep; 0 = no crater (explosion effects only).",
+                "Default 11 (~20 wide, ~7-8 deep): ~2x the Shahed, matching a ~10x heavier warhead.")
+                .defineInRange("iskanderCraterRadius", 11.0, 0.0, 20.0);
         BUILDER.pop();
 
-        BUILDER.push("Explosion Damage Multipliers");
+        BUILDER.push("Explosion Damage");
         BUILDER.comment(
-            "Multipliers applied to explosion damage per target category.",
-            "1.0 = default damage. 2.0 = double damage. 0.5 = half damage.",
-            "Vehicle category applies to SuperbWarfare/VVP vehicle entities (tanks, helicopters, planes).",
-            "Entity category applies to all other non-player entities (mobs, animals, etc)."
+            "Entity damage from Shahed and Iskander warheads.",
+            "Damage is full inside coreRadius, then falls off linearly to 0 at damageRadius.",
+            "Vehicles (SuperbWarfare / AshVehicle / MCSP ...) take the same damage as any other non-player entity;",
+            "their own armor / damage modifiers from the vehicle data files still apply on top.",
+            "For reference (this modpack): jets 350 HP, helicopters 250 HP, tanks 300-500 HP, Zumwalt 1000 HP."
         );
-        ISKANDER_PLAYER_DAMAGE_MULTIPLIER  = BUILDER.comment("Iskander: damage multiplier vs players").defineInRange("iskanderPlayerDamageMultiplier",  1.0, 0.0, 20.0);
-        ISKANDER_ENTITY_DAMAGE_MULTIPLIER  = BUILDER.comment("Iskander: damage multiplier vs mobs/entities (non-vehicle)").defineInRange("iskanderEntityDamageMultiplier",  1.0, 0.0, 20.0);
-        ISKANDER_VEHICLE_DAMAGE_MULTIPLIER = BUILDER.comment("Iskander: damage multiplier vs SuperbWarfare/VVP vehicles").defineInRange("iskanderVehicleDamageMultiplier", 3.5, 0.0, 20.0);
-        SHAHED_EXPLOSION_PLAYER_MULTIPLIER  = BUILDER.comment("Shahed: explosion damage multiplier vs players").defineInRange("shahedExplosionPlayerMultiplier",  1.0, 0.0, 20.0);
-        SHAHED_EXPLOSION_ENTITY_MULTIPLIER  = BUILDER.comment("Shahed: explosion damage multiplier vs mobs/entities (non-vehicle)").defineInRange("shahedExplosionEntityMultiplier",  1.0, 0.0, 20.0);
-        SHAHED_EXPLOSION_VEHICLE_MULTIPLIER = BUILDER.comment("Shahed: explosion damage multiplier vs SuperbWarfare/VVP vehicles").defineInRange("shahedExplosionVehicleMultiplier", 3.5, 0.0, 20.0);
+        SHAHED_CORE_DAMAGE   = BUILDER.comment("Shahed: damage at the epicenter").defineInRange("shahedCoreDamage", 60.0, 0.0, 5000.0);
+        SHAHED_CORE_RADIUS   = BUILDER.comment("Shahed: radius (blocks) of full damage").defineInRange("shahedCoreRadius", 3.0, 0.0, 64.0);
+        SHAHED_DAMAGE_RADIUS = BUILDER.comment("Shahed: radius (blocks) where damage reaches 0").defineInRange("shahedDamageRadius", 14.0, 1.0, 64.0);
+        ISKANDER_CORE_DAMAGE   = BUILDER.comment("Iskander: damage at the epicenter").defineInRange("iskanderCoreDamage", 160.0, 0.0, 5000.0);
+        ISKANDER_CORE_RADIUS   = BUILDER.comment("Iskander: radius (blocks) of full damage").defineInRange("iskanderCoreRadius", 5.0, 0.0, 64.0);
+        ISKANDER_DAMAGE_RADIUS = BUILDER.comment("Iskander: radius (blocks) where damage reaches 0").defineInRange("iskanderDamageRadius", 26.0, 1.0, 64.0);
+        ISKANDER_PLAYER_DAMAGE_MULTIPLIER  = BUILDER.comment("Iskander: extra multiplier vs players").defineInRange("iskanderPlayerDamageMultiplier",  1.0, 0.0, 20.0);
+        ISKANDER_ENTITY_DAMAGE_MULTIPLIER  = BUILDER.comment("Iskander: extra multiplier vs all non-player entities (mobs AND vehicles)").defineInRange("iskanderEntityDamageMultiplier",  1.0, 0.0, 20.0);
+        SHAHED_EXPLOSION_PLAYER_MULTIPLIER  = BUILDER.comment("Shahed: extra multiplier vs players").defineInRange("shahedExplosionPlayerMultiplier",  1.0, 0.0, 20.0);
+        SHAHED_EXPLOSION_ENTITY_MULTIPLIER  = BUILDER.comment("Shahed: extra multiplier vs all non-player entities (mobs AND vehicles)").defineInRange("shahedExplosionEntityMultiplier",  1.0, 0.0, 20.0);
+        VANILLA_EXPLOSION_HURTS_ENTITIES = BUILDER.comment(
+            "If false (recommended), the vanilla block-breaking blast of Shahed/Iskander does NOT damage entities,",
+            "so the numbers above are the only damage dealt. If true, vanilla TNT-style damage (~170+ at the center) is added on top.")
+            .define("vanillaExplosionHurtsEntities", false);
+        BUILDER.pop();
+
+        BUILDER.push("Radar");
+        RADAR_MIN_ALTITUDE = BUILDER.comment(
+            "Minimum absolute Y level for a contact to show on the Air Defense Radar.",
+            "Anything flying lower is treated as below the radar horizon (Iskander missiles are always shown).")
+            .defineInRange("radarMinAltitude", 90, -64, 2000);
+        RADAR_REQUIRES_OPEN_SKY = BUILDER.comment(
+            "If true, the radar needs open sky: no blocks at all (glass, leaves, water included) above the 5x5 area",
+            "centred on it. Otherwise it shows WEAK SIGNAL with an empty map and its redstone output is 0.")
+            .define("radarRequiresOpenSky", true);
+        BUILDER.comment(
+            "Extra entity ids (\"modid:entity\") to show on the radar with a forced type.",
+            "Aircraft from SuperbWarfare and its addons (AshVehicle etc.) are detected automatically;",
+            "these lists are for anything that is not, and override the automatic type.");
+        RADAR_PLANE_IDS = BUILDER.comment("Shown as PLN (plane)")
+            .defineList("radarPlaneIds", Arrays.asList("superbwarfare:tom_6", "ashvehicle:tom_7"), obj -> obj instanceof String);
+        RADAR_HELICOPTER_IDS = BUILDER.comment("Shown as HEL (helicopter)")
+            .defineList("radarHelicopterIds", Arrays.asList(), obj -> obj instanceof String);
+        RADAR_DRONE_IDS = BUILDER.comment("Shown as UAV (drone)")
+            .defineList("radarDroneIds", Arrays.asList("ashvehicle:reaper", "ashvehicle:x-47b"), obj -> obj instanceof String);
+        RADAR_EXCLUDED_IDS = BUILDER.comment("Never shown on the radar")
+            .defineList("radarExcludedIds", Arrays.asList(), obj -> obj instanceof String);
+        BUILDER.pop();
+
+        BUILDER.push("Language");
+        ALLOW_CLIENT_LANGUAGE = BUILDER.comment(
+            "ATA texts are English by default for every player, regardless of their Minecraft language.",
+            "true  = players may switch ATA to Russian or Ukrainian in their own config/ata-client.toml (or /atalang).",
+            "false = force English for all players on this server; their personal choice is ignored while connected.",
+            "Sent to players when they join (changes apply on the next join).")
+            .define("allowClientLanguage", true);
         BUILDER.pop();
 
         SPEC = BUILDER.build();

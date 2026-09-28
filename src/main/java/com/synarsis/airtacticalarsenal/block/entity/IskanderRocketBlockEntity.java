@@ -1,6 +1,5 @@
 package com.synarsis.airtacticalarsenal.block.entity;
 
-import com.synarsis.airtacticalarsenal.block.IskanderRocketBlock;
 import com.synarsis.airtacticalarsenal.block.LauncherBlock;
 import com.synarsis.airtacticalarsenal.entity.IskanderEntity;
 import com.synarsis.airtacticalarsenal.network.NetworkHandler;
@@ -45,8 +44,6 @@ public class IskanderRocketBlockEntity extends BlockEntity implements GeoBlockEn
     private UUID ownerUUID = null;
     private String ownerName = "";
 
-    private boolean soundStarted = false;
-
     public IskanderRocketBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ISKANDER_ROCKET.get(), pos, state);
     }
@@ -71,7 +68,7 @@ public class IskanderRocketBlockEntity extends BlockEntity implements GeoBlockEn
 
         if (launchTicks % 10 == 0) {
             NetworkHandler
-                    .sendToAllPlayers(new RocketLaunchStatePacket(pos, launchTicks, LAUNCH_COUNTDOWN_TICKS, true));
+                    .sendToDimension(level, new RocketLaunchStatePacket(pos, launchTicks, LAUNCH_COUNTDOWN_TICKS, true));
 
             if (launcherCenterPos != null) {
                 NetworkHandler.sendToAllPlayers(new LauncherStateUpdatePacket(
@@ -218,7 +215,7 @@ public class IskanderRocketBlockEntity extends BlockEntity implements GeoBlockEn
         iskander.isLegitSpawn = true;
         level.addFreshEntity(iskander);
 
-        NetworkHandler.sendToAllPlayers(new RocketLaunchStatePacket(pos, 0, LAUNCH_COUNTDOWN_TICKS, false));
+        NetworkHandler.sendToDimension(level, new RocketLaunchStatePacket(pos, 0, LAUNCH_COUNTDOWN_TICKS, false));
 
         for (ServerPlayer player : level.players()) {
             level.sendParticles(player, ParticleTypes.EXPLOSION, true,
@@ -247,7 +244,7 @@ public class IskanderRocketBlockEntity extends BlockEntity implements GeoBlockEn
         if (level != null && !level.isClientSide) {
 
             NetworkHandler
-                    .sendToAllPlayers(new RocketLaunchStatePacket(worldPosition, 0, LAUNCH_COUNTDOWN_TICKS, true));
+                    .sendToDimension(level, new RocketLaunchStatePacket(worldPosition, 0, LAUNCH_COUNTDOWN_TICKS, true));
 
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }
@@ -260,7 +257,7 @@ public class IskanderRocketBlockEntity extends BlockEntity implements GeoBlockEn
             this.setChanged();
 
             NetworkHandler
-                    .sendToAllPlayers(new RocketLaunchStatePacket(worldPosition, 0, LAUNCH_COUNTDOWN_TICKS, false));
+                    .sendToDimension(level, new RocketLaunchStatePacket(worldPosition, 0, LAUNCH_COUNTDOWN_TICKS, false));
 
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
         }

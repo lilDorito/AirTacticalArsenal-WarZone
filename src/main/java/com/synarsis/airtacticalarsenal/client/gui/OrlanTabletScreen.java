@@ -1,5 +1,7 @@
 package com.synarsis.airtacticalarsenal.client.gui;
 
+import com.synarsis.airtacticalarsenal.util.Tr;
+
 import com.synarsis.airtacticalarsenal.client.OrlanCameraHandler;
 import com.synarsis.airtacticalarsenal.entity.OrlanEntity;
 import com.synarsis.airtacticalarsenal.network.LaunchOrlanFromTabletPacket;
@@ -20,10 +22,16 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import java.util.*;
 
 @OnlyIn(Dist.CLIENT)
-public class OrlanTabletScreen extends Screen {
+public class OrlanTabletScreen extends AtaScaledScreen {
 
     private static final int GUI_WIDTH = 420;
     private static final int GUI_HEIGHT = 360;
+    
+    @Override
+    protected int designWidth() { return GUI_WIDTH; }
+
+    @Override
+    protected int designHeight() { return GUI_HEIGHT; }
 
     private static final int BORDER_COLOR = 0xFF1565C0;
     private static final int BG_COLOR = 0xE0101010;
@@ -94,14 +102,14 @@ public class OrlanTabletScreen extends Screen {
         rebuildCameraButtons();
 
         this.checkAllButton = Button.builder(
-                Component.literal(checkedLaunchers.size() == launcherPositions.size() ? "СНЯТЬ ВСЕ" : "ВЫБРАТЬ ВСЕ"),
+                Component.translatable(checkedLaunchers.size() == launcherPositions.size() ? "gui.ata.tablet.deselect_all" : "gui.ata.tablet.select_all"),
                 button -> toggleCheckAll())
             .bounds(guiLeft + 15, guiTop + 38 + MAX_VISIBLE_LAUNCHERS * 22 + 4, 160, 18)
             .build();
         this.addWidget(this.checkAllButton);
 
         this.routeButton = Button.builder(
-                Component.literal("МАРШРУТ"),
+                Component.translatable("gui.ata.tablet.route"),
                 button -> onRouteClicked())
             .bounds(rightX, guiTop + 120, btnW, 20)
             .build();
@@ -109,7 +117,7 @@ public class OrlanTabletScreen extends Screen {
         this.addWidget(this.routeButton);
 
         this.removeButton = Button.builder(
-                Component.literal("ОТВЯЗАТЬ"),
+                Component.translatable("gui.ata.tablet.unlink"),
                 button -> onRemoveClicked())
             .bounds(rightX + btnW + 5, guiTop + 120, btnW, 20)
             .build();
@@ -117,7 +125,7 @@ public class OrlanTabletScreen extends Screen {
         this.addWidget(this.removeButton);
 
         this.launchButton = Button.builder(
-                Component.literal("ЗАПУСК"),
+                Component.translatable("gui.ata.tablet.launch"),
                 button -> onLaunchClicked())
             .bounds(rightX, guiTop + 145, btnW, 20)
             .build();
@@ -128,7 +136,7 @@ public class OrlanTabletScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolledScaled(double mouseX, double mouseY, double delta) {
         int guiLeft = (this.width - GUI_WIDTH) / 2;
         int dividerX = guiLeft + 185;
 
@@ -143,7 +151,7 @@ public class OrlanTabletScreen extends Screen {
                 rebuildCameraButtons();
             }
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolledScaled(mouseX, mouseY, delta);
     }
 
     private void rebuildLauncherButtons() {
@@ -166,7 +174,7 @@ public class OrlanTabletScreen extends Screen {
             String check = checked ? "§a[✓]" : "§7[ ]";
             String droneIcon = hasDrone ? "§a●" : "§c○";
             String routeIcon = hasRoute ? "§a→" : "§8-";
-            String text = check + " " + droneIcon + " " + routeIcon + " ПУ#" + (actualIndex + 1);
+            String text = check + " " + droneIcon + " " + routeIcon + " " + Tr.s("gui.ata.tablet.launcher_short", actualIndex + 1);
 
             if (actualIndex == selectedLauncherIndex) {
                 text = "▶" + text;
@@ -217,8 +225,8 @@ public class OrlanTabletScreen extends Screen {
 
     private void updateCheckAllButton() {
         if (checkAllButton != null) {
-            checkAllButton.setMessage(Component.literal(
-                checkedLaunchers.size() == launcherPositions.size() ? "СНЯТЬ ВСЕ" : "ВЫБРАТЬ ВСЕ"));
+            checkAllButton.setMessage(Component.translatable(
+                checkedLaunchers.size() == launcherPositions.size() ? "gui.ata.tablet.deselect_all" : "gui.ata.tablet.select_all"));
         }
     }
 
@@ -250,7 +258,7 @@ public class OrlanTabletScreen extends Screen {
             String timerStr = String.format("%02d:%02d", totalSec / 60, totalSec % 60);
             String phaseStr = getLivePhase(entityId);
 
-            String text = "§bОрлан #" + droneNum + " §7[" + orlanData[1] + "," + orlanData[2] + "] " + phaseStr + " §e" + timerStr;
+            String text = Tr.s("gui.ata.orlan_tablet.drone_entry", droneNum, orlanData[1], orlanData[2], phaseStr, timerStr);
 
             Button camBtn = Button.builder(
                     Component.literal(text),
@@ -335,7 +343,7 @@ public class OrlanTabletScreen extends Screen {
                     if (!updatedRoutes.isEmpty() && !updatedRoutes.get(0).isEmpty()) {
                         List<BlockPos> newRoute = updatedRoutes.get(0);
                         NetworkHandler.sendToServer(new UpdateOrlanRoutePacket(droneEntityId, newRoute));
-                        statusMessage = "§aМаршрут обновлён!";
+                        statusMessage = Tr.s("gui.ata.orlan_tablet.route_updated");
                     }
                 }, droneEntityId);
         Minecraft.getInstance().setScreen(routeScreen);
@@ -377,8 +385,8 @@ public class OrlanTabletScreen extends Screen {
         this.routeButton.active = hasSelection || !checkedLaunchers.isEmpty();
 
         if (hasSelection && !inRange) {
-            statusMessage = "§cПУ слишком далеко! Макс. 30 блоков";
-        } else if (statusMessage.startsWith("§cПУ слишком")) {
+            statusMessage = Tr.s("gui.ata.tablet.too_far");
+        } else if (statusMessage.equals(Tr.s("gui.ata.tablet.too_far"))) {
             statusMessage = "";
         }
     }
@@ -427,7 +435,7 @@ public class OrlanTabletScreen extends Screen {
         if (selectedLauncherIndex < hasDroneList.size()) {
             hasDroneList.set(selectedLauncherIndex, false);
         }
-        statusMessage = "§aЗапуск выполнен!";
+        statusMessage = Tr.s("gui.ata.tablet.launch_done");
         rebuildLauncherButtons();
         updateButtonStates();
     }
@@ -507,7 +515,7 @@ public class OrlanTabletScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void renderScaled(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(g);
 
         int guiLeft = (this.width - GUI_WIDTH) / 2;
@@ -520,10 +528,10 @@ public class OrlanTabletScreen extends Screen {
         g.fill(guiLeft, guiTop, guiLeft + 2, guiTop + GUI_HEIGHT, BORDER_COLOR);
         g.fill(guiLeft + GUI_WIDTH - 2, guiTop, guiLeft + GUI_WIDTH, guiTop + GUI_HEIGHT, BORDER_COLOR);
 
-        String title = "ПЛАНШЕТ УПРАВЛЕНИЯ ОРЛАН-10";
+        String title = Tr.s("gui.ata.orlan_tablet.title");
         g.drawCenteredString(this.font, title, guiLeft + GUI_WIDTH / 2, guiTop + 8, ACCENT_COLOR);
 
-        g.drawString(this.font, "ПУСКОВЫЕ УСТАНОВКИ: §8(Shift+ЛКМ)", guiLeft + 10, guiTop + 30, 0xAAAAAA, false);
+        g.drawString(this.font, Tr.s("gui.ata.orlan_tablet.launchers"), guiLeft + 10, guiTop + 30, 0xAAAAAA, false);
 
         for (Button btn : launcherButtons) {
             btn.render(g, mouseX, mouseY, partialTick);
@@ -541,22 +549,22 @@ public class OrlanTabletScreen extends Screen {
             boolean inRange = isPlayerInRange(selectedLauncherIndex);
 
             int y = guiTop + 28;
-            g.drawString(this.font, "§eВЫБРАНА: ПУ #" + (selectedLauncherIndex + 1), rightX, y, 0xFFFF00, false);
+            g.drawString(this.font, Tr.s("gui.ata.tablet.selected", selectedLauncherIndex + 1), rightX, y, 0xFFFF00, false);
             y += 14;
             g.drawString(this.font, "[" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + "]", rightX, y, 0x888888, false);
             y += 16;
 
-            g.drawString(this.font, hasDrone ? "§a● ДРОН ГОТОВ" : "§c○ НЕТ ДРОНА", rightX, y, 0xFFFFFF, false);
+            g.drawString(this.font, hasDrone ? Tr.s("gui.ata.tablet.drone_ready") : Tr.s("gui.ata.tablet.no_drone"), rightX, y, 0xFFFFFF, false);
             y += 14;
 
-            String routeText = hasRoute ? "§a✓ МАРШРУТ (" + routePts + " тч.)" : "§6✗ НЕТ МАРШРУТА";
+            String routeText = hasRoute ? Tr.s("gui.ata.tablet.has_route", routePts) : Tr.s("gui.ata.tablet.no_route");
             g.drawString(this.font, routeText, rightX, y, 0xFFFFFF, false);
             y += 14;
 
             if (!inRange) {
-                g.drawString(this.font, "§c⚠ Слишком далеко от ПУ!", rightX, y, 0xFF4444, false);
+                g.drawString(this.font, Tr.s("gui.ata.tablet.too_far_warn"), rightX, y, 0xFF4444, false);
                 y += 11;
-                g.drawString(this.font, "§7Макс. 30 блоков для запуска", rightX, y, 0x888888, false);
+                g.drawString(this.font, Tr.s("gui.ata.tablet.max_range_hint"), rightX, y, 0x888888, false);
                 y += 14;
             } else {
                 y += 4;
@@ -569,15 +577,15 @@ public class OrlanTabletScreen extends Screen {
                     if (idx < hasDroneList.size() && hasDroneList.get(idx)) withDrone++;
                     if (idx < savedRoutes.size() && !savedRoutes.get(idx).isEmpty()) withRoute++;
                 }
-                g.drawString(this.font, String.format("§fОтмечено: %d ПУ", totalChecked), rightX, y, 0xAAAAAA, false);
+                g.drawString(this.font, Tr.s("gui.ata.tablet.checked", totalChecked), rightX, y, 0xAAAAAA, false);
                 y += 12;
-                g.drawString(this.font, String.format("С дроном: %d | С маршр.: %d", withDrone, withRoute), rightX, y, 0x777777, false);
+                g.drawString(this.font, Tr.s("gui.ata.tablet.checked_stats", withDrone, withRoute), rightX, y, 0x777777, false);
             }
         } else {
-            g.drawString(this.font, "Выберите ПУ из списка", rightX, guiTop + 60, 0x666666, false);
+            g.drawString(this.font, Tr.s("gui.ata.tablet.select_hint"), rightX, guiTop + 60, 0x666666, false);
 
             if (!checkedLaunchers.isEmpty()) {
-                g.drawString(this.font, String.format("§fОтмечено: %d ПУ", checkedLaunchers.size()), rightX, guiTop + 80, 0xAAAAAA, false);
+                g.drawString(this.font, Tr.s("gui.ata.tablet.checked", checkedLaunchers.size()), rightX, guiTop + 80, 0xAAAAAA, false);
             }
         }
 
@@ -587,10 +595,10 @@ public class OrlanTabletScreen extends Screen {
 
         g.fill(guiLeft + 5, guiTop + 190, guiLeft + GUI_WIDTH - 5, guiTop + 192, BORDER_COLOR);
 
-        g.drawString(this.font, "§bАКТИВНЫЕ ДРОНЫ (" + activeOrlans.size() + "):", guiLeft + 10, guiTop + 196, ACCENT_COLOR, false);
+        g.drawString(this.font, Tr.s("gui.ata.orlan_tablet.active_drones", activeOrlans.size()), guiLeft + 10, guiTop + 196, ACCENT_COLOR, false);
 
         if (activeOrlans.isEmpty()) {
-            g.drawString(this.font, "Нет активных Орланов", guiLeft + 30, guiTop + 215, 0x666666, false);
+            g.drawString(this.font, Tr.s("gui.ata.orlan_tablet.no_active"), guiLeft + 30, guiTop + 215, 0x666666, false);
         }
 
         for (Button btn : cameraButtons) {
@@ -607,7 +615,7 @@ public class OrlanTabletScreen extends Screen {
             g.drawCenteredString(this.font, statusMessage, guiLeft + GUI_WIDTH / 2, guiTop + GUI_HEIGHT - 15, 0xFFFFFF);
         }
 
-        super.render(g, mouseX, mouseY, partialTick);
+        super.renderScaled(g, mouseX, mouseY, partialTick);
     }
 
     @Override

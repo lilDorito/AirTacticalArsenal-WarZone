@@ -10,7 +10,6 @@ import com.synarsis.airtacticalarsenal.network.OrlanRemovePacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
@@ -110,11 +109,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
 
     private static final float DEFAULT_MAX_HEALTH = 80.0f;
 
-    private static final int MAX_FLIGHT_TICKS = 24000;
-
     private static final double RETURN_SPEED = 1.0;
-
-    private static final double LANDING_RADIUS = 15.0;
 
     private static final EntityDataAccessor<BlockPos> TARGET_POS = SynchedEntityData.defineId(OrlanEntity.class,
             EntityDataSerializers.BLOCK_POS);
@@ -168,7 +163,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     private boolean initialPacketSent = false;
     private boolean destroyed = false;
 
-    private int localFlightTimer = MAX_FLIGHT_TICKS;
+    private int localFlightTimer = getMaxFlightTicks();
 
     private float maxHealth = DEFAULT_MAX_HEALTH;
 
@@ -277,7 +272,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         this.entityData.define(IS_DAMAGED, false);
         this.entityData.define(LINKED_PLAYER, "");
         this.entityData.define(OWNER_UUID_DATA, "");
-        this.entityData.define(FLIGHT_TIMER, MAX_FLIGHT_TICKS);
+        this.entityData.define(FLIGHT_TIMER, getMaxFlightTicks());
         this.entityData.define(LAUNCHER_POS_DATA, BlockPos.ZERO);
         this.entityData.define(TARGET_ALTITUDE_DATA, (float) PATROL_ALTITUDE);
     }
@@ -440,7 +435,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         if (needSync) {
             this.initialPacketSent = true;
             this.syncTickCounter = 0;
-            NetworkHandler.sendToAllPlayers(new OrlanSpawnPacket(
+            NetworkHandler.sendToDimension(this.level(), new OrlanSpawnPacket(
                     this.getId(), this.position(), this.getDeltaMovement(), target,
                     this.flightPhase.ordinal(), this.getRemainingFlightTicks()));
         }
@@ -830,7 +825,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         if (!player.getInventory().add(orlanItem)) {
             player.drop(orlanItem, false);
         }
-        player.displayClientMessage(Component.literal("§aОрлан-10 подобран"), true);
+        player.displayClientMessage(Component.translatable("message.ata.orlan.picked_up"), true);
         this.discard();
         return InteractionResult.SUCCESS;
     }
@@ -1326,7 +1321,11 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     }
 
     public static int getMaxFlightTicks() {
-        return MAX_FLIGHT_TICKS;
+        try {
+            return com.synarsis.airtacticalarsenal.config.ShahedConfig.getOrlanFlightTimeMinutes() * 60 * 20;
+        } catch (IllegalStateException configNotLoaded) {
+            return 30 * 60 * 20;
+        }
     }
 
     public double getTargetAltitude() {

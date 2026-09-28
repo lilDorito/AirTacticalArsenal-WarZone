@@ -47,7 +47,7 @@ public class ControlTabletItem extends Item {
             if (!launchers.isEmpty()) {
                 clearAllLaunchers(stack);
                 if (!level.isClientSide) {
-                    player.displayClientMessage(Component.literal("§eВсе привязки ПУ сброшены"), true);
+                    player.displayClientMessage(Component.translatable("message.ata.tablet.links_reset"), true);
                 }
                 return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
             }
@@ -255,22 +255,22 @@ public class ControlTabletItem extends Item {
         List<BlockPos> launchers = getLinkedLaunchers(stack);
 
         if (!launchers.isEmpty()) {
-            tooltip.add(Component.literal("§aПривязано ПУ: §f" + launchers.size() + "/" + MAX_LAUNCHERS));
+            tooltip.add(Component.translatable("tooltip.ata.tablet.linked", launchers.size(), MAX_LAUNCHERS));
             for (int i = 0; i < Math.min(launchers.size(), 5); i++) {
                 BlockPos pos = launchers.get(i);
                 tooltip.add(Component.literal("§7  " + (i+1) + ". [" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + "]"));
             }
             if (launchers.size() > 5) {
-                tooltip.add(Component.literal("§7  ... и ещё " + (launchers.size() - 5)));
+                tooltip.add(Component.translatable("tooltip.ata.tablet.and_more", launchers.size() - 5));
             }
         } else {
-            tooltip.add(Component.literal("§7Нет привязанных ПУ"));
+            tooltip.add(Component.translatable("tooltip.ata.tablet.none_linked"));
         }
 
         tooltip.add(Component.literal(""));
-        tooltip.add(Component.literal("§eПКМ по ПУ§7 - привязать ПУ"));
-        tooltip.add(Component.literal("§eПКМ§7 - открыть управление"));
-        tooltip.add(Component.literal("§eShift + ПКМ§7 - сбросить все привязки"));
+        tooltip.add(Component.translatable("tooltip.ata.tablet.link_hint"));
+        tooltip.add(Component.translatable("tooltip.ata.control_tablet.open"));
+        tooltip.add(Component.translatable("tooltip.ata.control_tablet.reset"));
     }
 
     @Override

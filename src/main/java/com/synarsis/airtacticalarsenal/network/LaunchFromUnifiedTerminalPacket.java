@@ -107,7 +107,7 @@ public class LaunchFromUnifiedTerminalPacket {
             BlockPos launchBlockPos = new BlockPos((int) launchPos.x, (int) launchPos.y, (int) launchPos.z);
             if (!level.getFluidState(launchBlockPos).isEmpty()) {
                 player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("§cЗапуск невозможен под водой!"), true);
+                        net.minecraft.network.chat.Component.translatable("message.ata.launch.underwater"), true);
                 return;
             }
 

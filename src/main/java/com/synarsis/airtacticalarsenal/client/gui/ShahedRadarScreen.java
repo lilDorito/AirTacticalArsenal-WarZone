@@ -1,5 +1,7 @@
 package com.synarsis.airtacticalarsenal.client.gui;
 
+import com.synarsis.airtacticalarsenal.util.Tr;
+
 import com.synarsis.airtacticalarsenal.client.radar.TerrainMapRenderer;
 import com.synarsis.airtacticalarsenal.network.NetworkHandler;
 import com.synarsis.airtacticalarsenal.network.RadarUpdatePacket;
@@ -47,23 +49,21 @@ public class ShahedRadarScreen extends Screen {
     private static final int COL_BG         = 0xFF0a0e14;
     private static final int COL_FRAME      = 0xFF1c2a38;
     private static final int COL_FRAME_LITE = 0xFF2a3e52;
-    private static final int COL_GRID       = 0x20408060;
     private static final int COL_CROSS      = 0x3060c090;
     private static final int COL_SWEEP      = 0x9030ff70;
-    private static final int COL_RANGE_RING = 0xA0206040;
     private static final int COL_RADAR_DOT  = 0xFF30ff90;
-    private static final int COL_TEXT       = 0xFFc0d0c0;
     private static final int COL_TEXT_DIM   = 0xFF607060;
     private static final int COL_TITLE      = 0xFF40ff80;
     private static final int COL_TARGET     = 0xFFe04040;
-    private static final int COL_LABEL      = 0xFFffcc40;
     private static final int COL_SELECTED   = 0xFFffff60;
     private static final int COL_STATUS_BG  = 0xE0080c14;
-    private static final int COL_STATUS_TXT = 0xFF40e080;
     private static final int COL_COMPASS    = 0xFF508868;
     private static final int COL_SW_HELI    = 0xFF40c0ff;
     private static final int COL_SW_PLANE   = 0xFFff8040;
     private static final int COL_SW_DRONE   = 0xFFc040ff;
+    private static final int COL_SHAHED   = 0xFFFF2A2A;
+    private static final int COL_ISKANDER = 0xFFFFE62A;
+    private static final int COL_ORLAN    = 0xFF2AFFFF;
 
     private static class RadarTarget {
         final int entityId;
@@ -101,6 +101,9 @@ public class ShahedRadarScreen extends Screen {
         }
     }
 
+    private int serverMinAltitude = 90;
+    private boolean weakSignal = false;
+
     public ShahedRadarScreen(BlockPos radarPos) {
         super(Component.translatable("gui.ata.radar.title"));
         this.radarPos = radarPos;
@@ -115,8 +118,14 @@ public class ShahedRadarScreen extends Screen {
         Minecraft.getInstance().setScreen(screen);
     }
 
-    public static void updateTargets(BlockPos radarPos, List<RadarUpdatePacket.TargetData> data) {
+    public static void updateTargets(BlockPos radarPos, List<RadarUpdatePacket.TargetData> data, int minAltitude, boolean openSky) {
         if (currentInstance == null || !currentInstance.radarPos.equals(radarPos)) return;
+        currentInstance.serverMinAltitude = minAltitude;
+        currentInstance.weakSignal = !openSky;
+        if (!openSky) {
+            currentInstance.targets.clear();
+            return;
+        }
         for (RadarUpdatePacket.TargetData td : data) {
             RadarTarget t = currentInstance.targets.computeIfAbsent(
                     td.entityId, id -> new RadarTarget(id, td.type));
@@ -204,18 +213,24 @@ public class ShahedRadarScreen extends Screen {
         int half = mapSide / 2;
 
         renderFrame(g, cx, cy, half);
-        renderTerrainMap(g, cx, cy, half);
+        if (!weakSignal) renderTerrainMap(g, cx, cy, half);
 
         g.enableScissor(cx - half, cy - half, cx + half, cy + half);
         renderCrosshair(g, cx, cy, half);
         renderRangeRings(g, cx, cy, half);
-        renderSweep(g, cx, cy, half);
         hoveredTargetId = -1;
-        renderTargets(g, cx, cy, half, mouseX, mouseY);
-        renderRadarMarker(g, cx, cy, half);
+        if (!weakSignal) {
+            renderSweep(g, cx, cy, half);
+            renderTargets(g, cx, cy, half, mouseX, mouseY);
+            renderRadarMarker(g, cx, cy, half);
+        }
         renderCompass(g, cx, cy, half);
         g.disableScissor();
-        renderHUD(g, cx, cy, half);
+        if (weakSignal) {
+            renderWeakSignal(g, cx, cy, half);
+        } else {
+            renderHUD(g, cx, cy, half);
+        }
         renderStatusBar(g, cx, cy, half);
         renderRightPanel(g, cx, cy, half, mouseX, mouseY);
 
@@ -234,12 +249,12 @@ public class ShahedRadarScreen extends Screen {
 
             String loadText;
             if (terrainMap.isQueued()) {
-                loadText = "\u0412 \u043e\u0447\u0435\u0440\u0435\u0434\u0438: #" + terrainMap.getQueuePosition();
+                loadText = Tr.s("gui.ata.map.queued", terrainMap.getQueuePosition());
             } else if (terrainMap.isBuilding()) {
                 int pct = (int)(terrainMap.getBuildProgress() * 100);
-                loadText = "\u0421\u043a\u0430\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435: " + pct + "%";
+                loadText = Tr.s("gui.ata.map.scanning", pct);
             } else {
-                loadText = "\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430 \u043a\u0430\u0440\u0442\u044b...";
+                loadText = Tr.s("gui.ata.map.loading");
             }
             int tw = font.width(loadText);
             g.drawString(font, loadText, cx - tw / 2, cy - 4, 0xFF40FF80, false);
@@ -247,10 +262,9 @@ public class ShahedRadarScreen extends Screen {
         }
 
         int texSize = terrainMap.getTextureSize();
-        int bpp = ZOOM_LEVELS[zoomIndex];
         double viewCenterX = radarPos.getX() + panWorldX;
         double viewCenterZ = radarPos.getZ() + panWorldZ;
-        double viewRadius = (double) half * bpp;
+        double viewRadius = getWorldRadius();
 
         double panDeltaX = viewCenterX - terrainMap.getRadarX();
         double panDeltaZ = viewCenterZ - terrainMap.getRadarZ();
@@ -301,14 +315,14 @@ public class ShahedRadarScreen extends Screen {
         int detectPx = (int) (DRONE_DETECT_RADIUS * scale);
         if (detectPx > 8 && detectPx < half * 3) {
             drawCircle(g, rp[0], rp[1], detectPx, 0xC040c070, 48);
-            String distLabel = DRONE_DETECT_RADIUS + "м";
+            String distLabel = Tr.s("gui.ata.radar.meters", DRONE_DETECT_RADIUS);
             g.drawString(font, distLabel, rp[0] + 3, rp[1] - detectPx - 11, 0xFF60e080, false);
         }
 
         int halfPx = detectPx / 2;
         if (halfPx > 8) {
             drawCircle(g, rp[0], rp[1], halfPx, 0x9030a058, 32);
-            String halfLabel = (DRONE_DETECT_RADIUS / 2) + "м";
+            String halfLabel = Tr.s("gui.ata.radar.meters", DRONE_DETECT_RADIUS / 2);
             g.drawString(font, halfLabel, rp[0] + 3, rp[1] - halfPx - 11, 0xFF50b068, false);
         }
     }
@@ -329,8 +343,8 @@ public class ShahedRadarScreen extends Screen {
     private void renderTargets(GuiGraphics g, int cx, int cy, int half, int mx, int my) {
         int wr = getWorldRadius();
         float scale = (float) half / wr;
-        int viewCX = radarPos.getX() + (int) panWorldX;
-        int viewCZ = radarPos.getZ() + (int) panWorldZ;
+        double viewCX = radarPos.getX() + panWorldX;
+        double viewCZ = radarPos.getZ() + panWorldZ;
 
         for (RadarTarget target : targets.values()) {
             Vec3 pos = target.smoothPos;
@@ -387,17 +401,10 @@ public class ShahedRadarScreen extends Screen {
     }
 
     private int[] getRadarScreenPos(int cx, int cy, int half) {
-        int bpp = ZOOM_LEVELS[zoomIndex];
-        int viewCX = radarPos.getX() + (int) panWorldX;
-        int viewCZ = radarPos.getZ() + (int) panWorldZ;
-
-        int texOffX = (radarPos.getX() - viewCX) / bpp;
-        int texOffZ = (radarPos.getZ() - viewCZ) / bpp;
-
-        float pxToScreen = (float) half / 256.0f;
+        float scale = (float) half / getWorldRadius();
         return new int[]{
-                cx + Math.round(texOffX * pxToScreen),
-                cy + Math.round(texOffZ * pxToScreen)
+                cx + Math.round(-panWorldX * scale),
+                cy + Math.round(-panWorldZ * scale)
         };
     }
 
@@ -422,7 +429,7 @@ public class ShahedRadarScreen extends Screen {
                 lx + 3, ly + 11, COL_TEXT_DIM);
 
         if (terrainMap != null && terrainMap.isQueued()) {
-            g.drawCenteredString(this.font, "\u25CB \u0412 \u041e\u0427\u0415\u0420\u0415\u0414\u0418: #" + terrainMap.getQueuePosition(), cx, cy - half + 20, 0xFFffcc40);
+            g.drawCenteredString(this.font, Tr.s("gui.ata.radar.queued_big", terrainMap.getQueuePosition()), cx, cy - half + 20, 0xFFffcc40);
         } else if (terrainMap != null && terrainMap.isBuilding()) {
             int pct = (int)(terrainMap.getBuildProgress() * 100);
             String scan = String.format("\u25CB SCANNING... %d%%", pct);
@@ -446,6 +453,22 @@ public class ShahedRadarScreen extends Screen {
         }
     }
 
+    private void renderWeakSignal(GuiGraphics g, int cx, int cy, int half) {
+        boolean blink = (System.currentTimeMillis() / 500) % 2 == 0;
+        String title = Tr.s("gui.ata.radar.weak_signal");
+        g.pose().pushPose();
+        g.pose().translate(cx, cy - 10, 0);
+        g.pose().scale(2.0f, 2.0f, 1.0f);
+        g.drawCenteredString(this.font, title, 0, 0, blink ? 0xFFff3030 : 0xFFb02020);
+        g.pose().popPose();
+        int lineY = cy + 14;
+        for (net.minecraft.util.FormattedCharSequence line : this.font.split(
+                net.minecraft.network.chat.Component.literal(Tr.s("gui.ata.radar.weak_signal_hint")), Math.max(80, half * 2 - 20))) {
+            g.drawCenteredString(this.font, line, cx, lineY, 0xFFc05050);
+            lineY += 10;
+        }
+    }
+
     private void renderStatusBar(GuiGraphics g, int cx, int cy, int half) {
         int barX = cx - half - 2;
         int barW = half * 2 + 4;
@@ -456,14 +479,28 @@ public class ShahedRadarScreen extends Screen {
         g.hLine(barX, barX + barW - 1, barY, 0xFF1a3028);
 
         long activeCount = targets.values().stream().filter(t -> t.staleTicks < RadarTarget.STALE_REMOVE).count();
-        String countStr = activeCount > 0
-                ? "\u26A0 \u0426\u0415\u041b\u0418: " + activeCount
-                : "\u2714 \u0427\u0418\u0421\u0422\u041e";
-        int countCol = activeCount > 0 ? 0xFFff5050 : 0xFF50ff80;
+        String countStr = weakSignal ? Tr.s("gui.ata.radar.weak_signal")
+                : activeCount > 0
+                ? Tr.s("gui.ata.radar.targets_count", activeCount)
+                : Tr.s("gui.ata.radar.clear");
+        int countCol = weakSignal || activeCount > 0 ? 0xFFff5050 : 0xFF50ff80;
         g.drawString(font, countStr, barX + 4, barY + 3, countCol, false);
 
-        g.drawString(font, "[Scroll] Zoom  [LMB] Pan  [RMB] Reset  [Click target] Select",
-                barX + barW / 3, barY + 3, 0xFF304030, false);
+        String controls = Tr.s("gui.ata.radar.controls_bar");
+        int ctrlX = Math.max(barX + barW / 3, barX + 4 + font.width(countStr) + 8);
+        int avail = barX + barW - 4 - ctrlX;
+        if (avail > 10) {
+            int w = font.width(controls);
+            float s = w > avail ? Math.max(0.6f, avail / (float) w) : 1.0f;
+            if (w * s > avail) {
+                controls = font.plainSubstrByWidth(controls, (int) (avail / s) - font.width("...")) + "...";
+            }
+            g.pose().pushPose();
+            g.pose().translate(ctrlX, barY + 3 + (1.0f - s) * 4.0f, 0);
+            g.pose().scale(s, s, 1.0f);
+            g.drawString(font, controls, 0, 0, 0xFF304030, false);
+            g.pose().popPose();
+        }
     }
 
     private List<RadarTarget> getSortedTargets() {
@@ -490,7 +527,7 @@ public class ShahedRadarScreen extends Screen {
         g.fill(px, py, px + pw, py + ph, COL_STATUS_BG);
         g.vLine(px, py, py + ph, 0xFF1a3028);
 
-        g.drawString(font, "\u0426\u0415\u041b\u0418", px + 4, py + 3, COL_TITLE, false);
+        g.drawString(font, Tr.s("gui.ata.radar.targets"), px + 4, py + 3, COL_TITLE, false);
         g.hLine(px + 2, px + pw - 2, py + 13, 0xFF1a3028);
 
         int listTop = py + 16;
@@ -526,7 +563,7 @@ public class ShahedRadarScreen extends Screen {
             double dist = Math.sqrt(
                     (t.position.x - radarPos.getX()) * (t.position.x - radarPos.getX()) +
                     (t.position.z - radarPos.getZ()) * (t.position.z - radarPos.getZ()));
-            g.drawString(font, String.format("\u0414:%.0f\u043c", dist), px + 60, row, COL_TEXT_DIM, false);
+            g.drawString(font, Tr.s("gui.ata.radar.target_dist", dist), px + 60, row, COL_TEXT_DIM, false);
 
             g.drawString(font, String.format("ALT:%.0f", t.position.y), px + 4, row + 9, 0xFF405840, false);
             g.drawString(font, String.format("V:%.1f", t.speed * 20), px + 60, row + 9, 0xFF405840, false);
@@ -545,9 +582,9 @@ public class ShahedRadarScreen extends Screen {
 
         int bottomY = py + ph - 4;
 
-        bottomY -= 10; g.drawString(font, "[Scroll] Zoom [LMB] Pan", px + 4, bottomY, 0xFF304030, false);
-        bottomY -= 10; g.drawString(font, "ALT<90: \u0441\u0442\u0435\u043b\u0441", px + 4, bottomY, 0xFF304030, false);
-        bottomY -= 10; g.drawString(font, "V=\u0441\u043a\u043e\u0440. ALT=\u0432\u044b\u0441. \u0414=\u0434\u0438\u0441\u0442.", px + 4, bottomY, 0xFF304030, false);
+        bottomY -= 10; g.drawString(font, Tr.s("gui.ata.radar.legend.controls"), px + 4, bottomY, 0xFF304030, false);
+        bottomY -= 10; g.drawString(font, Tr.s("gui.ata.radar.legend.stealth", serverMinAltitude), px + 4, bottomY, 0xFF304030, false);
+        bottomY -= 10; g.drawString(font, Tr.s("gui.ata.radar.legend.abbrev"), px + 4, bottomY, 0xFF304030, false);
         bottomY -= 4;
         g.hLine(px + 2, px + pw - 2, bottomY, 0xFF1a3028);
         bottomY -= 2;
@@ -556,9 +593,10 @@ public class ShahedRadarScreen extends Screen {
         boolean hasVvp = com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.isVvpLoaded();
         if (hasSw || hasVvp) {
             if (hasSw) {
-                bottomY -= 10; g.drawString(font, "PLN \u0421\u0430\u043c\u043e\u043b\u0451\u0442", px + 4, bottomY, COL_SW_PLANE, false);
+                bottomY -= 10; g.drawString(font, Tr.s("gui.ata.radar.legend.plane"), px + 4, bottomY, COL_SW_PLANE, false);
             }
-            bottomY -= 10; g.drawString(font, "HEL \u0412\u0435\u0440\u0442\u043e\u043b\u0451\u0442", px + 4, bottomY, COL_SW_HELI, false);
+            bottomY -= 10; g.drawString(font, Tr.s("gui.ata.radar.legend.heli"), px + 4, bottomY, COL_SW_HELI, false);
+            bottomY -= 10; g.drawString(font, Tr.s("gui.ata.radar.legend.uav"), px + 4, bottomY, COL_SW_DRONE, false);
             bottomY -= 4;
             g.hLine(px + 2, px + pw - 2, bottomY, 0xFF1a3028);
             bottomY -= 2;
@@ -566,13 +604,13 @@ public class ShahedRadarScreen extends Screen {
 
         int valCol = 0xFF80c890;
         bottomY -= 10;
-        g.drawString(font, "\u041e\u0440\u043b\u0430\u043d-10", px + 4, bottomY, 0xFF40a0c0, false);
+        g.drawString(font, Tr.s("gui.ata.radar.legend.orlan"), px + 4, bottomY, COL_ORLAN, false);
         g.drawString(font, "V:16-24 ALT:100-350", px + 62, bottomY, valCol, false);
         bottomY -= 10;
-        g.drawString(font, "\u0418\u0441\u043a\u0430\u043d\u0434\u0435\u0440", px + 4, bottomY, 0xFFc0a040, false);
+        g.drawString(font, Tr.s("gui.ata.radar.legend.iskander"), px + 4, bottomY, COL_ISKANDER, false);
         g.drawString(font, "V:50-100 ALT:200+", px + 62, bottomY, valCol, false);
         bottomY -= 10;
-        g.drawString(font, "\u0428\u0430\u0445\u0435\u0434", px + 4, bottomY, 0xFFc06040, false);
+        g.drawString(font, Tr.s("gui.ata.radar.legend.shahed"), px + 4, bottomY, COL_SHAHED, false);
         g.drawString(font, "V:10-30 ALT:80-250", px + 62, bottomY, valCol, false);
         bottomY -= 2;
         g.hLine(px + 2, px + pw - 2, bottomY, 0xFF1a3028);
@@ -580,6 +618,9 @@ public class ShahedRadarScreen extends Screen {
 
     private static int getTargetColor(byte type) {
         return switch (type) {
+            case 0 -> COL_SHAHED;
+            case 1 -> COL_ISKANDER;
+            case 2 -> COL_ORLAN;
             case 3 -> COL_SW_HELI;
             case 4 -> COL_SW_PLANE;
             case 5 -> COL_SW_DRONE;
@@ -589,8 +630,12 @@ public class ShahedRadarScreen extends Screen {
 
     private static String getTargetTypeTag(byte type) {
         return switch (type) {
+            case 0 -> "SHD";
+            case 1 -> "BAL";
+            case 2 -> "ORL";
             case 3 -> "HEL";
             case 4 -> "PLN";
+            case 5 -> "UAV";
             default -> "";
         };
     }

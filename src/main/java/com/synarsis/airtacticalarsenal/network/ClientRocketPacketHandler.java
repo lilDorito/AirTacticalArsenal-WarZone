@@ -30,7 +30,8 @@ public class ClientRocketPacketHandler {
 
             IskanderPreparingSoundClient existingSound = activeSounds.get(pos);
             if (existingSound != null) {
-                if (existingSound.isStopped()) {
+                if (existingSound.isStopped() || !mc.getSoundManager().isActive(existingSound)) {
+                    if (!existingSound.isStopped()) existingSound.stopSound();
                     activeSounds.remove(pos);
                 } else if (!launching) {
 
@@ -42,7 +43,7 @@ public class ClientRocketPacketHandler {
                 }
             }
 
-            if (launching && launchTicks == 0) {
+            if (launching && launchTicks < totalTicks - 10) {
                 IskanderPreparingSoundClient sound = new IskanderPreparingSoundClient(pos);
                 activeSounds.put(pos, sound);
                 mc.execute(sound::start);

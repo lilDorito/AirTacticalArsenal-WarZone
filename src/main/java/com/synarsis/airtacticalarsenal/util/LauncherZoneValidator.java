@@ -59,23 +59,4 @@ public class LauncherZoneValidator {
             Math.cos(radYaw)    
         ).normalize();
     }
-
-    public static String getTargetDirectionDescription(double angle) {
-        if (angle > 150) {
-            return "прямо ПОЗАДИ ПУ";
-        } else if (angle > 120) {
-            return "сзади-сбоку";
-        } else if (angle > 90) {
-            return "сбоку/сзади";
-        } else if (angle > MAX_DEVIATION_ANGLE) {
-            return "слишком сбоку";
-        } else {
-            return "в допустимой зоне";
-        }
-    }
-
-    public static String getShortErrorMessage(double angle) {
-        return String.format("Угол: %.0f° (макс: %.0f°) - %s", 
-            angle, MAX_DEVIATION_ANGLE, getTargetDirectionDescription(angle));
-    }
 }

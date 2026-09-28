@@ -21,7 +21,6 @@ import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import software.bernie.geckolib.animatable.GeoItem;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
-import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import javax.annotation.Nullable;
@@ -75,13 +74,13 @@ public class PaintStandItem extends Item implements GeoItem {
         BlockPos placePos = face == Direction.UP ? clickedPos.above() : clickedPos.relative(face);
 
         if (!serverLevel.isEmptyBlock(placePos)) {
-            player.displayClientMessage(Component.literal("§cМесто занято!"), true);
+            player.displayClientMessage(Component.translatable("message.ata.place.occupied"), true);
             return InteractionResult.FAIL;
         }
 
         BlockState support = serverLevel.getBlockState(placePos.below());
         if (!support.isFaceSturdy(serverLevel, placePos.below(), Direction.UP)) {
-            player.displayClientMessage(Component.literal("§cНужна твёрдая поверхность!"), true);
+            player.displayClientMessage(Component.translatable("message.ata.place.need_solid"), true);
             return InteractionResult.FAIL;
         }
 
@@ -89,7 +88,7 @@ public class PaintStandItem extends Item implements GeoItem {
         List<PaintStandEntity> nearbyStands = serverLevel.getEntitiesOfClass(
                 PaintStandEntity.class, checkArea, e -> e.isAlive());
         if (!nearbyStands.isEmpty()) {
-            player.displayClientMessage(Component.literal("§cСлишком близко к другой стойке!"), true);
+            player.displayClientMessage(Component.translatable("message.ata.place.too_close_stand"), true);
             return InteractionResult.FAIL;
         }
 
@@ -109,7 +108,7 @@ public class PaintStandItem extends Item implements GeoItem {
 
         if (!serverLevel.noCollision(stand)) {
             stand.discard();
-            player.displayClientMessage(Component.literal("§cНедостаточно места!"), true);
+            player.displayClientMessage(Component.translatable("message.ata.place.not_enough_space"), true);
             return InteractionResult.FAIL;
         }
 
@@ -125,10 +124,10 @@ public class PaintStandItem extends Item implements GeoItem {
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.literal("§7Стойка для покраски БПЛА"));
+        tooltip.add(Component.translatable("tooltip.ata.paint_stand.desc"));
         tooltip.add(Component.literal(""));
-        tooltip.add(Component.literal("§7ПКМ по блоку - разместить"));
-        tooltip.add(Component.literal("§7Shift+ПКМ - убрать стойку"));
+        tooltip.add(Component.translatable("tooltip.ata.place_hint"));
+        tooltip.add(Component.translatable("tooltip.ata.paint_stand.remove"));
         super.appendHoverText(stack, level, tooltip, flag);
     }
 }

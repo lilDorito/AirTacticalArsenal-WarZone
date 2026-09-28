@@ -1,5 +1,7 @@
 package com.synarsis.airtacticalarsenal.client.gui;
 
+import com.synarsis.airtacticalarsenal.util.Tr;
+
 import com.synarsis.airtacticalarsenal.network.LaunchShahedByRoutePacket;
 import com.synarsis.airtacticalarsenal.network.NetworkHandler;
 import com.synarsis.airtacticalarsenal.network.RemoveLauncherFromTabletPacket;
@@ -16,10 +18,16 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import java.util.*;
 
 @OnlyIn(Dist.CLIENT)
-public class ShahedTabletScreen extends Screen {
+public class ShahedTabletScreen extends AtaScaledScreen {
 
     private static final int GUI_WIDTH = 420;
     private static final int GUI_HEIGHT = 280;
+    
+    @Override
+    protected int designWidth() { return GUI_WIDTH; }
+
+    @Override
+    protected int designHeight() { return GUI_HEIGHT; }
 
     private static final int BORDER_COLOR = 0xFF006400;
     private static final int BG_COLOR = 0xE0101010;
@@ -76,14 +84,14 @@ public class ShahedTabletScreen extends Screen {
         rebuildLauncherButtons();
 
         this.checkAllButton = Button.builder(
-                Component.literal(checkedLaunchers.size() == launcherPositions.size() ? "СНЯТЬ ВСЕ" : "ВЫБРАТЬ ВСЕ"),
+                Component.translatable(checkedLaunchers.size() == launcherPositions.size() ? "gui.ata.tablet.deselect_all" : "gui.ata.tablet.select_all"),
                 button -> toggleCheckAll())
             .bounds(guiLeft + 15, guiTop + GUI_HEIGHT - 30, 160, 18)
             .build();
         this.addWidget(this.checkAllButton);
 
         this.routeButton = Button.builder(
-                Component.literal("МАРШРУТ"),
+                Component.translatable("gui.ata.tablet.route"),
                 button -> onRouteClicked())
             .bounds(rightX, guiTop + GUI_HEIGHT - 80, btnW, 20)
             .build();
@@ -91,7 +99,7 @@ public class ShahedTabletScreen extends Screen {
         this.addWidget(this.routeButton);
 
         this.removeButton = Button.builder(
-                Component.literal("ОТВЯЗАТЬ"),
+                Component.translatable("gui.ata.tablet.unlink"),
                 button -> onRemoveClicked())
             .bounds(rightX + btnW + 5, guiTop + GUI_HEIGHT - 80, btnW, 20)
             .build();
@@ -99,7 +107,7 @@ public class ShahedTabletScreen extends Screen {
         this.addWidget(this.removeButton);
 
         this.launchButton = Button.builder(
-                Component.literal("ЗАПУСК"),
+                Component.translatable("gui.ata.tablet.launch"),
                 button -> onLaunchByRouteClicked())
             .bounds(rightX, guiTop + GUI_HEIGHT - 55, btnW, 20)
             .build();
@@ -107,7 +115,7 @@ public class ShahedTabletScreen extends Screen {
         this.addWidget(this.launchButton);
 
         this.launchAllButton = Button.builder(
-                Component.literal("ЗАПУСК ВСЕХ"),
+                Component.translatable("gui.ata.tablet.launch_all"),
                 button -> onLaunchAllClicked())
             .bounds(rightX + btnW + 5, guiTop + GUI_HEIGHT - 55, btnW, 20)
             .build();
@@ -118,12 +126,12 @@ public class ShahedTabletScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolledScaled(double mouseX, double mouseY, double delta) {
         if (launcherPositions.size() > MAX_VISIBLE_LAUNCHERS) {
             scrollOffset = Math.max(0, Math.min(scrollOffset - (int)delta, launcherPositions.size() - MAX_VISIBLE_LAUNCHERS));
             rebuildLauncherButtons();
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolledScaled(mouseX, mouseY, delta);
     }
 
     private void rebuildLauncherButtons() {
@@ -146,7 +154,7 @@ public class ShahedTabletScreen extends Screen {
             String check = checked ? "§a[✓]" : "§7[ ]";
             String droneIcon = hasDrone ? "§a●" : "§c○";
             String routeIcon = hasRoute ? "§a→" : "§8-";
-            String text = check + " " + droneIcon + " " + routeIcon + " ПУ#" + (actualIndex + 1);
+            String text = check + " " + droneIcon + " " + routeIcon + " " + Tr.s("gui.ata.tablet.launcher_short", actualIndex + 1);
 
             if (actualIndex == selectedLauncherIndex) {
                 text = "▶" + text;
@@ -199,8 +207,8 @@ public class ShahedTabletScreen extends Screen {
 
     private void updateCheckAllButton() {
         if (checkAllButton != null) {
-            checkAllButton.setMessage(Component.literal(
-                checkedLaunchers.size() == launcherPositions.size() ? "СНЯТЬ ВСЕ" : "ВЫБРАТЬ ВСЕ"));
+            checkAllButton.setMessage(Component.translatable(
+                checkedLaunchers.size() == launcherPositions.size() ? "gui.ata.tablet.deselect_all" : "gui.ata.tablet.select_all"));
         }
     }
 
@@ -254,8 +262,8 @@ public class ShahedTabletScreen extends Screen {
         this.launchAllButton.active = anyReady;
 
         if (hasSelection && !inRange) {
-            statusMessage = "§cПУ слишком далеко! Макс. 30 блоков";
-        } else if (statusMessage.startsWith("§cПУ слишком")) {
+            statusMessage = Tr.s("gui.ata.tablet.too_far");
+        } else if (statusMessage.equals(Tr.s("gui.ata.tablet.too_far"))) {
             statusMessage = "";
         }
     }
@@ -306,7 +314,7 @@ public class ShahedTabletScreen extends Screen {
         if (selectedLauncherIndex < hasDroneList.size()) {
             hasDroneList.set(selectedLauncherIndex, false);
         }
-        statusMessage = "§aЗапуск выполнен!";
+        statusMessage = Tr.s("gui.ata.tablet.launch_done");
         rebuildLauncherButtons();
         updateButtonStates();
     }
@@ -321,7 +329,7 @@ public class ShahedTabletScreen extends Screen {
             }
         }
         if (readyLaunchers.isEmpty()) {
-            statusMessage = "§cНет готовых ПУ!";
+            statusMessage = Tr.s("gui.ata.tablet.no_ready");
             return;
         }
         NetworkHandler.sendToServer(new LaunchShahedByRoutePacket(readyLaunchers, 0));
@@ -333,7 +341,7 @@ public class ShahedTabletScreen extends Screen {
                 hasDroneList.set(i, false);
             }
         }
-        statusMessage = "§aЗапущено: " + readyLaunchers.size() + " ПУ";
+        statusMessage = Tr.s("gui.ata.tablet.launched_count", readyLaunchers.size());
         rebuildLauncherButtons();
         updateButtonStates();
     }
@@ -382,7 +390,7 @@ public class ShahedTabletScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void renderScaled(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(g);
 
         int guiLeft = (this.width - GUI_WIDTH) / 2;
@@ -395,7 +403,7 @@ public class ShahedTabletScreen extends Screen {
         g.fill(guiLeft, guiTop, guiLeft + 2, guiTop + GUI_HEIGHT, BORDER_COLOR);
         g.fill(guiLeft + GUI_WIDTH - 2, guiTop, guiLeft + GUI_WIDTH, guiTop + GUI_HEIGHT, BORDER_COLOR);
 
-        String title = "ПЛАНШЕТ УПРАВЛЕНИЯ SHAHED";
+        String title = Tr.s("gui.ata.shahed_tablet.title");
         g.drawCenteredString(this.font, title, guiLeft + GUI_WIDTH / 2, guiTop + 8, BORDER_COLOR);
 
         renderLaunchersTab(g, mouseX, mouseY, partialTick, guiLeft, guiTop, rightX);
@@ -404,7 +412,7 @@ public class ShahedTabletScreen extends Screen {
             g.drawCenteredString(this.font, statusMessage, guiLeft + GUI_WIDTH / 2, guiTop + GUI_HEIGHT - 15, 0xFFFFFF);
         }
 
-        super.render(g, mouseX, mouseY, partialTick);
+        super.renderScaled(g, mouseX, mouseY, partialTick);
     }
 
     private void renderLaunchersTab(GuiGraphics g, int mouseX, int mouseY, float partialTick, int guiLeft, int guiTop, int rightX) {
@@ -424,22 +432,22 @@ public class ShahedTabletScreen extends Screen {
             boolean inRange = isPlayerInRange(selectedLauncherIndex);
 
             int y = guiTop + 28;
-            g.drawString(this.font, "§eВЫБРАНА: ПУ #" + (selectedLauncherIndex + 1), rightX, y, 0xFFFF00, false);
+            g.drawString(this.font, Tr.s("gui.ata.tablet.selected", selectedLauncherIndex + 1), rightX, y, 0xFFFF00, false);
             y += 14;
             g.drawString(this.font, "[" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + "]", rightX, y, 0x888888, false);
             y += 16;
 
-            g.drawString(this.font, hasDrone ? "§a● ДРОН ГОТОВ" : "§c○ НЕТ ДРОНА", rightX, y, 0xFFFFFF, false);
+            g.drawString(this.font, hasDrone ? Tr.s("gui.ata.tablet.drone_ready") : Tr.s("gui.ata.tablet.no_drone"), rightX, y, 0xFFFFFF, false);
             y += 14;
 
-            String routeText = hasRoute ? "§a✓ МАРШРУТ (" + routePts + " тч.)" : "§6✗ НЕТ МАРШРУТА";
+            String routeText = hasRoute ? Tr.s("gui.ata.tablet.has_route", routePts) : Tr.s("gui.ata.tablet.no_route");
             g.drawString(this.font, routeText, rightX, y, 0xFFFFFF, false);
             y += 14;
 
             if (!inRange) {
-                g.drawString(this.font, "§c⚠ Слишком далеко от ПУ!", rightX, y, 0xFF4444, false);
+                g.drawString(this.font, Tr.s("gui.ata.tablet.too_far_warn"), rightX, y, 0xFF4444, false);
                 y += 11;
-                g.drawString(this.font, "§7Макс. 30 блоков для запуска", rightX, y, 0x888888, false);
+                g.drawString(this.font, Tr.s("gui.ata.tablet.max_range_hint"), rightX, y, 0x888888, false);
                 y += 14;
             } else {
                 y += 4;
@@ -452,16 +460,16 @@ public class ShahedTabletScreen extends Screen {
                     if (idx < hasDroneList.size() && hasDroneList.get(idx)) withDrone++;
                     if (idx < savedRoutes.size() && !savedRoutes.get(idx).isEmpty()) withRoute++;
                 }
-                g.drawString(this.font, String.format("§fОтмечено: %d ПУ", totalChecked), rightX, y, 0xAAAAAA, false);
+                g.drawString(this.font, Tr.s("gui.ata.tablet.checked", totalChecked), rightX, y, 0xAAAAAA, false);
                 y += 12;
-                g.drawString(this.font, String.format("С дроном: %d | С маршр.: %d", withDrone, withRoute), rightX, y, 0x777777, false);
+                g.drawString(this.font, Tr.s("gui.ata.tablet.checked_stats", withDrone, withRoute), rightX, y, 0x777777, false);
             }
         } else {
-            g.drawString(this.font, "Выберите ПУ из списка", rightX, guiTop + 60, 0x666666, false);
+            g.drawString(this.font, Tr.s("gui.ata.tablet.select_hint"), rightX, guiTop + 60, 0x666666, false);
 
             if (!checkedLaunchers.isEmpty()) {
                 int totalChecked = checkedLaunchers.size();
-                g.drawString(this.font, String.format("§fОтмечено: %d ПУ", totalChecked), rightX, guiTop + 80, 0xAAAAAA, false);
+                g.drawString(this.font, Tr.s("gui.ata.tablet.checked", totalChecked), rightX, guiTop + 80, 0xAAAAAA, false);
             }
         }
 

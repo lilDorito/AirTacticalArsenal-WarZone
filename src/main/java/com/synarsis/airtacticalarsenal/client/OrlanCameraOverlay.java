@@ -1,5 +1,7 @@
 package com.synarsis.airtacticalarsenal.client;
 
+import com.synarsis.airtacticalarsenal.util.Tr;
+
 import com.synarsis.airtacticalarsenal.entity.OrlanEntity;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
@@ -103,7 +105,7 @@ public class OrlanCameraOverlay {
         int warnColor = 0xFF5555;
         int panelBg = 0x88000000;
 
-        String header = "ОРЛАН-10 // РАЗВЕДКА";
+        String header = Tr.s("hud.ata.orlan.header");
         int headerW = mc.font.width(header) + 8;
         guiGraphics.fill(iL, iT, iL + headerW, iT + 12, panelBg);
         guiGraphics.drawString(mc.font, header, iL + 4, iT + 2, textColor, true);
@@ -117,7 +119,7 @@ public class OrlanCameraOverlay {
         guiGraphics.drawString(mc.font, timeStr, iR - timeW + 4, iT + 2, dimColor, true);
 
         if (OrlanCameraHandler.isNvgActive()) {
-            String nvgStr = "ПНВ";
+            String nvgStr = Tr.s("hud.ata.orlan.nvg");
             int nvgW = mc.font.width(nvgStr) + 8;
             guiGraphics.fill(iR - timeW - nvgW - 2, iT, iR - timeW - 2, iT + 12, 0x88003300);
             guiGraphics.drawString(mc.font, nvgStr, iR - timeW - nvgW + 2, iT + 2, 0xFF00FF00, true);
@@ -128,7 +130,7 @@ public class OrlanCameraOverlay {
         int leftPanelW = 118;
 
         guiGraphics.fill(iL, leftY - 2, iL + leftPanelW, leftY + 46, panelBg);
-        guiGraphics.drawString(mc.font, "КООРДИНАТЫ:", leftX, leftY, labelColor, true);
+        guiGraphics.drawString(mc.font, Tr.s("hud.ata.orlan.coords"), leftX, leftY, labelColor, true);
         guiGraphics.drawString(mc.font, String.format("X: %.0f", dronePos.x), leftX, leftY + 12, brightColor, true);
         guiGraphics.drawString(mc.font, String.format("Y: %.0f", dronePos.y), leftX, leftY + 22, brightColor, true);
         guiGraphics.drawString(mc.font, String.format("Z: %.0f", dronePos.z), leftX, leftY + 32, brightColor, true);
@@ -143,12 +145,12 @@ public class OrlanCameraOverlay {
 
         int targetPanelH = showDistToTarget ? 38 : 26;
         guiGraphics.fill(iL, targetY - 2, iL + leftPanelW, targetY + targetPanelH, panelBg);
-        guiGraphics.drawString(mc.font, "ЦЕЛЬ:", leftX, targetY, labelColor, true);
+        guiGraphics.drawString(mc.font, Tr.s("hud.ata.orlan.target"), leftX, targetY, labelColor, true);
         guiGraphics.drawString(mc.font, String.format("X: %d  Z: %d", targetPos.getX(), targetPos.getZ()),
                 leftX, targetY + 12, dimColor, true);
 
         if (showDistToTarget) {
-            String distStr = String.format("ДО ЦЕЛИ: %.0f m", horizDistToTarget);
+            String distStr = Tr.s("hud.ata.orlan.to_target", horizDistToTarget);
             int distColor = (horizDistToTarget < 100) ? brightColor : textColor;
             guiGraphics.drawString(mc.font, distStr, leftX, targetY + 24, distColor, true);
         }
@@ -167,14 +169,14 @@ public class OrlanCameraOverlay {
             double aimDist = dronePos.distanceTo(Vec3.atCenterOf(hitPos));
             int aimPanelW = Math.max(leftPanelW, mc.font.width(String.format("X:%-6d Z:%-6d", hitPos.getX(), hitPos.getZ())) + 12);
             guiGraphics.fill(iL, aimY - 2, iL + aimPanelW, aimY + 36, panelBg);
-            guiGraphics.drawString(mc.font, "НАВЕДЕНИЕ:", leftX, aimY, 0xFF5555, true);
+            guiGraphics.drawString(mc.font, Tr.s("hud.ata.orlan.aim"), leftX, aimY, 0xFF5555, true);
             guiGraphics.drawString(mc.font, String.format("X: %d  Z: %d", hitPos.getX(), hitPos.getZ()),
                     leftX, aimY + 12, 0xFFFF44, true);
-            guiGraphics.drawString(mc.font, String.format("Y: %d   ДИСТ: %.0f m", hitPos.getY(), aimDist),
+            guiGraphics.drawString(mc.font, Tr.s("hud.ata.orlan.aim_y_dist", hitPos.getY(), aimDist),
                     leftX, aimY + 24, 0xFFFF44, true);
         } else {
             guiGraphics.fill(iL, aimY - 2, iL + leftPanelW, aimY + 14, panelBg);
-            guiGraphics.drawString(mc.font, "НАВЕДЕНИЕ: ---", leftX, aimY, dimColor, true);
+            guiGraphics.drawString(mc.font, Tr.s("hud.ata.orlan.aim_none"), leftX, aimY, dimColor, true);
         }
 
         int rightPanelW = 88;
@@ -216,13 +218,13 @@ public class OrlanCameraOverlay {
 
         String phaseStr;
         switch (phase) {
-            case LAUNCHING: phaseStr = "ЗАПУСК"; break;
-            case CLIMBING: phaseStr = "НАБОР"; break;
-            case CRUISING: phaseStr = "ПОЛЁТ"; break;
-            case PATROLLING: phaseStr = "ПАТРУЛЬ"; break;
-            case RETURNING: phaseStr = "ВОЗВРАТ"; break;
-            case LANDING: phaseStr = "ПОСАДКА"; break;
-            case LANDED: phaseStr = "НА ЗЕМЛЕ"; break;
+            case LAUNCHING: phaseStr = Tr.s("hud.ata.orlan.phase.launching"); break;
+            case CLIMBING: phaseStr = Tr.s("hud.ata.orlan.phase.climbing"); break;
+            case CRUISING: phaseStr = Tr.s("hud.ata.orlan.phase.cruising"); break;
+            case PATROLLING: phaseStr = Tr.s("hud.ata.orlan.phase.patrolling"); break;
+            case RETURNING: phaseStr = Tr.s("hud.ata.orlan.phase.returning"); break;
+            case LANDING: phaseStr = Tr.s("hud.ata.orlan.phase.landing"); break;
+            case LANDED: phaseStr = Tr.s("hud.ata.orlan.phase.landed"); break;
             default: phaseStr = "---";
         }
         int phaseY = hpY + 14;
@@ -242,18 +244,39 @@ public class OrlanCameraOverlay {
 
         guiGraphics.fill(iL, bottomY - 2, iR, bottomY + 11, panelBg);
 
-        if (mc.player != null) {
-            double distToPlayer = mc.player.position().distanceTo(dronePos);
-            guiGraphics.drawString(mc.font, String.format("ДИСТ: %.0f m", distToPlayer), iL + 4, bottomY, dimColor, true);
+        String distStr = mc.player != null
+                ? Tr.s("hud.ata.orlan.dist", mc.player.position().distanceTo(dronePos)) : "";
+        double speed = orlan.getDeltaMovement().length() * 20.0;
+        String spdStr = String.format("SPD: %.0f b/s", speed);
+        String exitHint = Tr.s("hud.ata.orlan.controls");
+
+        int gap = 12;
+        int left = iL + 4;
+        int right = iR - 4;
+        int distW = mc.font.width(distStr);
+        int spdW = mc.font.width(spdStr);
+        int hintW = mc.font.width(exitHint);
+        boolean oneLine = distW + gap + spdW + gap + hintW <= right - left;
+
+        if (!distStr.isEmpty()) {
+            guiGraphics.drawString(mc.font, distStr, left, bottomY, dimColor, true);
         }
 
-        Vec3 motion = orlan.getDeltaMovement();
-        double speed = motion.length() * 20.0;
-        guiGraphics.drawString(mc.font, String.format("SPD: %.0f b/s", speed), cx - 30, bottomY, dimColor, true);
+        int spdX = Math.max(cx - spdW / 2, left + distW + gap);
+        if (oneLine) {
+            spdX = Math.min(spdX, right - hintW - gap - spdW);
+        } else {
+            spdX = Math.min(spdX, right - spdW);
+        }
+        guiGraphics.drawString(mc.font, spdStr, spdX, bottomY, dimColor, true);
 
-        String exitHint = "[LAlt] Выход [R] Lock [N] ПНВ [Space/Ctrl] ALT";
-        guiGraphics.drawString(mc.font, exitHint,
-                iR - mc.font.width(exitHint) - 4, bottomY, dimColor, true);
+        int hintX = right - hintW;
+        int hintY = bottomY;
+        if (!oneLine) {
+            hintY = bottomY - 13;
+            guiGraphics.fill(hintX - 4, hintY - 2, iR, hintY + 10, panelBg);
+        }
+        guiGraphics.drawString(mc.font, exitHint, hintX, hintY, dimColor, true);
 
         renderCompass(guiGraphics, mc, cx, borderSize + 14, OrlanCameraHandler.getCameraYaw());
 
@@ -334,7 +357,7 @@ public class OrlanCameraOverlay {
             int filled = (int)(barW * progress);
             guiGraphics.fill(barX, barY, barX + filled, barY + barH, 0xDDFF2222);
 
-            String lockingText = ">> ЗАХВАТ <<";
+            String lockingText = Tr.s("hud.ata.orlan.locking");
             guiGraphics.drawString(mc.font, lockingText,
                     cx - mc.font.width(lockingText) / 2, barY + barH + 3, 0xDDFF3333, true);
         } else if (OrlanCameraHandler.isLocked()) {
@@ -359,7 +382,7 @@ public class OrlanCameraOverlay {
                         panelX, panelY + 13, 0xCCFF4444, true);
 
                 guiGraphics.drawString(mc.font,
-                        String.format("ДИСТ: %.0f m", dist),
+                        Tr.s("hud.ata.orlan.dist", dist),
                         panelX, panelY + 25, 0xCCFF6644, true);
             }
         }

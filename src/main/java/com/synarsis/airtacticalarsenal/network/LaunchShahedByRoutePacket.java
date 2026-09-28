@@ -89,19 +89,24 @@ public class LaunchShahedByRoutePacket {
                     continue;
                 }
 
+                if (com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), route) > com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax()) {
+                    com.synarsis.airtacticalarsenal.util.RouteLimits.check(player, com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), route), com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax());
+                    failed++;
+                    continue;
+                }
                 launcher.startLaunchSequenceWithRoute(player, finalTarget, "low", intermediateWaypoints, altitude);
                 launched++;
             }
 
             if (launcherPositions.size() == 1) {
                 if (launched > 0) {
-                    player.displayClientMessage(Component.literal("§aЗапуск выполнен!"), true);
+                    player.displayClientMessage(Component.translatable("message.ata.launch.success"), true);
                 } else {
-                    player.displayClientMessage(Component.literal("§cОшибка запуска!"), true);
+                    player.displayClientMessage(Component.translatable("message.ata.launch.failed"), true);
                 }
             } else {
-                player.displayClientMessage(Component.literal(
-                        String.format("§aЗапущено: %d §7| §cОшибки: %d", launched, failed)), true);
+                player.displayClientMessage(Component.translatable(
+                        "message.ata.launch.summary", launched, failed), true);
             }
         });
         ctx.get().setPacketHandled(true);
