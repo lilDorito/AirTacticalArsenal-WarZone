@@ -105,7 +105,7 @@ Full list in [CHANGELOG.md](CHANGELOG.md). Main points:
 
 - Minecraft 1.20.1, Forge 47.2+
 - GeckoLib 4.4.9+ (works with 4.8.2)
-- Optional: Superb Warfare, AshVehicle, TacZ, Create
+- Optional: SuperbWarfare, AshVehicles, TacZ, Create
 - To build: Java 17 and internet (Gradle downloads the dependencies)
 
 ## Build
@@ -203,7 +203,7 @@ src/main/resources
 
 - **Create** — ATA blocks are protected from Create contraption movement
 - **TacZ** — optional, TacZ bullets can shoot Shaheds down (detected at runtime)
-- **Superb Warfare** — optional. Its aircraft and those of every addon show on the radar, SBW bullets can
+- **SuperbWarfare** — optional. Its aircraft and those of every addon show on the radar, SBW bullets can
   shoot Shaheds down, and the radar uses SBW's FuMO 25 model. SBW files are loaded from the SBW jar and
   are not included in this mod.
 - **AshVehicles** — optional. Its aircraft can see and lock Shahed / Orlan with AAM-4 (never the Iskander).
