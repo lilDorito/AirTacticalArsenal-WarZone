@@ -2,7 +2,6 @@ package com.synarsis.airtacticalarsenal.radar;
 
 import com.synarsis.airtacticalarsenal.config.ShahedConfig;
 import net.minecraft.Util;
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +44,14 @@ final class MapRefresher {
                 && System.currentTimeMillis() - lastDoneMs >= minutes * 60_000L;
     }
 
+    void cancel() {
+        state = State.IDLE;
+        decoding = null;
+        encoding = null;
+        pixels = null;
+        markFresh();
+    }
+
     void markFresh() {
         lastDoneMs = System.currentTimeMillis();
     }
@@ -74,12 +81,12 @@ final class MapRefresher {
                 state = State.SCANNING;
             }
             case SCANNING -> {
-                BlockPos.MutableBlockPos mPos = new BlockPos.MutableBlockPos();
+                MapPixelSampler.Sample tmp = new MapPixelSampler.Sample();
                 int total = size * size;
                 while (index < total) {
                     int wx = originX + (index % size) * step;
                     int wz = originZ + (index / size) * step;
-                    int c = MapPixelSampler.sampleLoaded(level, wx, wz, step, mPos);
+                    int c = MapPixelSampler.sampleLoaded(level, wx, wz, step, tmp);
                     if (c != 0 && c != pixels[index]) {
                         pixels[index] = c;
                         changed++;

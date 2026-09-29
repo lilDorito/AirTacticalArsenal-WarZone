@@ -46,6 +46,12 @@ public class ServerForgeEvents {
     }
 
     @SubscribeEvent
+    public static void onServerStopping(net.minecraftforge.event.server.ServerStoppingEvent event) {
+        com.synarsis.airtacticalarsenal.radar.WorldTerrainScan.cancel();
+        com.synarsis.airtacticalarsenal.radar.TerrainTileStore.reset();
+    }
+
+    @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
 
@@ -57,12 +63,14 @@ public class ServerForgeEvents {
 
             long terrainOrder = ServerTerrainScanner.getFirstBuildingOrder();
             long routeOrder = ServerRouteMapScanner.getFirstBuildingOrder();
+            if (com.synarsis.airtacticalarsenal.radar.WorldTerrainScan.tick(overworld)) return;
             boolean busy;
             if (terrainOrder <= routeOrder) {
                 busy = ServerTerrainScanner.tickAll(overworld) || ServerRouteMapScanner.tickAll(overworld);
             } else {
                 busy = ServerRouteMapScanner.tickAll(overworld) || ServerTerrainScanner.tickAll(overworld);
             }
+            if (!busy) busy = com.synarsis.airtacticalarsenal.radar.TerrainTileStore.tickRefresh(overworld);
             if (!busy && !ServerTerrainScanner.tickRefresh(overworld)) {
                 ServerRouteMapScanner.tickRefresh(overworld);
             }

@@ -362,6 +362,51 @@ public class ShahedCommand {
                                                     .withStyle(s -> s.withColor(0x55FF55)), true);
                                     return 1;
                                 })))
+                .then(Commands.literal("terrain")
+                        .then(Commands.literal("scan")
+                                .executes(ctx -> startTerrainScan(ctx.getSource(), 10000, 0, 0, false))
+                                .then(Commands.argument("size", IntegerArgumentType.integer(512, 100000))
+                                        .executes(ctx -> startTerrainScan(ctx.getSource(),
+                                                IntegerArgumentType.getInteger(ctx, "size"), 0, 0, false))
+                                        .then(Commands.argument("centerX", IntegerArgumentType.integer())
+                                                .then(Commands.argument("centerZ", IntegerArgumentType.integer())
+                                                        .executes(ctx -> startTerrainScan(ctx.getSource(),
+                                                                IntegerArgumentType.getInteger(ctx, "size"),
+                                                                IntegerArgumentType.getInteger(ctx, "centerX"),
+                                                                IntegerArgumentType.getInteger(ctx, "centerZ"), false))))))
+                        .then(Commands.literal("rescan")
+                                .executes(ctx -> startTerrainScan(ctx.getSource(), 10000, 0, 0, true))
+                                .then(Commands.argument("size", IntegerArgumentType.integer(512, 100000))
+                                        .executes(ctx -> startTerrainScan(ctx.getSource(),
+                                                IntegerArgumentType.getInteger(ctx, "size"), 0, 0, true))
+                                        .then(Commands.argument("centerX", IntegerArgumentType.integer())
+                                                .then(Commands.argument("centerZ", IntegerArgumentType.integer())
+                                                        .executes(ctx -> startTerrainScan(ctx.getSource(),
+                                                                IntegerArgumentType.getInteger(ctx, "size"),
+                                                                IntegerArgumentType.getInteger(ctx, "centerX"),
+                                                                IntegerArgumentType.getInteger(ctx, "centerZ"), true))))))
+                        .then(Commands.literal("status")
+                                .executes(ctx -> {
+                                    ServerLevel overworld = ctx.getSource().getServer().overworld();
+                                    int tiles = com.synarsis.airtacticalarsenal.radar.TerrainTileStore.count(overworld);
+                                    if (com.synarsis.airtacticalarsenal.radar.WorldTerrainScan.isActive()) {
+                                        int pct = com.synarsis.airtacticalarsenal.radar.WorldTerrainScan.percent();
+                                        ctx.getSource().sendSuccess(() -> Component.translatable("command.ata.terrain.running", pct, tiles)
+                                                .withStyle(st -> st.withColor(0xFFFF55)), false);
+                                    } else {
+                                        ctx.getSource().sendSuccess(() -> Component.translatable("command.ata.terrain.idle", tiles)
+                                                .withStyle(st -> st.withColor(0x55FF55)), false);
+                                    }
+                                    return 1;
+                                }))
+                        .then(Commands.literal("cancel")
+                                .executes(ctx -> {
+                                    boolean was = com.synarsis.airtacticalarsenal.radar.WorldTerrainScan.cancel();
+                                    ctx.getSource().sendSuccess(() -> Component.translatable(
+                                            was ? "command.ata.terrain.cancelled" : "command.ata.terrain.not_running")
+                                            .withStyle(st -> st.withColor(was ? 0xFFAA00 : 0xFF5555)), true);
+                                    return was ? 1 : 0;
+                                })))
                 .then(Commands.literal("map")
                         .then(Commands.literal("rescan")
                                 .executes(context -> {
@@ -396,6 +441,18 @@ public class ShahedCommand {
                                     }
                                     return 1;
                                 }))));
+    }
+
+    private static int startTerrainScan(CommandSourceStack source, int size, int centerX, int centerZ, boolean overwrite) {
+        if (com.synarsis.airtacticalarsenal.radar.WorldTerrainScan.isActive()) {
+            int pct = com.synarsis.airtacticalarsenal.radar.WorldTerrainScan.percent();
+            source.sendFailure(Component.translatable("command.ata.terrain.busy", pct));
+            return 0;
+        }
+        int tiles = com.synarsis.airtacticalarsenal.radar.WorldTerrainScan.start(size, centerX, centerZ, overwrite, source);
+        source.sendSuccess(() -> Component.translatable("command.ata.terrain.started", size, size, centerX, centerZ, tiles)
+                .withStyle(st -> st.withColor(0x55FF55)), true);
+        return 1;
     }
 
     private static void preloadChunks(ServerLevel level, Vec3 from, Vec3 to) {

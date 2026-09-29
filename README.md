@@ -50,7 +50,7 @@ The mod id stays `ata`, so it replaces upstream ATA in a pack. Don't install bot
 
 Full list in [CHANGELOG.md](CHANGELOG.md). Main points:
 
-- **Radar**: radar and route maps show the real terrain from the server's loaded chunks (top blocks with hill shading) and update over time; detects all SBW and addon aircraft (including AshVehicles), with new UAV / SHD / BAL / ORL tags and legend colours; uses SBW's FuMO 25 model when SBW is installed; needs open sky (**WEAK SIGNAL**); tracks the Iskander for its whole flight; configurable horizon and entity lists; drops itself when mined; servers can swap the biome map for a plain dark background (`radarDarkBackground`). 
+- **Radar**: radar and route maps show the real terrain (top blocks with hill shading), from a one-time whole-map scan (`/ata terrain scan`) plus live updates; detects all SBW and addon aircraft (including AshVehicle), with new UAV / SHD / BAL / ORL tags and legend colours; uses SBW's FuMO 25 model when SBW is installed; needs open sky (**WEAK SIGNAL**); tracks the Iskander for its whole flight; configurable horizon and entity lists; drops itself when mined; servers can swap the biome map for a plain dark background (`radarDarkBackground`).
 - **Air-to-air**: AshVehicles jets see and lock Shahed / Orlan with AAM-4, never the Iskander.
 - **Damage**: no more ×3.5 vehicle multiplier, lower and configurable explosion damage, round craters for
   Iskander and Shahed.
@@ -162,6 +162,21 @@ Admin shortcut: `/ata attack shahed <start> <target> low|high`
    or it only shows **WEAK SIGNAL**.
 2. Right-click it to open the map. Its redstone output grows as a Shahed or an
    Iskander gets closer.
+
+### Terrain maps
+
+Run once on the server (op level 2), ideally after pregenerating the world:
+
+```
+/ata terrain scan                      # 10000x10000 square around 0, 0
+/ata terrain scan <size>               # size x size around 0, 0
+/ata terrain scan <size> <x> <z>       # size x size around x, z
+/ata terrain rescan [...]              # same, but rescans existing tiles
+/ata terrain status | cancel
+```
+
+The result is stored in `world/ata_map/`. All radar and Shahed/Orlan route maps inside that area are built
+from it, and chunks loaded around players are painted in every `mapRefreshMinutes`.
 
 ### Config
 

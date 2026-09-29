@@ -6,24 +6,44 @@ applies to this fork too.
 
 ## 1.1.2-warzone
 
-### Radar and route maps
+### Radar and route maps: real terrain
 - The radar map and the Shahed/Orlan route maps now show the **real terrain** instead of biome colours:
   the top block of every spot, like a vanilla map (grass, forests, sand, stone, snow, roads and buildings),
   with hill shading. Water gets darker the deeper it is.
-- The terrain comes from the chunks the **server has loaded right now** (around players, force-loaded
-  areas, flying missiles), so a scan is as fast as before. Areas that are not loaded use the old biome
-  colours, so the map has no holes.
-- The maps update themselves: every `mapRefreshMinutes` (new option in the `[Radar]` section of
-  `ata-common.toml`, default 10, 0 = never) the chunks loaded at that moment are painted onto the map.
-  The map fills in as players explore and shows new buildings and craters. The update runs in the
-  background and only touches loaded chunks.
+
+### Whole-map terrain scan (new command)
+- `/ata terrain scan [size] [centerX centerZ]` scans the whole map once and stores it in the world folder
+  (`world/ata_map/`, tiles of 512×512 blocks). Default: a 10000×10000 square centred on 0, 0.
+  - Reads the chunks saved on disk (e.g. a world pregenerated with Chunky mod) in the background, without
+    stalling the server. Progress is shown in chat every 10% and in the server log.
+  - Tiles that already exist are skipped, so an interrupted scan continues where it stopped.
+    `/ata terrain rescan [size] [centerX centerZ]` scans everything again.
+  - `/ata terrain status` shows progress and how many tiles are stored; `/ata terrain cancel` stops it
+    (tiles done so far are kept).
+  - When the scan finishes, all radar and route maps are rebuilt from the tiles.
+- Every radar and route map inside the scanned area is then assembled from the tiles almost instantly,
+  including radars placed later. The tiles travel with the world folder.
+- While a terrain scan runs, radar and route maps wait for it (they show as queued).
+
+### Where map data comes from
+1. chunks the server has loaded right now,
+2. the terrain tiles from `/ata terrain scan`,
+3. with `mapReadSavedChunks = true` (default), other chunks saved on disk (read in the background),
+4. biome colours for everything else, so maps have no holes.
+
+### Keeping maps up to date
+- Every `mapRefreshMinutes` (default 10, 0 = never) the chunks loaded around players are painted into the
+  terrain tiles and into the radar and route maps, so they show new buildings and craters. This runs in
+  the background.
 - Players get the updated map when they next open a radar or route screen (clients keep a downloaded map
   for up to 5 minutes).
+- `mapReadSavedChunks` and `mapRefreshMinutes` are in the `[Radar]` section of `ata-common.toml`.
 - Existing radar and route maps are rebuilt once after the update (old map files are deleted).
 - `radarDarkBackground = true` still disables the radar map and its scanning completely.
 
 ### Upgrade notes
-- The network protocol is unchanged (still 12), so 1.1.1 clients can join a 1.1.2 server, but only 1.1.2 clients pick up map updates without reconnecting. Updating both is recommended.
+- The network protocol is unchanged (still 12), so 1.1.1 clients can join a 1.1.2 server, but only 1.1.2
+  clients pick up map updates without reconnecting. Updating both is recommended.
 
 ## 1.1.1-warzone
 

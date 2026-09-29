@@ -2,15 +2,12 @@ package com.synarsis.airtacticalarsenal.radar;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.biome.BiomeSource;
-import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.storage.LevelResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -28,21 +25,16 @@ public class ServerTerrainScanner {
 
     private final BlockPos radarPos;
     private final int originX, originZ;
-    private int buildRow = -1;
-    private int buildCol = 0;
+    private MapScanJob job;
     private boolean ready = false;
     private long buildStartOrder = 0;
-    private int[] pixels;
     private volatile byte[] pngBytes;
     private final MapRefresher refresher;
-
-    private final Map<Long, Integer> biomeColorCache = new HashMap<>();
 
     public ServerTerrainScanner(BlockPos radarPos) {
         this.radarPos = radarPos;
         this.originX = radarPos.getX() - (CACHE_SIZE / 2) * CACHE_BPP;
         this.originZ = radarPos.getZ() - (CACHE_SIZE / 2) * CACHE_BPP;
-        this.pixels = new int[CACHE_SIZE * CACHE_SIZE];
         this.refresher = new MapRefresher(CACHE_SIZE, CACHE_BPP, originX, originZ);
     }
 
@@ -60,9 +52,8 @@ public class ServerTerrainScanner {
         if (cached != null) {
             scanner.pngBytes = cached;
             scanner.ready = true;
-            scanner.pixels = null;
         } else {
-            scanner.buildRow = 0;
+            scanner.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, scanner.originX, scanner.originZ);
             scanner.buildStartOrder = ++GLOBAL_BUILD_ORDER;
         }
         INSTANCES.put(k, scanner);
@@ -88,8 +79,8 @@ public class ServerTerrainScanner {
     }
 
     public boolean isReady() { return ready; }
-    public boolean isBuilding() { return buildRow >= 0; }
-    public float getProgress() { return buildRow >= 0 ? (float)(buildRow * CACHE_SIZE + buildCol) / (CACHE_SIZE * CACHE_SIZE) : 1.0f; }
+    public boolean isBuilding() { return job != null; }
+    public float getProgress() { return job != null ? job.progress() : 1.0f; }
     public byte[] getPngBytes() { return pngBytes; }
 
     public static synchronized int getQueuePosition(BlockPos pos) {
@@ -129,6 +120,15 @@ public class ServerTerrainScanner {
         return false;
     }
 
+    public static synchronized void rebuildAll(ServerLevel level) {
+        for (ServerTerrainScanner s : INSTANCES.values()) {
+            s.ready = false;
+            s.refresher.cancel();
+            s.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, s.originX, s.originZ);
+            s.buildStartOrder = ++GLOBAL_BUILD_ORDER;
+        }
+    }
+
     public static synchronized boolean tickRefresh(ServerLevel level) {
         ServerTerrainScanner due = null;
         for (ServerTerrainScanner scanner : INSTANCES.values()) {
@@ -155,38 +155,15 @@ public class ServerTerrainScanner {
     }
 
     public void tick(ServerLevel level) {
-        if (ready || buildRow < 0) return;
-
-        long start = System.currentTimeMillis();
-        BlockPos.MutableBlockPos mPos = new BlockPos.MutableBlockPos();
-        BiomeSource bs = level.getChunkSource().getGenerator().getBiomeSource();
-        Climate.Sampler sampler = level.getChunkSource().randomState().sampler();
-        int pixelsDone = 0;
-
-        while (buildRow < CACHE_SIZE) {
-            int wx = originX + buildCol * CACHE_BPP;
-            int wz = originZ + buildRow * CACHE_BPP;
-            pixels[buildRow * CACHE_SIZE + buildCol] =
-                    MapPixelSampler.sample(level, wx, wz, CACHE_BPP, mPos, bs, sampler, biomeColorCache);
-            buildCol++;
-            pixelsDone++;
-            if (buildCol >= CACHE_SIZE) {
-                buildCol = 0;
-                buildRow++;
-            }
-            if ((pixelsDone & 31) == 0 && System.currentTimeMillis() - start > MAX_TICK_MS) break;
-        }
-
-        if (buildRow >= CACHE_SIZE) {
-            buildRow = -1;
-            ready = true;
-            pngBytes = MapRefresher.encode(pixels, CACHE_SIZE);
-            saveToDisk(level);
-            biomeColorCache.clear();
-            pixels = null;
-            refresher.markFresh();
-            LOGGER.info("[ATA] Radar map ready for {}", key(radarPos));
-        }
+        if (ready || job == null) return;
+        if (!job.tick(level, MAX_TICK_MS)) return;
+        int[] pixels = job.finish();
+        job = null;
+        ready = true;
+        pngBytes = MapRefresher.encode(pixels, CACHE_SIZE);
+        saveToDisk(level);
+        refresher.markFresh();
+        LOGGER.info("[ATA] Radar map ready for {}", key(radarPos));
     }
 
     private Path getCacheDir(ServerLevel level) {

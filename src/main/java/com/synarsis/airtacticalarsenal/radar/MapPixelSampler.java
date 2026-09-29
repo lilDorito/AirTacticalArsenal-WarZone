@@ -4,12 +4,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.ChunkAccess;
-import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.MapColor;
@@ -18,74 +17,103 @@ import java.util.Map;
 
 public final class MapPixelSampler {
 
+    public static final byte KIND_BIOME = 0;
+    public static final byte KIND_LAND = 1;
+    public static final byte KIND_WATER = 2;
+    public static final byte KIND_FINAL = 3;
+
     private static final int WATER_COLOR = 0x3F76E4;
     private static final float LAND_DIM = 0.72f;
 
     private MapPixelSampler() {}
 
-    public static int sample(ServerLevel level, int wx, int wz, int step, BlockPos.MutableBlockPos mPos,
-                             BiomeSource bs, Climate.Sampler sampler, Map<Long, Integer> biomeCache) {
-        int terrain = sampleLoaded(level, wx, wz, step, mPos);
-        if (terrain != 0) return terrain;
-        return sampleBiome(level, wx, wz, bs, sampler, biomeCache);
+    public interface Column {
+        int minY();
+        int surfaceY(int wx, int wz);
+        BlockState state(int wx, int y, int wz);
     }
 
-    public static int sampleLoaded(ServerLevel level, int wx, int wz, int step, BlockPos.MutableBlockPos mPos) {
-        LevelChunk chunk = level.getChunkSource().getChunkNow(wx >> 4, wz >> 4);
-        if (chunk == null) return 0;
+    public static final class Sample {
+        public int color;
+        public int height;
+        public byte kind;
+    }
 
-        int minY = chunk.getMinBuildHeight();
-        int y = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, wx & 15, wz & 15) - 1;
-        mPos.set(wx, y, wz);
-        BlockState st = chunk.getBlockState(mPos);
-        MapColor mc = st.getMapColor(chunk, mPos);
+    public static Column live(LevelChunk chunk) {
+        BlockPos.MutableBlockPos mPos = new BlockPos.MutableBlockPos();
+        return new Column() {
+            @Override public int minY() { return chunk.getMinBuildHeight(); }
+            @Override public int surfaceY(int wx, int wz) {
+                return chunk.getHeight(Heightmap.Types.WORLD_SURFACE, wx & 15, wz & 15) - 1;
+            }
+            @Override public BlockState state(int wx, int y, int wz) {
+                return chunk.getBlockState(mPos.set(wx, y, wz));
+            }
+        };
+    }
+
+    public static void sampleColumn(Column col, int wx, int wz, Sample out) {
+        int minY = col.minY();
+        int y = col.surfaceY(wx, wz);
+        BlockState st = col.state(wx, y, wz);
+        MapColor mc = mapColor(st);
         while (y > minY && mc == MapColor.NONE) {
             y--;
-            mPos.setY(y);
-            st = chunk.getBlockState(mPos);
-            mc = st.getMapColor(chunk, mPos);
+            st = col.state(wx, y, wz);
+            mc = mapColor(st);
         }
 
         if (st.getFluidState().is(FluidTags.WATER)) {
             int depth = 0;
             int wy = y;
             while (wy > minY && depth < 16) {
-                mPos.setY(wy);
-                if (!chunk.getBlockState(mPos).getFluidState().is(FluidTags.WATER)) break;
+                if (!col.state(wx, wy, wz).getFluidState().is(FluidTags.WATER)) break;
                 depth++;
                 wy--;
             }
             float f = 1.0f - Math.min(depth, 16) / 16.0f * 0.55f;
-            return scale(WATER_COLOR, f * 0.8f);
+            out.color = scale(WATER_COLOR, f * 0.8f);
+            out.height = y + 1;
+            out.kind = KIND_WATER;
+            return;
         }
 
-        int col = mc == MapColor.NONE ? 0x202020 : mc.col;
-        float shade = 1.0f;
-        Integer nh = surfaceHeight(level, wx - step, wz - step);
-        if (nh != null) {
-            float slope = (y + 1 - nh) * 2.0f / step;
-            shade = Math.max(0.7f, Math.min(1.2f, 1.0f + slope * 0.08f));
-        }
-        return scale(col, shade * LAND_DIM);
+        out.color = 0xFF000000 | (mc == MapColor.NONE ? 0x202020 : mc.col);
+        out.height = y + 1;
+        out.kind = KIND_LAND;
     }
 
-    private static Integer surfaceHeight(ServerLevel level, int wx, int wz) {
+    private static MapColor mapColor(BlockState st) {
+        try {
+            return st.getMapColor(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+        } catch (RuntimeException e) {
+            return MapColor.STONE;
+        }
+    }
+
+    public static int shadeLand(int baseColor, int height, int neighbourHeight, int step) {
+        float slope = (height - neighbourHeight) * 2.0f / step;
+        float shade = Math.max(0.7f, Math.min(1.2f, 1.0f + slope * 0.08f));
+        return scale(baseColor, shade * LAND_DIM);
+    }
+
+    public static int sampleLoaded(ServerLevel level, int wx, int wz, int step, Sample tmp) {
         LevelChunk chunk = level.getChunkSource().getChunkNow(wx >> 4, wz >> 4);
-        if (chunk == null) return null;
-        return chunk.getHeight(Heightmap.Types.WORLD_SURFACE, wx & 15, wz & 15);
+        if (chunk == null) return 0;
+        sampleColumn(live(chunk), wx, wz, tmp);
+        if (tmp.kind != KIND_LAND) return tmp.color;
+        LevelChunk n = level.getChunkSource().getChunkNow((wx - step) >> 4, (wz - step) >> 4);
+        int nh = n == null ? tmp.height
+                : n.getHeight(Heightmap.Types.WORLD_SURFACE, (wx - step) & 15, (wz - step) & 15);
+        return shadeLand(tmp.color, tmp.height, nh, step);
     }
 
-    public static int sampleBiome(ServerLevel level, int wx, int wz, BiomeSource bs, Climate.Sampler sampler,
-                                  Map<Long, Integer> biomeCache) {
-        ChunkAccess chunk = level.getChunk(wx >> 4, wz >> 4, ChunkStatus.BIOMES, false);
-        if (chunk != null) {
-            return biomeOnlyColor(chunk.getNoiseBiome(wx >> 2, 16, wz >> 2));
-        }
+    public static int biomeColor(int wx, int wz, BiomeSource bs, Climate.Sampler sampler, Map<Long, Integer> cache) {
         long ck = ((long) (wx >> 2) << 32) | ((wz >> 2) & 0xFFFFFFFFL);
-        Integer cached = biomeCache.get(ck);
+        Integer cached = cache.get(ck);
         if (cached != null) return cached;
         int color = biomeOnlyColor(bs.getNoiseBiome(wx >> 2, 16, wz >> 2, sampler));
-        biomeCache.put(ck, color);
+        cache.put(ck, color);
         return color;
     }
 
@@ -129,7 +157,7 @@ public final class MapPixelSampler {
         return 0x7ABD52;
     }
 
-    private static int scale(int rgb, float f) {
+    static int scale(int rgb, float f) {
         int r = Math.min(255, (int) (((rgb >> 16) & 0xFF) * f));
         int g = Math.min(255, (int) (((rgb >> 8) & 0xFF) * f));
         int b = Math.min(255, (int) ((rgb & 0xFF) * f));
