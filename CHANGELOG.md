@@ -16,6 +16,11 @@ applies to this fork too.
 ### Upgrade notes
 - Network protocol 11 -> 12: server and all clients must update to 1.1.1-warzone together.
 
+### Fixes
+- Fixed a server crash ("Markers should never be sent") while a player watched through an Orlan camera near
+  a `minecraft:marker` entity (used by datapacks, maps and command setups). The camera now skips entities
+  that are never sent to clients.
+
 ## 1.1.0-warzone
 
 First release of the fork. Everything below is relative to upstream Air Tactical Arsenal 1.1.0.

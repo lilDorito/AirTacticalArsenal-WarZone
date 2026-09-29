@@ -1000,16 +1000,24 @@ public class OrlanEntity extends Projectile implements GeoEntity {
                 this.getX() + scanRadius, this.getY() + 300, this.getZ() + scanRadius);
 
         List<Entity> nearbyEntities = level.getEntities(this, scanBox,
-                e -> e != viewer && e.isAlive() && !(e instanceof OrlanEntity && e.getId() == this.getId()));
+                e -> e != viewer && e.isAlive() && !(e instanceof OrlanEntity && e.getId() == this.getId())
+                        && !(e instanceof net.minecraft.world.entity.Marker)
+                        && e.getType().clientTrackingRange() > 0);
 
         Set<Integer> currentNearby = new HashSet<>();
         for (Entity e : nearbyEntities) {
             int eid = e.getId();
-            currentNearby.add(eid);
 
             if (!trackedCameraEntities.contains(eid)) {
-
-                viewer.connection.send(e.getAddEntityPacket());
+                net.minecraft.network.protocol.Packet<?> addPacket;
+                try {
+                    addPacket = e.getAddEntityPacket();
+                } catch (RuntimeException ex) {
+                    continue;
+                }
+                if (addPacket == null) continue;
+                currentNearby.add(eid);
+                viewer.connection.send(addPacket);
                 var dataValues = e.getEntityData().getNonDefaultValues();
                 if (dataValues != null) {
                     viewer.connection.send(new ClientboundSetEntityDataPacket(eid, dataValues));
@@ -1019,6 +1027,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
                     viewer.connection.send(new ClientboundSetEntityMotionPacket(e));
                 }
             } else {
+                currentNearby.add(eid);
 
                 viewer.connection.send(new ClientboundTeleportEntityPacket(e));
                 if (e.getDeltaMovement().lengthSqr() > 0.001) {
