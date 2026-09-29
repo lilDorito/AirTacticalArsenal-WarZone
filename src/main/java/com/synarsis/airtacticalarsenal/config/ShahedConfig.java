@@ -62,6 +62,7 @@ public class ShahedConfig {
     public static final ForgeConfigSpec.BooleanValue VANILLA_EXPLOSION_HURTS_ENTITIES;
     public static final ForgeConfigSpec.IntValue RADAR_MIN_ALTITUDE;
     public static final ForgeConfigSpec.BooleanValue RADAR_REQUIRES_OPEN_SKY;
+    public static final ForgeConfigSpec.BooleanValue RADAR_DARK_BACKGROUND;
     public static final ForgeConfigSpec.BooleanValue ALLOW_CLIENT_LANGUAGE;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> RADAR_PLANE_IDS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> RADAR_HELICOPTER_IDS;
@@ -190,6 +191,7 @@ public class ShahedConfig {
 
     public static int getRadarMinAltitude() { return RADAR_MIN_ALTITUDE.get(); }
     public static boolean isRadarOpenSkyRequired() { return RADAR_REQUIRES_OPEN_SKY.get(); }
+    public static boolean isRadarDarkBackground() { return RADAR_DARK_BACKGROUND.get(); }
     public static boolean isClientLanguageAllowed() { return ALLOW_CLIENT_LANGUAGE.get(); }
     public static List<? extends String> getRadarPlaneIds()      { return RADAR_PLANE_IDS.get(); }
     public static List<? extends String> getRadarHelicopterIds() { return RADAR_HELICOPTER_IDS.get(); }
@@ -333,6 +335,11 @@ public class ShahedConfig {
             "If true, the radar needs open sky: no blocks at all (glass, leaves, water included) above the 5x5 area",
             "centred on it. Otherwise it shows WEAK SIGNAL with an empty map and its redstone output is 0.")
             .define("radarRequiresOpenSky", true);
+        RADAR_DARK_BACKGROUND = BUILDER.comment(
+            "If true, the radar screen shows a plain dark background instead of the biome/terrain map.",
+            "The terrain around radars is then never scanned, which also saves server work.",
+            "Players see the change the next time they open a radar.")
+            .define("radarDarkBackground", false);
         BUILDER.comment(
             "Extra entity ids (\"modid:entity\") to show on the radar with a forced type.",
             "Aircraft from SuperbWarfare and its addons (AshVehicle etc.) are detected automatically;",

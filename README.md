@@ -18,7 +18,7 @@
 Forge 1.20.1 mod that adds tactical drones, ballistic missiles, an air-defense
 radar and alert sirens to Minecraft.
 
-modId: `ata` (same as upstream) · version: `1.1.0-warzone`
+modId: `ata` (same as upstream) · version: `1.1.1-warzone`
 
 ## Contents
 
@@ -52,7 +52,7 @@ Full list in [CHANGELOG.md](CHANGELOG.md). Main points:
 
 - **Radar**: detects all SBW and addon aircraft (including AshVehicles), with new UAV / SHD / BAL / ORL tags
   and legend colours; uses SBW's FuMO 25 model when SBW is installed; needs open sky (**WEAK SIGNAL**);
-  tracks the Iskander for its whole flight; configurable horizon and entity lists; drops itself when mined.
+  tracks the Iskander for its whole flight; configurable horizon and entity lists; drops itself when mined; servers can swap the biome map for a plain dark background. 
 - **Air-to-air**: AshVehicles jets see and lock Shahed / Orlan with AAM-4, never the Iskander.
 - **Damage**: no more ×3.5 vehicle multiplier, lower and configurable explosion damage, round craters for
   Iskander and Shahed.

@@ -29,6 +29,7 @@ public class RequestRadarMapPacket {
         ctx.enqueueWork(() -> {
             ServerPlayer player = ctx.getSender();
             if (player == null) return;
+            if (com.synarsis.airtacticalarsenal.config.ShahedConfig.isRadarDarkBackground()) return;
             ServerLevel level = player.serverLevel();
 
             ServerTerrainScanner scanner = ServerTerrainScanner.getOrCreate(radarPos, level);

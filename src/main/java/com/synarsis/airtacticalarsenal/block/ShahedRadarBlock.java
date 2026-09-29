@@ -91,7 +91,7 @@ public class ShahedRadarBlock extends Block implements EntityBlock {
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
-            NetworkHandler.sendToPlayer(serverPlayer, new OpenRadarScreenPacket(pos));
+            NetworkHandler.sendToPlayer(serverPlayer, new OpenRadarScreenPacket(pos, com.synarsis.airtacticalarsenal.config.ShahedConfig.isRadarDarkBackground()));
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
@@ -124,7 +124,11 @@ public class ShahedRadarBlock extends Block implements EntityBlock {
             }
         }
 
-        ServerTerrainScanner.getOrCreate(pos, level);
+        if (com.synarsis.airtacticalarsenal.config.ShahedConfig.isRadarDarkBackground()) {
+            ServerTerrainScanner.remove(pos);
+        } else {
+            ServerTerrainScanner.getOrCreate(pos, level);
+        }
 
         if (!level.getChunkAt(pos).getBlockEntities().containsKey(pos)) {
             level.getBlockEntity(pos);

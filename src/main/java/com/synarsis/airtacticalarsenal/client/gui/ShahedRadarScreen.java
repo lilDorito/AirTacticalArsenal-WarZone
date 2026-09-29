@@ -104,16 +104,19 @@ public class ShahedRadarScreen extends Screen {
     private int serverMinAltitude = 90;
     private boolean weakSignal = false;
 
-    public ShahedRadarScreen(BlockPos radarPos) {
+    private final boolean darkBackground;
+
+    public ShahedRadarScreen(BlockPos radarPos, boolean darkBackground) {
         super(Component.translatable("gui.ata.radar.title"));
         this.radarPos = radarPos;
+        this.darkBackground = darkBackground;
     }
 
-    public static void open(BlockPos pos) {
+    public static void open(BlockPos pos, boolean darkBackground) {
         if (currentInstance != null) {
             currentInstance.closeTerrainMap();
         }
-        ShahedRadarScreen screen = new ShahedRadarScreen(pos);
+        ShahedRadarScreen screen = new ShahedRadarScreen(pos, darkBackground);
         currentInstance = screen;
         Minecraft.getInstance().setScreen(screen);
     }
@@ -137,7 +140,7 @@ public class ShahedRadarScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        if (terrainMap == null) {
+        if (terrainMap == null && !darkBackground) {
             terrainMap = new TerrainMapRenderer(radarPos.getX(), radarPos.getZ());
         }
 

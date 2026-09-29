@@ -4,6 +4,18 @@
 Based on Air Tactical Arsenal 1.1.0 (Forge 1.20.1). The original [LICENSE](LICENSE) is kept unchanged and
 applies to this fork too.
 
+## 1.1.1-warzone
+
+### Radar
+- New server option `radarDarkBackground` (`[Radar]` section of `ata-common.toml`, default `false`).
+  Set it to `true` and the radar screen shows a plain dark background instead of the biome/terrain map;
+  targets, range rings, sweep and everything else work as before.
+- With it on, the terrain around radars is never scanned, which also saves server work.
+- Players see the change the next time they open a radar.
+
+### Upgrade notes
+- Network protocol 11 -> 12: server and all clients must update to 1.1.1-warzone together.
+
 ## 1.1.0-warzone
 
 First release of the fork. Everything below is relative to upstream Air Tactical Arsenal 1.1.0.

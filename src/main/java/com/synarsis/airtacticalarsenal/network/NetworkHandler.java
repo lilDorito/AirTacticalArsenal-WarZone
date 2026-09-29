@@ -7,7 +7,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    private static final String PROTOCOL_VERSION = "11";
+    private static final String PROTOCOL_VERSION = "12";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(com.synarsis.airtacticalarsenal.ShahedMod.MOD_ID, "main"),
             () -> PROTOCOL_VERSION,
