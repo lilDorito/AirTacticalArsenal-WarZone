@@ -4,6 +4,27 @@
 Based on Air Tactical Arsenal 1.1.0 (Forge 1.20.1). The original [LICENSE](LICENSE) is kept unchanged and
 applies to this fork too.
 
+## 1.1.2-warzone
+
+### Radar and route maps
+- The radar map and the Shahed/Orlan route maps now show the **real terrain** instead of biome colours:
+  the top block of every spot, like a vanilla map (grass, forests, sand, stone, snow, roads and buildings),
+  with hill shading. Water gets darker the deeper it is.
+- The terrain comes from the chunks the **server has loaded right now** (around players, force-loaded
+  areas, flying missiles), so a scan is as fast as before. Areas that are not loaded use the old biome
+  colours, so the map has no holes.
+- The maps update themselves: every `mapRefreshMinutes` (new option in the `[Radar]` section of
+  `ata-common.toml`, default 10, 0 = never) the chunks loaded at that moment are painted onto the map.
+  The map fills in as players explore and shows new buildings and craters. The update runs in the
+  background and only touches loaded chunks.
+- Players get the updated map when they next open a radar or route screen (clients keep a downloaded map
+  for up to 5 minutes).
+- Existing radar and route maps are rebuilt once after the update (old map files are deleted).
+- `radarDarkBackground = true` still disables the radar map and its scanning completely.
+
+### Upgrade notes
+- The network protocol is unchanged (still 12), so 1.1.1 clients can join a 1.1.2 server, but only 1.1.2 clients pick up map updates without reconnecting. Updating both is recommended.
+
 ## 1.1.1-warzone
 
 ### Radar

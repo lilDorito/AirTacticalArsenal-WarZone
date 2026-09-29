@@ -40,6 +40,8 @@ public class TerrainMapRenderer {
 
     private static byte[] cachedPngBytes;
     private static int cachedRadarX, cachedRadarZ;
+    private static long cachedAt;
+    private static final long CACHE_MAX_AGE_MS = 5 * 60_000L;
 
     public TerrainMapRenderer(int radarX, int radarZ) {
         this.radarX = radarX;
@@ -59,7 +61,8 @@ public class TerrainMapRenderer {
         textureRegistered = true;
         currentInstance = this;
 
-        if (cachedPngBytes != null && cachedRadarX == radarX && cachedRadarZ == radarZ) {
+        if (cachedPngBytes != null && cachedRadarX == radarX && cachedRadarZ == radarZ
+                && System.currentTimeMillis() - cachedAt <= CACHE_MAX_AGE_MS) {
             loadFromPngBytes(cachedPngBytes);
         }
     }
@@ -118,6 +121,7 @@ public class TerrainMapRenderer {
             cachedPngBytes = pngBytes;
             cachedRadarX = radarX;
             cachedRadarZ = radarZ;
+            cachedAt = System.currentTimeMillis();
 
             NativeImage d = displayTexture.getPixels();
             if (d != null) {

@@ -1,24 +1,13 @@
 package com.synarsis.airtacticalarsenal.radar;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.ChunkAccess;
-import net.minecraft.world.level.chunk.ChunkStatus;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.storage.LevelResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -32,7 +21,7 @@ public class ServerRouteMapScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger("ATA-RouteMap");
     public static final int CACHE_SIZE = 2048;
     public static final int CACHE_BPP = 10;
-    private static final int CACHE_VERSION = 16;
+    private static final int CACHE_VERSION = 17;
     private static final long MAX_TICK_MS = 25;
     public static final int REUSE_RADIUS = 500;
 
@@ -45,14 +34,16 @@ public class ServerRouteMapScanner {
     private boolean ready = false;
     private long buildStartOrder = 0;
     private int[] pixels;
-    private byte[] pngBytes;
+    private volatile byte[] pngBytes;
     private final Map<Long, Integer> biomeColorCache = new HashMap<>();
+    private final MapRefresher refresher;
 
     public ServerRouteMapScanner(BlockPos centerPos) {
         this.centerPos = centerPos;
         this.originX = centerPos.getX() - (CACHE_SIZE / 2) * CACHE_BPP;
         this.originZ = centerPos.getZ() - (CACHE_SIZE / 2) * CACHE_BPP;
         this.pixels = new int[CACHE_SIZE * CACHE_SIZE];
+        this.refresher = new MapRefresher(CACHE_SIZE, CACHE_BPP, originX, originZ);
     }
 
     public static synchronized ServerRouteMapScanner findNear(BlockPos pos) {
@@ -193,6 +184,27 @@ public class ServerRouteMapScanner {
         return false;
     }
 
+    public static synchronized boolean tickRefresh(ServerLevel level) {
+        ServerRouteMapScanner due = null;
+        for (ServerRouteMapScanner scanner : INSTANCES.values()) {
+            if (!scanner.ready) continue;
+            if (scanner.refresher.isActive()) {
+                byte[] png = scanner.refresher.tick(level, MAX_TICK_MS);
+                if (png != null) {
+                    scanner.pngBytes = png;
+                    scanner.saveToDisk(level);
+                }
+                return true;
+            }
+            if (due == null && scanner.refresher.isDue()) due = scanner;
+        }
+        if (due != null) {
+            due.refresher.start(due.pngBytes);
+            return true;
+        }
+        return false;
+    }
+
     public void tick(ServerLevel level) {
         if (ready || buildRow < 0) return;
 
@@ -206,7 +218,8 @@ public class ServerRouteMapScanner {
         while (buildRow < CACHE_SIZE) {
             int wx = originX + buildCol * CACHE_BPP;
             int wz = originZ + buildRow * CACHE_BPP;
-            pixels[buildRow * CACHE_SIZE + buildCol] = sampleColor(level, wx, wz, mPos, bs, sampler);
+            pixels[buildRow * CACHE_SIZE + buildCol] =
+                    MapPixelSampler.sample(level, wx, wz, CACHE_BPP, mPos, bs, sampler, biomeColorCache);
             buildCol++;
             pixelsDone++;
             if (buildCol >= CACHE_SIZE) {
@@ -220,114 +233,12 @@ public class ServerRouteMapScanner {
         if (buildRow >= CACHE_SIZE) {
             buildRow = -1;
             ready = true;
-            pngBytes = convertToPng();
+            pngBytes = MapRefresher.encode(pixels, CACHE_SIZE);
             saveToDisk(level);
             biomeColorCache.clear();
             pixels = null;
+            refresher.markFresh();
             LOGGER.info("[ATA] Route map ready for {}", key(centerPos));
-        }
-    }
-
-    private int sampleColor(ServerLevel level, int wx, int wz, BlockPos.MutableBlockPos mPos,
-                             BiomeSource bs, Climate.Sampler sampler) {
-        ChunkAccess chunk = level.getChunk(wx >> 4, wz >> 4, ChunkStatus.FULL, false);
-        if (chunk == null) {
-
-            chunk = level.getChunk(wx >> 4, wz >> 4, ChunkStatus.BIOMES, false);
-            if (chunk != null) {
-                Holder<Biome> bh = chunk.getNoiseBiome(wx >> 2, 16, wz >> 2);
-                return biomeOnlyColor(bh);
-            }
-
-            long ck = ChunkPos.asLong(wx >> 4, wz >> 4);
-            Integer cached = biomeColorCache.get(ck);
-            if (cached != null) return cached;
-            Holder<Biome> bh = bs.getNoiseBiome(wx >> 2, 16, wz >> 2, sampler);
-            int color = biomeOnlyColor(bh);
-            biomeColorCache.put(ck, color);
-            return color;
-        }
-
-        int h = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, wx & 15, wz & 15) + 1;
-
-        Holder<Biome> bh = chunk.getNoiseBiome(wx >> 2, Math.max(h, 64) >> 2, wz >> 2);
-        Biome biome = bh.value();
-
-        mPos.set(wx, h, wz);
-        BlockState st = chunk.getBlockState(mPos);
-        boolean water = st.is(Blocks.WATER) || st.is(Blocks.ICE) || st.is(Blocks.FROSTED_ICE);
-        String bn = bh.unwrapKey().map(k -> k.location().getPath()).orElse("");
-
-        int r, g, b;
-        if (water || bn.contains("ocean") || bn.contains("river")) {
-            int wc = biome.getWaterColor();
-            r = (wc >> 16) & 0xFF; g = (wc >> 8) & 0xFF; b = wc & 0xFF;
-            if (bn.contains("deep")) { r = (int)(r*0.6f); g = (int)(g*0.6f); b = (int)(b*0.6f); }
-            else { r = (int)(r*0.75f); g = (int)(g*0.75f); b = (int)(b*0.75f); }
-        } else if (bn.contains("beach") || bn.contains("desert")) { r=190; g=175; b=130; }
-        else if (bn.contains("badlands") || bn.contains("eroded")) { r=180; g=95; b=35; }
-        else if (bn.contains("snowy") || bn.contains("frozen") || bn.contains("ice")) { r=200; g=205; b=210; }
-        else if (bn.contains("mushroom")) { r=130; g=95; b=130; }
-        else {
-            int gc = getGrassColor(bn);
-            r=(gc>>16)&0xFF; g=(gc>>8)&0xFF; b=gc&0xFF;
-        }
-
-        r=(int)(r*0.65f); g=(int)(g*0.65f); b=(int)(b*0.65f);
-
-        return 0xFF000000 | (r << 16) | (g << 8) | b;
-    }
-
-    private int biomeOnlyColor(Holder<Biome> bh) {
-        String n = bh.unwrapKey().map(k -> k.location().getPath()).orElse("");
-        Biome bi = bh.value();
-        int r, g, b;
-        if (n.contains("ocean") || n.contains("river")) {
-            int wc = bi.getWaterColor(); r=(wc>>16)&0xFF; g=(wc>>8)&0xFF; b=wc&0xFF;
-            if (n.contains("deep")) { r=(int)(r*0.6f); g=(int)(g*0.6f); b=(int)(b*0.6f); }
-            else { r=(int)(r*0.75f); g=(int)(g*0.75f); b=(int)(b*0.75f); }
-        } else if (n.contains("beach") || n.contains("desert")) { r=190; g=175; b=130; }
-        else if (n.contains("badlands")) { r=180; g=95; b=35; }
-        else if (n.contains("snowy") || n.contains("frozen") || n.contains("ice")) { r=200; g=205; b=210; }
-        else { int gc=getGrassColor(n); r=(gc>>16)&0xFF; g=(gc>>8)&0xFF; b=gc&0xFF; }
-        r=(int)(r*0.65f); g=(int)(g*0.65f); b=(int)(b*0.65f);
-        return 0xFF000000 | (r << 16) | (g << 8) | b;
-    }
-
-    private static int getGrassColor(String biomeName) {
-        if (biomeName.contains("swamp"))                  return 0x6A7039;
-        if (biomeName.contains("jungle"))                 return 0x59C93C;
-        if (biomeName.contains("dark_forest"))            return 0x507A32;
-        if (biomeName.contains("old_growth_spruce"))      return 0x6B8E52;
-        if (biomeName.contains("old_growth_pine"))        return 0x6B8E52;
-        if (biomeName.contains("old_growth_birch"))       return 0x7DB05A;
-        if (biomeName.contains("birch"))                  return 0x88BB67;
-        if (biomeName.contains("flower_forest"))          return 0x79C05A;
-        if (biomeName.contains("forest"))                 return 0x79C05A;
-        if (biomeName.contains("taiga"))                  return 0x6B8E52;
-        if (biomeName.contains("savanna"))                return 0xBFB755;
-        if (biomeName.contains("windswept_hills"))        return 0x6B935B;
-        if (biomeName.contains("windswept"))              return 0x6B935B;
-        if (biomeName.contains("meadow"))                 return 0x83BB6D;
-        if (biomeName.contains("cherry"))                 return 0xB6DB61;
-        if (biomeName.contains("mangrove"))               return 0x6A7039;
-        if (biomeName.contains("stony"))                  return 0x6B935B;
-        if (biomeName.contains("grove"))                  return 0x6B8E52;
-        if (biomeName.contains("plains"))                 return 0x91BD59;
-        if (biomeName.contains("sunflower"))              return 0x91BD59;
-        return 0x7ABD52;
-    }
-
-    private byte[] convertToPng() {
-        try {
-            BufferedImage img = new BufferedImage(CACHE_SIZE, CACHE_SIZE, BufferedImage.TYPE_INT_ARGB);
-            img.setRGB(0, 0, CACHE_SIZE, CACHE_SIZE, pixels, 0, CACHE_SIZE);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ImageIO.write(img, "PNG", baos);
-            return baos.toByteArray();
-        } catch (Exception e) {
-            LOGGER.error("[ATA] Failed to convert route map to PNG", e);
-            return null;
         }
     }
 
@@ -350,13 +261,16 @@ public class ServerRouteMapScanner {
     }
 
     private void saveToDisk(ServerLevel level) {
-        if (pngBytes == null) return;
+        byte[] png = pngBytes;
+        if (png == null) return;
         try {
             Path dir = getCacheDir(level);
             Files.createDirectories(dir);
             Path file = dir.resolve("route_v" + CACHE_VERSION + "_" + centerPos.getX() + "_" + centerPos.getZ() + ".png");
-            Files.write(file, pngBytes);
-            LOGGER.info("[ATA] Saved route map to {}", file);
+            Files.write(file, png);
+            for (int v = 1; v < CACHE_VERSION; v++) {
+                Files.deleteIfExists(dir.resolve("route_v" + v + "_" + centerPos.getX() + "_" + centerPos.getZ() + ".png"));
+            }
         } catch (Exception e) {
             LOGGER.error("[ATA] Failed to save route map", e);
         }

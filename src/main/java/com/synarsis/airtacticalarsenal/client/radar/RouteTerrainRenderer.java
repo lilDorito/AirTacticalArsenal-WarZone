@@ -41,17 +41,21 @@ public class RouteTerrainRenderer {
 
     private static final int REUSE_RADIUS = 500;
     private static final int MAX_CACHED_MAPS = 8;
+    private static final long CACHE_MAX_AGE_MS = 5 * 60_000L;
     private static final List<CachedMapEntry> mapCache = new ArrayList<>();
 
     private static class CachedMapEntry {
         final byte[] pngBytes;
         final int centerX, centerZ;
+        final long loadedAt = System.currentTimeMillis();
         CachedMapEntry(byte[] png, int cx, int cz) {
             this.pngBytes = png; this.centerX = cx; this.centerZ = cz;
         }
     }
 
     private static CachedMapEntry findNearestCache(int x, int z) {
+        long now = System.currentTimeMillis();
+        mapCache.removeIf(e -> now - e.loadedAt > CACHE_MAX_AGE_MS);
         CachedMapEntry best = null;
         double bestDist = Double.MAX_VALUE;
         for (CachedMapEntry e : mapCache) {

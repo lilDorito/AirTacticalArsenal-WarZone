@@ -103,7 +103,6 @@ public class ShahedRadarScreen extends Screen {
 
     private int serverMinAltitude = 90;
     private boolean weakSignal = false;
-
     private final boolean darkBackground;
 
     public ShahedRadarScreen(BlockPos radarPos, boolean darkBackground) {

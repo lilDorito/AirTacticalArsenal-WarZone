@@ -57,14 +57,14 @@ public class ServerForgeEvents {
 
             long terrainOrder = ServerTerrainScanner.getFirstBuildingOrder();
             long routeOrder = ServerRouteMapScanner.getFirstBuildingOrder();
+            boolean busy;
             if (terrainOrder <= routeOrder) {
-                if (!ServerTerrainScanner.tickAll(overworld)) {
-                    ServerRouteMapScanner.tickAll(overworld);
-                }
+                busy = ServerTerrainScanner.tickAll(overworld) || ServerRouteMapScanner.tickAll(overworld);
             } else {
-                if (!ServerRouteMapScanner.tickAll(overworld)) {
-                    ServerTerrainScanner.tickAll(overworld);
-                }
+                busy = ServerRouteMapScanner.tickAll(overworld) || ServerTerrainScanner.tickAll(overworld);
+            }
+            if (!busy && !ServerTerrainScanner.tickRefresh(overworld)) {
+                ServerRouteMapScanner.tickRefresh(overworld);
             }
         }
     }

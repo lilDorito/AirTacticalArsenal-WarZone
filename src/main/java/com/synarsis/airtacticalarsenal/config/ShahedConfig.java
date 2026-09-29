@@ -63,6 +63,7 @@ public class ShahedConfig {
     public static final ForgeConfigSpec.IntValue RADAR_MIN_ALTITUDE;
     public static final ForgeConfigSpec.BooleanValue RADAR_REQUIRES_OPEN_SKY;
     public static final ForgeConfigSpec.BooleanValue RADAR_DARK_BACKGROUND;
+    public static final ForgeConfigSpec.IntValue MAP_REFRESH_MINUTES;
     public static final ForgeConfigSpec.BooleanValue ALLOW_CLIENT_LANGUAGE;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> RADAR_PLANE_IDS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> RADAR_HELICOPTER_IDS;
@@ -192,6 +193,7 @@ public class ShahedConfig {
     public static int getRadarMinAltitude() { return RADAR_MIN_ALTITUDE.get(); }
     public static boolean isRadarOpenSkyRequired() { return RADAR_REQUIRES_OPEN_SKY.get(); }
     public static boolean isRadarDarkBackground() { return RADAR_DARK_BACKGROUND.get(); }
+    public static int getMapRefreshMinutes() { return MAP_REFRESH_MINUTES.get(); }
     public static boolean isClientLanguageAllowed() { return ALLOW_CLIENT_LANGUAGE.get(); }
     public static List<? extends String> getRadarPlaneIds()      { return RADAR_PLANE_IDS.get(); }
     public static List<? extends String> getRadarHelicopterIds() { return RADAR_HELICOPTER_IDS.get(); }
@@ -340,6 +342,12 @@ public class ShahedConfig {
             "The terrain around radars is then never scanned, which also saves server work.",
             "Players see the change the next time they open a radar.")
             .define("radarDarkBackground", false);
+        MAP_REFRESH_MINUTES = BUILDER.comment(
+            "Radar and Shahed/Orlan route maps are drawn from the chunks the server has loaded right now",
+            "(real terrain; never-loaded areas use biome colours). Every this many minutes the maps are",
+            "updated with the chunks loaded at that moment, so they fill in as players explore and show",
+            "new buildings. 0 = never update after the first scan.")
+            .defineInRange("mapRefreshMinutes", 10, 0, 1440);
         BUILDER.comment(
             "Extra entity ids (\"modid:entity\") to show on the radar with a forced type.",
             "Aircraft from SuperbWarfare and its addons (AshVehicle etc.) are detected automatically;",
