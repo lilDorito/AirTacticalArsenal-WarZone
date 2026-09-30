@@ -18,7 +18,7 @@ public class ServerRouteMapScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger("ATA-RouteMap");
     public static final int CACHE_SIZE = 2048;
     public static final int CACHE_BPP = 10;
-    private static final int CACHE_VERSION = 17;
+    private static final int CACHE_VERSION = 18;
     private static final long MAX_TICK_MS = 25;
     public static final int REUSE_RADIUS = 500;
 
@@ -86,7 +86,7 @@ public class ServerRouteMapScanner {
             }
         }
 
-        scanner.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, scanner.originX, scanner.originZ);
+        scanner.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, scanner.originX, scanner.originZ, true, false);
         scanner.buildStartOrder = ++ServerTerrainScanner.GLOBAL_BUILD_ORDER;
         INSTANCES.put(k, scanner);
         return scanner;
@@ -179,7 +179,7 @@ public class ServerRouteMapScanner {
         for (ServerRouteMapScanner s : INSTANCES.values()) {
             s.ready = false;
             s.refresher.cancel();
-            s.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, s.originX, s.originZ);
+            s.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, s.originX, s.originZ, true, false);
             s.buildStartOrder = ++ServerTerrainScanner.GLOBAL_BUILD_ORDER;
         }
     }

@@ -1,6 +1,5 @@
 package com.synarsis.airtacticalarsenal.radar;
 
-import com.synarsis.airtacticalarsenal.config.ShahedConfig;
 import com.mojang.serialization.Codec;
 import net.minecraft.SharedConstants;
 import net.minecraft.Util;
@@ -10,8 +9,6 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.Mth;
-import net.minecraft.util.SimpleBitStorage;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
@@ -50,11 +47,7 @@ final class MapScanJob {
     private final Map<Long, Integer> biomeCache = new ConcurrentHashMap<>();
     private final MapPixelSampler.Sample tmp = new MapPixelSampler.Sample();
 
-    MapScanJob(int size, int step, int originX, int originZ) {
-        this(size, step, originX, originZ, true);
-    }
-
-    MapScanJob(int size, int step, int originX, int originZ, boolean useTiles) {
+    MapScanJob(int size, int step, int originX, int originZ, boolean useTiles, boolean readDisk) {
         this.useTiles = useTiles;
         this.size = size;
         this.step = step;
@@ -66,7 +59,7 @@ final class MapScanJob {
         this.chunksX = Math.floorDiv(originX + maxOffset, 16) - minChunkX + 1;
         int chunksZ = Math.floorDiv(originZ + maxOffset, 16) - minChunkZ + 1;
         this.totalChunks = chunksX * chunksZ;
-        this.readDisk = !useTiles || ShahedConfig.isMapReadSavedChunks();
+        this.readDisk = readDisk;
         this.pixels = new int[size * size];
         this.heights = new short[size * size];
         this.kinds = new byte[size * size];
@@ -190,45 +183,62 @@ final class MapScanJob {
     private static MapPixelSampler.Column savedColumn(ServerLevel level, CompoundTag tag) {
         int current = SharedConstants.getCurrentVersion().getDataVersion().getVersion();
         if (NbtUtils.getDataVersion(tag, -1) < current) {
-            tag = level.getChunkSource().chunkMap.upgradeChunkTag(level.dimension(),
-                    () -> level.getServer().overworld().getDataStorage(), tag,
-                    level.getChunkSource().getGenerator().getTypeNameForDataFixer());
+            try {
+                tag = level.getChunkSource().chunkMap.upgradeChunkTag(level.dimension(),
+                        () -> level.getServer().overworld().getDataStorage(), tag.copy(),
+                        level.getChunkSource().getGenerator().getTypeNameForDataFixer());
+            } catch (Exception ignored) {
+            }
         }
-        if (!tag.getString("Status").endsWith("full")) return null;
-        CompoundTag hm = tag.getCompound("Heightmaps");
-        if (!hm.contains("WORLD_SURFACE", Tag.TAG_LONG_ARRAY)) return null;
 
-        int minY = level.getMinBuildHeight();
-        int bits = Mth.ceillog2(level.getHeight() + 1);
-        SimpleBitStorage surface = new SimpleBitStorage(bits, 256, hm.getLongArray("WORLD_SURFACE"));
-
-        Map<Integer, CompoundTag> sectionTags = new HashMap<>();
+        Map<Integer, PalettedContainer<BlockState>> decoded = new HashMap<>();
         ListTag sections = tag.getList("sections", Tag.TAG_COMPOUND);
         for (int i = 0; i < sections.size(); i++) {
             CompoundTag sec = sections.getCompound(i);
-            if (sec.contains("block_states", Tag.TAG_COMPOUND)) sectionTags.put((int) sec.getByte("Y"), sec.getCompound("block_states"));
+            if (!sec.contains("block_states", Tag.TAG_COMPOUND)) continue;
+            PalettedContainer<BlockState> c = decodeSection(sec.getCompound("block_states"));
+            if (c != null && c.maybeHas(st -> !st.isAir())) decoded.put((int) sec.getByte("Y"), c);
         }
-        Map<Integer, PalettedContainer<BlockState>> decoded = new HashMap<>();
+        if (decoded.isEmpty()) return null;
+
+        int[] ys = decoded.keySet().stream().mapToInt(Integer::intValue).sorted().toArray();
+        int minY = level.getMinBuildHeight();
         BlockState air = Blocks.AIR.defaultBlockState();
 
         return new MapPixelSampler.Column() {
             @Override public int minY() { return minY; }
             @Override public int surfaceY(int wx, int wz) {
-                return minY + surface.get((wx & 15) + (wz & 15) * 16) - 1;
+                for (int i = ys.length - 1; i >= 0; i--) {
+                    PalettedContainer<BlockState> c = decoded.get(ys[i]);
+                    for (int ly = 15; ly >= 0; ly--) {
+                        if (!c.get(wx & 15, ly, wz & 15).isAir()) return ys[i] * 16 + ly;
+                    }
+                }
+                return minY;
             }
             @Override public BlockState state(int wx, int y, int wz) {
-                int sy = y >> 4;
-                PalettedContainer<BlockState> c = decoded.get(sy);
-                if (c == null) {
-                    if (decoded.containsKey(sy)) return air;
-                    CompoundTag st = sectionTags.get(sy);
-                    c = st == null ? null : BLOCK_STATES.parse(NbtOps.INSTANCE, st).result().orElse(null);
-                    decoded.put(sy, c);
-                    if (c == null) return air;
-                }
-                return c.get(wx & 15, y & 15, wz & 15);
+                PalettedContainer<BlockState> c = decoded.get(y >> 4);
+                return c == null ? air : c.get(wx & 15, y & 15, wz & 15);
             }
         };
+    }
+
+    private static PalettedContainer<BlockState> decodeSection(CompoundTag blockStates) {
+        PalettedContainer<BlockState> c = BLOCK_STATES.parse(NbtOps.INSTANCE, blockStates).result().orElse(null);
+        if (c != null) return c;
+        CompoundTag fixed = blockStates.copy();
+        ListTag palette = fixed.getList("palette", Tag.TAG_COMPOUND);
+        for (int i = 0; i < palette.size(); i++) {
+            CompoundTag entry = palette.getCompound(i);
+            if (BlockState.CODEC.parse(NbtOps.INSTANCE, entry).result().isPresent()) continue;
+            CompoundTag nameOnly = new CompoundTag();
+            nameOnly.putString("Name", entry.getString("Name"));
+            if (BlockState.CODEC.parse(NbtOps.INSTANCE, nameOnly).result().isEmpty()) {
+                nameOnly.putString("Name", "minecraft:stone");
+            }
+            palette.set(i, nameOnly);
+        }
+        return BLOCK_STATES.parse(NbtOps.INSTANCE, fixed).result().orElse(null);
     }
 
     private static int ceilDiv(int a, int b) {

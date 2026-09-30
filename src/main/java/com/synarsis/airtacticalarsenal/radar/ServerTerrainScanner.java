@@ -16,7 +16,7 @@ public class ServerTerrainScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger("ATA-RadarMap");
     private static final int CACHE_SIZE = 1536;
     private static final int CACHE_BPP = 2;
-    private static final int CACHE_VERSION = 17;
+    private static final int CACHE_VERSION = 18;
     private static final long MAX_TICK_MS = 25;
 
     private static final Map<String, ServerTerrainScanner> INSTANCES = new LinkedHashMap<>();
@@ -53,7 +53,7 @@ public class ServerTerrainScanner {
             scanner.pngBytes = cached;
             scanner.ready = true;
         } else {
-            scanner.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, scanner.originX, scanner.originZ);
+            scanner.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, scanner.originX, scanner.originZ, true, com.synarsis.airtacticalarsenal.config.ShahedConfig.isMapReadSavedChunks());
             scanner.buildStartOrder = ++GLOBAL_BUILD_ORDER;
         }
         INSTANCES.put(k, scanner);
@@ -124,7 +124,7 @@ public class ServerTerrainScanner {
         for (ServerTerrainScanner s : INSTANCES.values()) {
             s.ready = false;
             s.refresher.cancel();
-            s.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, s.originX, s.originZ);
+            s.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, s.originX, s.originZ, true, com.synarsis.airtacticalarsenal.config.ShahedConfig.isMapReadSavedChunks());
             s.buildStartOrder = ++GLOBAL_BUILD_ORDER;
         }
     }

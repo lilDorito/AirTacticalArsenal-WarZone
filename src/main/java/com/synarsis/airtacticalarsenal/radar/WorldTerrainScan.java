@@ -86,7 +86,7 @@ public final class WorldTerrainScan {
                 jobTx = t[0];
                 jobTz = t[1];
                 job = new MapScanJob(TerrainTileStore.TILE_PX, TerrainTileStore.STEP,
-                        jobTx * TerrainTileStore.TILE_BLOCKS, jobTz * TerrainTileStore.TILE_BLOCKS, false);
+                        jobTx * TerrainTileStore.TILE_BLOCKS, jobTz * TerrainTileStore.TILE_BLOCKS, false, true);
             }
             long left = BUDGET_MS - (System.currentTimeMillis() - start);
             if (!job.tick(level, Math.max(1, left))) return;

@@ -25,7 +25,7 @@ public final class TerrainTileStore {
     public static final int TILE_BLOCKS = 512;
     public static final int STEP = 2;
     public static final int TILE_PX = TILE_BLOCKS / STEP;
-    private static final int FORMAT = 1;
+    private static final int FORMAT = 2;
     private static final int MAX_CACHED = 64;
     private static final long REFRESH_BUDGET_MS = 10;
 
@@ -77,6 +77,14 @@ public final class TerrainTileStore {
             if (Files.isDirectory(d)) {
                 try (Stream<Path> files = Files.list(d)) {
                     files.map(p -> p.getFileName().toString())
+                            .peek(n -> {
+                                if (n.startsWith("tile_v") && !n.startsWith(prefix)) {
+                                    try {
+                                        Files.deleteIfExists(d.resolve(n));
+                                    } catch (Exception ignored) {
+                                    }
+                                }
+                            })
                             .filter(n -> n.startsWith(prefix) && n.endsWith(".png"))
                             .forEach(n -> {
                                 String[] parts = n.substring(prefix.length(), n.length() - 4).split("_");
