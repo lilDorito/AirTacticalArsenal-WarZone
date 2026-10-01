@@ -12,6 +12,7 @@ public class ModSounds {
     public static final DeferredRegister<SoundEvent> SOUND_EVENTS = DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, ShahedMod.MOD_ID);
 
     public static final RegistryObject<SoundEvent> SHAHED_ENGINE = registerSoundEvent("shahed_engine");
+    public static final RegistryObject<SoundEvent> SHAHED_ENGINE_2 = registerSoundEvent("shahed_engine_2");
 
     public static final RegistryObject<SoundEvent> EXPLOSION_1 = registerSoundEvent("explosion_1");
     public static final RegistryObject<SoundEvent> EXPLOSION_2 = registerSoundEvent("explosion_2");

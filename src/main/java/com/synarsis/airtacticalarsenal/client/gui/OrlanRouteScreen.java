@@ -885,7 +885,10 @@ public class OrlanRouteScreen extends AtaScaledScreen {
                 loadText = Tr.s("gui.ata.map.loading");
             }
             int tw = this.font.width(loadText);
-            g.drawString(this.font, loadText, mapX + (MAP_SIZE - tw) / 2, mapY + MAP_SIZE / 2 - 4, loadColor, false);
+            int tx = mapX + (MAP_SIZE - tw) / 2;
+            int ty = mapY + MAP_SIZE - 16;
+            g.fill(tx - 4, ty - 3, tx + tw + 4, ty + 11, 0xB0000000);
+            g.drawString(this.font, loadText, tx, ty, loadColor, false);
         }
     }
 

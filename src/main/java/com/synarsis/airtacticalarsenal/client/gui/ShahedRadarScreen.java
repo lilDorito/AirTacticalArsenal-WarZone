@@ -259,7 +259,10 @@ public class ShahedRadarScreen extends Screen {
                 loadText = Tr.s("gui.ata.map.loading");
             }
             int tw = font.width(loadText);
-            g.drawString(font, loadText, cx - tw / 2, cy - 4, 0xFF40FF80, false);
+            int tx = cx - tw / 2;
+            int ty = cy + half - 16;
+            g.fill(tx - 4, ty - 3, tx + tw + 4, ty + 11, 0xB0000000);
+            g.drawString(font, loadText, tx, ty, 0xFF40FF80, false);
             return;
         }
 

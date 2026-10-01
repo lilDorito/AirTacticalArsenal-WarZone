@@ -33,7 +33,7 @@ public class ClientPacketHandler {
 
     private static final Map<Integer, int[]> orlanDataCache = new HashMap<>();
 
-    public static void handleShahedSpawn(int entityId, Vec3 currentPos, BlockPos targetPos, String diveMode) {
+    public static void handleShahedSpawn(int entityId, Vec3 currentPos, BlockPos targetPos, String diveMode, int engineSound) {
         cleanupStoppedSounds();
 
         Minecraft mc = Minecraft.getInstance();
@@ -56,7 +56,7 @@ public class ClientPacketHandler {
             }
         }
 
-        ShahedEngineSoundClient sound = new ShahedEngineSoundClient(entityId, currentPos, targetPos, diveMode);
+        ShahedEngineSoundClient sound = new ShahedEngineSoundClient(entityId, currentPos, targetPos, diveMode, engineSound);
         activeSounds.put(entityId, sound);
         mc.execute(sound::start);
     }

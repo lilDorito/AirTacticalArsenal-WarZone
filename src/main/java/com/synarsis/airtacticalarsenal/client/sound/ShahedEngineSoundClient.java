@@ -56,8 +56,9 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance {
     private Vec3 lastServerPos = null;
     private Vec3 inferredVelocity = null;
 
-    public ShahedEngineSoundClient(int entityId, Vec3 currentPos, BlockPos targetPos, String diveMode) {
-        super(ModSounds.SHAHED_ENGINE.get(), SoundSource.HOSTILE, SoundInstance.createUnseededRandom());
+    public ShahedEngineSoundClient(int entityId, Vec3 currentPos, BlockPos targetPos, String diveMode, int engineSound) {
+        super(engineSound == 1 ? ModSounds.SHAHED_ENGINE_2.get() : ModSounds.SHAHED_ENGINE.get(),
+                SoundSource.HOSTILE, SoundInstance.createUnseededRandom());
         this.entityId = entityId;
         this.startPos = currentPos;
         this.currentDronePos = currentPos;

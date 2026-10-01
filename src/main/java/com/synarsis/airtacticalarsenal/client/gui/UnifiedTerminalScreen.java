@@ -336,8 +336,8 @@ public class UnifiedTerminalScreen extends AtaScaledScreen {
         }
 
         double dist = Math.sqrt(Math.pow(targetX - launcherPos.getX(), 2) + Math.pow(targetZ - launcherPos.getZ(), 2));
-        int minDist = ShahedConfig.getIskanderMinDistance();
-        int maxDist = ShahedConfig.getIskanderMaxRange();
+        int minDist = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.iskanderMin();
+        int maxDist = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.iskanderMax();
 
         if (dist < minDist) {
             this.errorMessage = "§c" + Component.translatable("gui.ata.unified_terminal.error.min_distance", minDist).getString();
@@ -422,8 +422,8 @@ public class UnifiedTerminalScreen extends AtaScaledScreen {
         String speedStr = Tr.s("gui.ata.unified_terminal.missile_speed", cruiseSpeed);
         guiGraphics.drawString(this.font, speedStr, guiLeft + 20, guiTop + 38, 0xAAAAAA, false);
 
-        int minDist = ShahedConfig.getIskanderMinDistance();
-        int maxDist = ShahedConfig.getIskanderMaxRange();
+        int minDist = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.iskanderMin();
+        int maxDist = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.iskanderMax();
         String rangeStr = Tr.s("gui.ata.unified_terminal.range", minDist, maxDist);
         guiGraphics.drawString(this.font, rangeStr, guiLeft + 20, guiTop + 50, 0xAAAAAA, false);
 

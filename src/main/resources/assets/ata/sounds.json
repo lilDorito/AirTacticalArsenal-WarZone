@@ -12,6 +12,19 @@
       }
     ]
   },
+    "shahed_engine_2": {
+    "subtitle": "subtitles.ata.shahed_engine",
+    "sounds": [
+      {
+        "name": "ata:shahed_engine_2",
+        "stream": false,
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 256
+      }
+    ]
+  },
   "explosion_1": {
     "subtitle": "subtitles.ata.explosion",
     "sounds": [

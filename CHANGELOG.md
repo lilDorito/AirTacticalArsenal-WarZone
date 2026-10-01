@@ -4,6 +4,45 @@
 Based on Air Tactical Arsenal 1.1.0 (Forge 1.20.1). The original [LICENSE](LICENSE) is kept unchanged and
 applies to this fork too.
 
+## 1.1.3-warzone
+
+### Newer SuperbWarfare and AshVehicles versions
+- Fixed a crash when placing (or looking at) the radar with SuperbWarfare 0.8.9 or newer. SBW 0.8.9 moved
+  the FuMO 25 model files, so the radar asked GeckoLib for a model that no longer existed.
+  - The radar now finds the FuMO 25 model wherever the installed SBW keeps it (0.8.7–0.8.8 and 0.8.9+
+    layouts), and spins the right part of it in both.
+  - If the model can't be found or loaded (for example in a future SBW version), the radar uses the
+    original ATA block instead, with a normal hitbox outline, and the log says why. The game doesn't crash.
+- Radar detection works with SBW 0.8.8+, where SBW removed its aircraft interfaces. Vehicles are classified
+  by their SBW vehicle type: airplanes and airships are **PLN**, helicopters **HEL**, drones **UAV**.
+  This also covers AshVehicles 4.3+ aircraft. Tanks, APCs, AA, cars, artillery and boats are never shown.
+  The `radarPlaneIds` / `radarHelicopterIds` / `radarDroneIds` / `radarExcludedIds` lists still override it.
+- Lock-on with newer versions: SBW 0.8.8+ seekers and AshVehicles 4.3+ missiles lock Shahed and Orlan through
+  the same `destroyable_projectile` tag as before; the Iskander stays unlockable.
+- Checked against SBW 0.8.8, 0.8.8-hotfix, 0.8.8-final, 0.8.9-snapshot, 0.8.9, 0.8.9-final, 0.8.9.1, 0.8.9.2
+  and AshVehicles 4.3, 4.5, 4.6. Behaviour with the WarZone-specific patched builds (SBW 0.8.7.1, AshVehicles 4.2)
+  is unchanged.
+
+### Iskander range
+- Fixed the Iskander terminal and target settings screens ignoring the server's `iskanderMinDistance` and
+  `iskanderMaxRange`. They read the player's own local config (default 1000–5000), so a server with
+  `iskanderMaxRange = 10000` still showed "1000–5000" and refused targets past 5000. The server now sends
+  its values to every player on join, and again whenever `ata-common.toml` is edited while the server runs
+  (the route limits are re-sent the same way).
+
+### Sound
+- New second Shahed engine sound by **Kalitovskiy**. Each Shahed picks one of the two engine sounds at
+  random when it is launched and keeps it for the whole flight (also after a save/reload); every player
+  hears the same one.
+
+### Interface
+- The "Scanning: x%" / "Queued" / "Loading" map indicator on the radar and on the Shahed and Orlan route
+  screens moved from the centre of the map to its bottom edge, on a dark plate, so it no longer sits under
+  the launcher, radar and route markers.
+
+### Upgrade notes
+- Network protocol 12 -> 13: server and all clients must update to 1.1.3-warzone together.
+
 ## 1.1.2-warzone
 
 ### Radar and route maps: real terrain

@@ -236,6 +236,8 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         this.lerpSteps = steps + 1;
     }
 
+    private int engineSound = java.util.concurrent.ThreadLocalRandom.current().nextInt(2);
+
     @Override
     protected void defineSynchedData() {
         this.entityData.define(TARGET_POS, BlockPos.ZERO);
@@ -414,13 +416,13 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
         if (!this.initialPacketSent) {
             this.initialPacketSent = true;
-            NetworkHandler.sendToDimension(this.level(), new ShahedSpawnPacket(this.getId(), this.position(), target, mode));
+            NetworkHandler.sendToDimension(this.level(), new ShahedSpawnPacket(this.getId(), this.position(), target, mode, this.engineSound));
         }
 
         this.syncTickCounter++;
         if (this.syncTickCounter >= SYNC_INTERVAL) {
             this.syncTickCounter = 0;
-            NetworkHandler.sendToDimension(this.level(), new ShahedSpawnPacket(this.getId(), this.position(), target, mode));
+            NetworkHandler.sendToDimension(this.level(), new ShahedSpawnPacket(this.getId(), this.position(), target, mode, this.engineSound));
         }
     }
 
@@ -873,6 +875,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         tag.putBoolean("IsDiving", this.isDiving);
         tag.putFloat("DiveProgress", this.diveProgress);
         tag.putString("DiveMode", this.entityData.get(DIVE_MODE));
+        tag.putInt("EngineSound", this.engineSound);
         tag.putDouble("LastDirX", this.lastDirection.x);
         tag.putDouble("LastDirY", this.lastDirection.y);
         tag.putDouble("LastDirZ", this.lastDirection.z);
@@ -923,6 +926,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         this.diveProgress = tag.getFloat("DiveProgress");
         String mode = tag.getString("DiveMode");
         this.entityData.set(DIVE_MODE, mode);
+        if (tag.contains("EngineSound")) this.engineSound = tag.getInt("EngineSound");
         if (mode.equals("high")) {
             this.diveDistance = 300.0;
             this.diveTransitionDistance = 350.0;

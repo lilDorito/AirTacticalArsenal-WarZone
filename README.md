@@ -18,7 +18,7 @@
 Forge 1.20.1 mod that adds tactical drones, ballistic missiles, an air-defense
 radar and alert sirens to Minecraft.
 
-modId: `ata` (same as upstream) · version: `1.1.2-warzone`
+modId: `ata` (same as upstream) · version: `1.1.3-warzone`
 
 ## Contents
 
@@ -57,7 +57,8 @@ Full list in [CHANGELOG.md](CHANGELOG.md). Main points:
 - **UAVs**: configurable max route length (default 10,000 blocks), checked by the server; configurable
   Orlan flight time (default 30 min).
 - **Sound**: engine and countdown sounds come back when Minecraft drops them, only reach players in the
-  same dimension, and the siren behaves properly.
+  same dimension, and the siren behaves properly. Each Shahed randomly gets one of two engine sounds
+  (second one by Kalitovskiy).
 - **Language**: English by default, Russian and Ukrainian per player, can be forced to English per server;
   no hard-coded Russian text left.
 - **UI**: screens scale to fit, HUD and radar overlaps fixed.
@@ -114,7 +115,7 @@ Build the jar:
 .\gradlew.bat build
 ```
 
-Output: `build\libs\air-tactical-arsenal-1.1.0-warzone.jar`.
+Output: `build\libs\air-tactical-arsenal-1.1.3-warzone.jar`.
 
 Run a dev client:
 
@@ -224,11 +225,30 @@ src/main/resources
 
 All compat is optional. The mod runs fine on its own.
 
+### Supported versions
+
+The compat code detects what is installed at runtime, so one jar covers all of these:
+
+| Mod | Versions checked |
+|-----|------------------|
+| SuperbWarfare | 0.8.7.1 (WarZone patched build), 0.8.8 (incl. hotfix / final), 0.8.9 (snapshot, release, final), 0.8.9.1, 0.8.9.2 |
+| AshVehicles | 4.2 (WarZone patched build), 4.3, 4.5, 4.6 |
+
+- Radar model: uses the FuMO 25 model from whichever place the installed SBW keeps it (SBW moved it in
+  0.8.9). If a future SBW version removes or changes it, the radar switches to the original ATA block
+  instead of crashing.
+- Radar detection: older SBW builds are read through SBW's aircraft interfaces, 0.8.8+ through each vehicle's
+  type (airplane, airship, helicopter, drone). Ground vehicles and boats are never shown.
+- Locking: SBW's seekers (and AshVehicles 4.3+ missiles, which use them) can lock Shahed and Orlan through
+  the `superbwarfare:destroyable_projectile` tag; the Iskander is never lockable. On AshVehicles 4.2 the extra
+  AshVehicles hooks are used as before; on 4.3+ the HUD highlight hook still applies.
+
 ## Credits
 
 - **Synarsis** — author of Air Tactical Arsenal: the original mod, code, models, textures and sounds.
 - **lilDorito** — WarZone fork: the changes listed in [CHANGELOG.md](CHANGELOG.md).
 - GeckoLib, Forge and other third-party material stay under their own licenses.
+- **Kalitovskiy** — author of the second Shahed engine sound (`shahed_engine_2.ogg`).
 
 ## License
 

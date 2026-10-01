@@ -15,12 +15,14 @@ public class ShahedSpawnPacket {
     private final Vec3 startPos;
     private final BlockPos targetPos;
     private final String diveMode;
+    private final int engineSound;
 
-    public ShahedSpawnPacket(int entityId, Vec3 startPos, BlockPos targetPos, String diveMode) {
+    public ShahedSpawnPacket(int entityId, Vec3 startPos, BlockPos targetPos, String diveMode, int engineSound) {
         this.entityId = entityId;
         this.startPos = startPos;
         this.targetPos = targetPos;
         this.diveMode = diveMode;
+        this.engineSound = engineSound;
     }
 
     public ShahedSpawnPacket(FriendlyByteBuf buf) {
@@ -28,6 +30,7 @@ public class ShahedSpawnPacket {
         this.startPos = new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
         this.targetPos = buf.readBlockPos();
         this.diveMode = buf.readUtf();
+        this.engineSound = buf.readVarInt();
     }
 
     public void toBytes(FriendlyByteBuf buf) {
@@ -37,18 +40,19 @@ public class ShahedSpawnPacket {
         buf.writeDouble(this.startPos.z);
         buf.writeBlockPos(this.targetPos);
         buf.writeUtf(this.diveMode);
+        buf.writeVarInt(this.engineSound);
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> supplier) {
         NetworkEvent.Context ctx = supplier.get();
-        ctx.enqueueWork(() -> DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () -> 
-            handleClient(this.entityId, this.startPos, this.targetPos, this.diveMode)));
+        ctx.enqueueWork(() -> DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () ->
+                handleClient(this.entityId, this.startPos, this.targetPos, this.diveMode, this.engineSound)));
         return true;
     }
 
     @OnlyIn(Dist.CLIENT)
-    private static void handleClient(int entityId, Vec3 startPos, BlockPos targetPos, String diveMode) {
-        com.synarsis.airtacticalarsenal.network.ClientPacketHandler.handleShahedSpawn(entityId, startPos, targetPos, diveMode);
+    private static void handleClient(int entityId, Vec3 startPos, BlockPos targetPos, String diveMode, int engineSound) {
+        com.synarsis.airtacticalarsenal.network.ClientPacketHandler.handleShahedSpawn(entityId, startPos, targetPos, diveMode, engineSound);
     }
 
     public int getEntityId() {

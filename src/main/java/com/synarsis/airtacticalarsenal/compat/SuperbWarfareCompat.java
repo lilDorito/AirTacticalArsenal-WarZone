@@ -51,8 +51,10 @@ public class SuperbWarfareCompat {
     private static final String SW_AIRCRAFT_IFACE   = SW_PKG + ".entity.vehicle.base.AircraftEntity";
     private static final String SW_HELICOPTER_IFACE = SW_PKG + ".entity.vehicle.base.HelicopterEntity";
     private static final String SW_DRONE_CLASS      = SW_PKG + ".entity.vehicle.DroneEntity";
+    private static final String SW_VEHICLE_CLASS    = SW_PKG + ".entity.vehicle.base.VehicleEntity";
     private static boolean swClassesResolved = false;
-    private static Class<?> swAir, swAircraft, swHelicopter, swDrone;
+    private static Class<?> swAir, swAircraft, swHelicopter, swDrone, swVehicle;
+    private static java.lang.reflect.Method swGetVehicleType;
 
     private static Class<?> tryLoad(String name) {
         try {
@@ -70,6 +72,39 @@ public class SuperbWarfareCompat {
         swAircraft   = tryLoad(SW_AIRCRAFT_IFACE);
         swHelicopter = tryLoad(SW_HELICOPTER_IFACE);
         swDrone      = tryLoad(SW_DRONE_CLASS);
+        swVehicle    = tryLoad(SW_VEHICLE_CLASS);
+        if (swVehicle != null) {
+            try {
+                swGetVehicleType = swVehicle.getMethod("getVehicleType");
+            } catch (Throwable t) {
+                swGetVehicleType = null;
+            }
+        }
+    }
+
+    private static byte classifyByVehicleType(Entity entity) {
+        if (swGetVehicleType == null || !swVehicle.isInstance(entity)) return -1;
+        Object type;
+        try {
+            type = swGetVehicleType.invoke(entity);
+        } catch (Throwable t) {
+            return -1;
+        }
+        if (!(type instanceof Enum<?> e)) return -1;
+        switch (e.name()) {
+            case "HELICOPTER": return TYPE_SW_HELICOPTER;
+            case "AIRPLANE":
+            case "AIRSHIP": return TYPE_SW_PLANE;
+            case "DRONE": return TYPE_SW_DRONE;
+            case "TANK":
+            case "APC":
+            case "AA":
+            case "CAR":
+            case "ARTILLERY":
+            case "DEFENSE":
+            case "BOAT": return -2;
+            default: return -1;
+        }
     }
 
     public static byte getRadarType(Entity entity) {
@@ -91,6 +126,9 @@ public class SuperbWarfareCompat {
             if (swAircraft   != null && swAircraft.isInstance(entity))   return TYPE_SW_PLANE;
             if (swDrone      != null && swDrone.isInstance(entity))      return TYPE_SW_DRONE;
             if (swAir        != null && swAir.isInstance(entity))        return TYPE_SW_PLANE;
+            byte byType = classifyByVehicleType(entity);
+            if (byType >= 0) return byType;
+            if (byType == -2) return -1;
         }
 
         String pkg = entity.getClass().getName();

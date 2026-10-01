@@ -43,6 +43,7 @@ import java.util.List;
 public class ShahedRadarBlock extends Block implements EntityBlock {
 
     public static final boolean SBW_LOOK = ModList.get().isLoaded("superbwarfare");
+    public static volatile boolean fumoModel = SBW_LOOK;
 
     private static final VoxelShape FUMO_SHAPE = Shapes.or(
             Block.box(1.0, 0.0, 1.0, 15.0, 6.0, 15.0),
@@ -70,12 +71,17 @@ public class ShahedRadarBlock extends Block implements EntityBlock {
 
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return fumoModel ? FUMO_SHAPE : Shapes.block();
+    }
+
+    @Override
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SBW_LOOK ? FUMO_SHAPE : Shapes.block();
     }
 
     @Override
     public RenderShape getRenderShape(BlockState state) {
-        return SBW_LOOK ? RenderShape.ENTITYBLOCK_ANIMATED : RenderShape.MODEL;
+        return fumoModel ? RenderShape.ENTITYBLOCK_ANIMATED : RenderShape.MODEL;
     }
 
     @Override

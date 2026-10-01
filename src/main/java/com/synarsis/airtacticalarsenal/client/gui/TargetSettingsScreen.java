@@ -249,8 +249,8 @@ public class TargetSettingsScreen extends AtaScaledScreen {
             double distanceFactor = calculatedDistance / 100.0;
             calculatedCEP = Math.round(baseCEP + distanceFactor);
 
-            int minDist = ShahedConfig.getIskanderMinDistance();
-            int maxDist = ShahedConfig.getIskanderMaxRange();
+            int minDist = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.iskanderMin();
+            int maxDist = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.iskanderMax();
 
             if (calculatedDistance < minDist) {
                 errorMessage = "";
@@ -333,8 +333,8 @@ public class TargetSettingsScreen extends AtaScaledScreen {
         int sepY = guiTop + 142;
         guiGraphics.fill(rightX, sepY, guiLeft + GUI_WIDTH - 10, sepY + 1, 0xFF444444);
 
-        int minDist = ShahedConfig.getIskanderMinDistance();
-        int maxDist = ShahedConfig.getIskanderMaxRange();
+        int minDist = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.iskanderMin();
+        int maxDist = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.iskanderMax();
 
         if (calculatedDistance > 0) {
             String distStr = Tr.s("gui.ata.target_settings.dist", calculatedDistance);
