@@ -14,9 +14,8 @@ import java.util.Map;
 public class ServerTerrainScanner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("ATA-RadarMap");
-    private static final int CACHE_SIZE = 1536;
-    private static final int CACHE_BPP = 2;
-    private static final int CACHE_VERSION = 18;
+    private static final int CACHE_SIZE = com.synarsis.airtacticalarsenal.util.MapScale.RADAR_CACHE_SIZE;
+    private static final int CACHE_VERSION = 20;
     private static final long MAX_TICK_MS = 25;
 
     private static final Map<String, ServerTerrainScanner> INSTANCES = new LinkedHashMap<>();
@@ -24,6 +23,7 @@ public class ServerTerrainScanner {
     public static long GLOBAL_BUILD_ORDER = 0;
 
     private final BlockPos radarPos;
+    private final int bpp;
     private final int originX, originZ;
     private MapScanJob job;
     private boolean ready = false;
@@ -33,9 +33,10 @@ public class ServerTerrainScanner {
 
     public ServerTerrainScanner(BlockPos radarPos) {
         this.radarPos = radarPos;
-        this.originX = radarPos.getX() - (CACHE_SIZE / 2) * CACHE_BPP;
-        this.originZ = radarPos.getZ() - (CACHE_SIZE / 2) * CACHE_BPP;
-        this.refresher = new MapRefresher(CACHE_SIZE, CACHE_BPP, originX, originZ);
+        this.bpp = com.synarsis.airtacticalarsenal.util.MapScale.serverRadarBpp();
+        this.originX = radarPos.getX() - (CACHE_SIZE / 2) * bpp;
+        this.originZ = radarPos.getZ() - (CACHE_SIZE / 2) * bpp;
+        this.refresher = new MapRefresher(CACHE_SIZE, bpp, originX, originZ);
     }
 
     public static String key(BlockPos pos) {
@@ -45,7 +46,7 @@ public class ServerTerrainScanner {
     public static synchronized ServerTerrainScanner getOrCreate(BlockPos pos, ServerLevel level) {
         String k = key(pos);
         ServerTerrainScanner scanner = INSTANCES.get(k);
-        if (scanner != null) return scanner;
+        if (scanner != null && scanner.bpp == com.synarsis.airtacticalarsenal.util.MapScale.serverRadarBpp()) return scanner;
 
         scanner = new ServerTerrainScanner(pos);
         byte[] cached = scanner.tryLoadFromFile(level);
@@ -53,7 +54,7 @@ public class ServerTerrainScanner {
             scanner.pngBytes = cached;
             scanner.ready = true;
         } else {
-            scanner.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, scanner.originX, scanner.originZ, true, com.synarsis.airtacticalarsenal.config.ShahedConfig.isMapReadSavedChunks());
+            scanner.job = new MapScanJob(CACHE_SIZE, scanner.bpp, scanner.originX, scanner.originZ, true, com.synarsis.airtacticalarsenal.config.ShahedConfig.isMapReadSavedChunks());
             scanner.buildStartOrder = ++GLOBAL_BUILD_ORDER;
         }
         INSTANCES.put(k, scanner);
@@ -69,9 +70,14 @@ public class ServerTerrainScanner {
         if (level != null) {
             try {
                 Path worldPath = level.getServer().getWorldPath(LevelResource.ROOT);
-                Path file = worldPath.resolve("ata_radar_cache")
-                        .resolve("radar_v" + CACHE_VERSION + "_" + pos.getX() + "_" + pos.getZ() + ".png");
-                Files.deleteIfExists(file);
+                Path dir = worldPath.resolve("ata_radar_cache");
+                String suffix = "_" + pos.getX() + "_" + pos.getZ() + ".png";
+                try (java.util.stream.Stream<Path> files = Files.list(dir)) {
+                    for (Path f : (Iterable<Path>) files::iterator) {
+                        String n = f.getFileName().toString();
+                        if (n.startsWith("radar_v") && n.endsWith(suffix)) Files.deleteIfExists(f);
+                    }
+                }
             } catch (Exception e) {
                 LOGGER.warn("[ATA] Failed to delete radar cache for {}", key(pos));
             }
@@ -124,7 +130,7 @@ public class ServerTerrainScanner {
         for (ServerTerrainScanner s : INSTANCES.values()) {
             s.ready = false;
             s.refresher.cancel();
-            s.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, s.originX, s.originZ, true, com.synarsis.airtacticalarsenal.config.ShahedConfig.isMapReadSavedChunks());
+            s.job = new MapScanJob(CACHE_SIZE, s.bpp, s.originX, s.originZ, true, com.synarsis.airtacticalarsenal.config.ShahedConfig.isMapReadSavedChunks());
             s.buildStartOrder = ++GLOBAL_BUILD_ORDER;
         }
     }
@@ -173,7 +179,7 @@ public class ServerTerrainScanner {
 
     private byte[] tryLoadFromFile(ServerLevel level) {
         try {
-            Path file = getCacheDir(level).resolve("radar_v" + CACHE_VERSION + "_" + radarPos.getX() + "_" + radarPos.getZ() + ".png");
+            Path file = getCacheDir(level).resolve(fileName());
             if (Files.exists(file)) {
                 LOGGER.info("[ATA] Loading cached radar map from {}", file);
                 return Files.readAllBytes(file);
@@ -190,7 +196,7 @@ public class ServerTerrainScanner {
         try {
             Path dir = getCacheDir(level);
             Files.createDirectories(dir);
-            Path file = dir.resolve("radar_v" + CACHE_VERSION + "_" + radarPos.getX() + "_" + radarPos.getZ() + ".png");
+            Path file = dir.resolve(fileName());
             Files.write(file, png);
             for (int v = 1; v < CACHE_VERSION; v++) {
                 Files.deleteIfExists(dir.resolve("radar_v" + v + "_" + radarPos.getX() + "_" + radarPos.getZ() + ".png"));
@@ -200,6 +206,9 @@ public class ServerTerrainScanner {
         }
     }
 
+    private String fileName() {
+        return "radar_v" + CACHE_VERSION + "_b" + bpp + "_" + radarPos.getX() + "_" + radarPos.getZ() + ".png";
+    }
+
     public static int getCacheSize() { return CACHE_SIZE; }
-    public static int getCacheBpp() { return CACHE_BPP; }
 }

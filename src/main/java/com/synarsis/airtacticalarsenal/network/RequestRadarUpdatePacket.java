@@ -20,7 +20,6 @@ import java.util.function.Supplier;
 
 public class RequestRadarUpdatePacket {
     private final BlockPos radarPos;
-    private static final int RADAR_RANGE = 1500;
 
     public RequestRadarUpdatePacket(BlockPos radarPos) {
         this.radarPos = radarPos;
@@ -45,8 +44,8 @@ public class RequestRadarUpdatePacket {
 
             double top = Math.max(level.getMaxBuildHeight(), ShahedConfig.getIskanderMaxFlightHeight()) + 64;
             AABB searchBox = new AABB(
-                radarCenter.x - RADAR_RANGE, level.getMinBuildHeight(), radarCenter.z - RADAR_RANGE,
-                radarCenter.x + RADAR_RANGE, top, radarCenter.z + RADAR_RANGE
+                radarCenter.x - ShahedConfig.getRadarRange(), level.getMinBuildHeight(), radarCenter.z - ShahedConfig.getRadarRange(),
+                radarCenter.x + ShahedConfig.getRadarRange(), top, radarCenter.z + ShahedConfig.getRadarRange()
             );
 
             List<RadarUpdatePacket.TargetData> targets = new ArrayList<>();
@@ -55,14 +54,13 @@ public class RequestRadarUpdatePacket {
                 NetworkHandler.sendToPlayer(player, new RadarUpdatePacket(radarPos, targets, minAltitudeCfg, false));
                 return;
             }
-            double rangeSquared = (double) RADAR_RANGE * RADAR_RANGE;
+            double rangeSquared = (double) ShahedConfig.getRadarRange() * ShahedConfig.getRadarRange();
             int minAltitude = ShahedConfig.getRadarMinAltitude();
 
             for (Entity entity : level.getEntities(null, searchBox)) {
                 byte type = -1;
-                if (entity instanceof ShahedEntity) type = 0;
-                else if (entity instanceof IskanderEntity) type = 1;
-                else if (entity instanceof OrlanEntity) type = 2;
+                if (entity instanceof ShahedEntity || entity instanceof OrlanEntity) type = SuperbWarfareCompat.TYPE_SW_DRONE;
+                else if (entity instanceof IskanderEntity) type = SuperbWarfareCompat.TYPE_MISSILE;
                 else {
                     byte swType = SuperbWarfareCompat.getRadarType(entity);
                     if (swType >= 0) type = swType;
@@ -73,7 +71,7 @@ public class RequestRadarUpdatePacket {
                 double dz = entity.getZ() - radarCenter.z;
                 if (dx * dx + dz * dz > rangeSquared) continue;
 
-                if (type != 1 && entity.getY() < minAltitude) continue;
+                if (entity.getY() < minAltitude) continue;
 
                 Vec3 delta = entity.getDeltaMovement();
                 float speed = (float) Math.sqrt(delta.x * delta.x + delta.z * delta.z);

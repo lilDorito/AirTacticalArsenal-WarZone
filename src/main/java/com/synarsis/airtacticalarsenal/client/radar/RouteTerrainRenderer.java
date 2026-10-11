@@ -24,6 +24,7 @@ public class RouteTerrainRenderer {
     private boolean cacheReady = false;
 
     private final int centerX, centerZ;
+    private final int bpp;
 
     private DynamicTexture displayTexture;
     private ResourceLocation textureLocation;
@@ -46,16 +47,17 @@ public class RouteTerrainRenderer {
 
     private static class CachedMapEntry {
         final byte[] pngBytes;
-        final int centerX, centerZ;
+        final int centerX, centerZ, bpp;
         final long loadedAt = System.currentTimeMillis();
-        CachedMapEntry(byte[] png, int cx, int cz) {
-            this.pngBytes = png; this.centerX = cx; this.centerZ = cz;
+        CachedMapEntry(byte[] png, int cx, int cz, int bpp) {
+            this.pngBytes = png; this.centerX = cx; this.centerZ = cz; this.bpp = bpp;
         }
     }
 
     private static CachedMapEntry findNearestCache(int x, int z) {
         long now = System.currentTimeMillis();
-        mapCache.removeIf(e -> now - e.loadedAt > CACHE_MAX_AGE_MS);
+        int bpp = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.routeBpp();
+        mapCache.removeIf(e -> now - e.loadedAt > CACHE_MAX_AGE_MS || e.bpp != bpp);
         CachedMapEntry best = null;
         double bestDist = Double.MAX_VALUE;
         for (CachedMapEntry e : mapCache) {
@@ -99,6 +101,7 @@ public class RouteTerrainRenderer {
     public RouteTerrainRenderer(int centerX, int centerZ) {
         this.centerX = centerX;
         this.centerZ = centerZ;
+        this.bpp = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.routeBpp();
 
         displayTexture = new DynamicTexture(TEX_SIZE, TEX_SIZE, false);
         NativeImage d = displayTexture.getPixels();
@@ -128,9 +131,10 @@ public class RouteTerrainRenderer {
     public int getTextureSize() { return TEX_SIZE; }
     public int getCenterX() { return centerX; }
     public int getCenterZ() { return centerZ; }
+    public int getBpp() { return bpp; }
 
     public int getWorldRadius() {
-        return (TEX_SIZE / 2) * ServerRouteMapScanner.CACHE_BPP;
+        return (TEX_SIZE / 2) * bpp;
     }
 
     public static void handleServerData(BlockPos centerPos, int status, float progress,
@@ -186,7 +190,7 @@ public class RouteTerrainRenderer {
             if (existing != null) {
                 mapCache.remove(existing);
             }
-            mapCache.add(new CachedMapEntry(pngBytes, centerX, centerZ));
+            mapCache.add(new CachedMapEntry(pngBytes, centerX, centerZ, bpp));
             while (mapCache.size() > MAX_CACHED_MAPS) {
                 mapCache.remove(0);
             }

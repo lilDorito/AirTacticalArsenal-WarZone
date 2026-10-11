@@ -200,7 +200,6 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             Vec3 dir = Vec3.directionFromRotation(0, launcherYaw).normalize();
             this.launchDirection = new Vec3(dir.x, 0, dir.z).normalize();
             this.lastDirection = this.launchDirection;
-            this.setYRot(launcherYaw);
         } else {
 
             Vec3 targetVec = Vec3.atCenterOf(targetPos);
@@ -214,6 +213,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             }
         }
 
+        this.setYRot((float) Math.toDegrees(Math.atan2(this.launchDirection.x, this.launchDirection.z)));
         this.setXRot((float) -LAUNCH_ANGLE_DEG);
 
         this.entityData.set(FLIGHT_PHASE_ID, this.flightPhase.ordinal());
@@ -237,6 +237,10 @@ public class ShahedEntity extends Projectile implements GeoEntity {
     }
 
     private int engineSound = java.util.concurrent.ThreadLocalRandom.current().nextInt(2);
+
+    public void setEngineSound(int engineSound) {
+        this.engineSound = engineSound == 1 ? 1 : 0;
+    }
 
     @Override
     protected void defineSynchedData() {
@@ -264,6 +268,9 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         if (!this.level().isClientSide && !this.isLegitSpawn) {
             this.discard();
             return;
+        }
+        if (!this.level().isClientSide && this.tickCount % 10 == 0) {
+            com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.registerForSbwRadar(this);
         }
 
         super.tick();
@@ -303,6 +310,13 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         int syncedPhaseId = this.entityData.get(FLIGHT_PHASE_ID);
         if (this.level().isClientSide && syncedPhaseId >= 0 && syncedPhaseId < FlightPhase.values().length) {
             this.flightPhase = FlightPhase.values()[syncedPhaseId];
+        }
+
+        if (this.level().isClientSide && this.launchDirection.lengthSqr() < 1.0E-6) {
+            double yaw = Math.toRadians(this.entityData.get(SYNC_Y_ROT));
+            this.launchDirection = new Vec3(Math.sin(yaw), 0, Math.cos(yaw));
+            this.lastDirection = this.launchDirection;
+            if (this.currentSpeed <= 0) this.currentSpeed = LAUNCH_INITIAL_SPEED;
         }
 
         Vec3 motion;
@@ -380,6 +394,17 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         spawnDamageEffects();
 
         checkTacZBulletCollisions();
+
+        net.minecraft.world.entity.projectile.Projectile incoming =
+                com.synarsis.airtacticalarsenal.compat.MissileProximityFuse.find(this);
+        if (incoming != null) {
+            Entity shooter = incoming.getOwner();
+            com.synarsis.airtacticalarsenal.compat.MissileProximityFuse.detonate(incoming);
+            if (!this.exploding && !this.isRemoved()) {
+                this.hurt(this.damageSources().explosion(incoming, shooter), 1000.0f);
+            }
+            if (this.exploding || this.isRemoved()) return;
+        }
 
         if (this.level() instanceof ServerLevel serverLevel) {
             MissileChunkManager.updateChunksForMissile(this, serverLevel);

@@ -1,26 +1,72 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "pattern": [
-    " N ",
-    "BTB",
-    "BFB"
-  ],
-  "key": {
-    "N": {
-      "item": "minecraft:netherite_ingot"
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "superbwarfare"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          "SKS",
+          "HHH",
+          "EEE"
+        ],
+        "key": {
+          "S": {
+            "item": "superbwarfare:steel_ingot"
+          },
+          "K": {
+            "item": "superbwarfare:seeker"
+          },
+          "H": {
+            "item": "superbwarfare:high_energy_explosives"
+          },
+          "E": {
+            "item": "superbwarfare:missile_engine"
+          }
+        },
+        "result": {
+          "item": "ata:iskander",
+          "count": 1
+        }
+      }
     },
-    "B": {
-      "item": "minecraft:iron_block"
-    },
-    "T": {
-      "item": "minecraft:tnt"
-    },
-    "F": {
-      "item": "minecraft:blaze_powder"
+    {
+      "conditions": [
+        {
+          "type": "forge:true"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          " N ",
+          "BTB",
+          "BFB"
+        ],
+        "key": {
+          "N": {
+            "item": "minecraft:netherite_ingot"
+          },
+          "B": {
+            "item": "minecraft:iron_block"
+          },
+          "T": {
+            "item": "minecraft:tnt"
+          },
+          "F": {
+            "item": "minecraft:blaze_powder"
+          }
+        },
+        "result": {
+          "item": "ata:iskander",
+          "count": 1
+        }
+      }
     }
-  },
-  "result": {
-    "item": "ata:iskander",
-    "count": 1
-  }
+  ]
 }

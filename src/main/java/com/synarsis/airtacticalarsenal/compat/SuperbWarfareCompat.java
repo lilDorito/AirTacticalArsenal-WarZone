@@ -33,9 +33,17 @@ public class SuperbWarfareCompat {
         "drone", "uav", "fpv"
     };
 
+    public static final byte TYPE_MISSILE       = 1;
     public static final byte TYPE_SW_HELICOPTER = 3;
     public static final byte TYPE_SW_PLANE      = 4;
     public static final byte TYPE_SW_DRONE      = 5;
+
+    private static final String ASH_PKG = "Aru.Aru.ashvehicle";
+    private static final String SW_MISSILE_CLASS = SW_PKG + ".entity.projectile.MissileProjectile";
+    private static final java.util.regex.Pattern MISSILE_NAME =
+            java.util.regex.Pattern.compile("^(aim|agm|aam|jassm|tomahawk|kh\\d|r\\d\\d).*");
+    private static boolean missileClassResolved = false;
+    private static Class<?> swMissile;
 
     public static boolean isLoaded() {
         if (!checkedSw) { swLoaded = ModList.get().isLoaded("superbwarfare"); checkedSw = true; }
@@ -107,15 +115,28 @@ public class SuperbWarfareCompat {
         }
     }
 
+    private static final String[] LARGE_UAV_NAMES = {"reaper", "x-47", "x47", "mq-9", "mq9", "mq_9"};
+
+    private static boolean isLargeUav(String path) {
+        String p = path.toLowerCase(java.util.Locale.ROOT);
+        for (String n : LARGE_UAV_NAMES) if (p.contains(n)) return true;
+        return false;
+    }
+
     public static byte getRadarType(Entity entity) {
         ResourceLocation regKey = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType());
 
         if (regKey != null) {
             String id = regKey.toString();
             if (ShahedConfig.getRadarExcludedIds().contains(id))   return -1;
-            if (ShahedConfig.getRadarDroneIds().contains(id))      return TYPE_SW_DRONE;
+            if (ShahedConfig.getRadarMissileIds().contains(id))    return TYPE_MISSILE;
+            if (ShahedConfig.getRadarDroneIds().contains(id) || isLargeUav(regKey.getPath())) return TYPE_SW_DRONE;
             if (ShahedConfig.getRadarHelicopterIds().contains(id)) return TYPE_SW_HELICOPTER;
             if (ShahedConfig.getRadarPlaneIds().contains(id))      return TYPE_SW_PLANE;
+        }
+
+        if (entity instanceof net.minecraft.world.entity.projectile.Projectile) {
+            return isMissile(entity) ? TYPE_MISSILE : -1;
         }
 
         if (!isLoaded() && !isVvpLoaded()) return -1;
@@ -124,9 +145,10 @@ public class SuperbWarfareCompat {
             resolveSwClasses();
             if (swHelicopter != null && swHelicopter.isInstance(entity)) return TYPE_SW_HELICOPTER;
             if (swAircraft   != null && swAircraft.isInstance(entity))   return TYPE_SW_PLANE;
-            if (swDrone      != null && swDrone.isInstance(entity))      return TYPE_SW_DRONE;
+            if (swDrone      != null && swDrone.isInstance(entity))      return -1;
             if (swAir        != null && swAir.isInstance(entity))        return TYPE_SW_PLANE;
             byte byType = classifyByVehicleType(entity);
+            if (byType == TYPE_SW_DRONE) return -1;
             if (byType >= 0) return byType;
             if (byType == -2) return -1;
         }
@@ -137,14 +159,111 @@ public class SuperbWarfareCompat {
         if (!isSW && !isVVP) return -1;
 
         byte byHierarchy = classifyByHierarchy(entity);
+        if (byHierarchy == TYPE_SW_DRONE) return -1;
         if (byHierarchy >= 0) return byHierarchy;
 
         if (regKey != null) {
             byte byReg = classifyByRegistryPath(regKey.getPath());
+            if (byReg == TYPE_SW_DRONE) return -1;
             if (byReg >= 0) return byReg;
         }
 
-        return classifyByExactName(pkg);
+        byte byName = classifyByExactName(pkg);
+        return byName == TYPE_SW_DRONE ? -1 : byName;
+    }
+
+    private static boolean bvrResolved = false;
+    private static java.lang.reflect.Method bvrRegister;
+
+    public static void registerForSbwRadar(Entity entity) {
+        if (!isLoaded()) return;
+        if (!bvrResolved) {
+            bvrResolved = true;
+            Class<?> handler = tryLoad(SW_PKG + ".tools.ServerSyncedEntityHandler");
+            if (handler != null) {
+                try {
+                    bvrRegister = handler.getMethod("register", Entity.class);
+                } catch (Throwable t) {
+                    bvrRegister = null;
+                }
+            }
+        }
+        if (bvrRegister == null) return;
+        ensureSbwScanList();
+        try {
+            bvrRegister.invoke(null, entity);
+        } catch (Throwable t) {
+            bvrRegister = null;
+        }
+    }
+
+    private static final String[] SBW_SCAN_IDS = {"ata:shahed", "ata:orlan", "ata:iskander"};
+    private static boolean scanListResolved = false;
+    private static net.minecraftforge.common.ForgeConfigSpec.ConfigValue<?> sbwScanList;
+
+    @SuppressWarnings("unchecked")
+    private static void ensureSbwScanList() {
+        if (!scanListResolved) {
+            scanListResolved = true;
+            Class<?> cfg = tryLoad(SW_PKG + ".config.server.VehicleConfig");
+            if (cfg != null) {
+                for (java.lang.reflect.Field f : cfg.getDeclaredFields()) {
+                    if (!java.lang.reflect.Modifier.isStatic(f.getModifiers())) continue;
+                    if (!net.minecraftforge.common.ForgeConfigSpec.ConfigValue.class.isAssignableFrom(f.getType())) continue;
+                    try {
+                        f.setAccessible(true);
+                        Object v = f.get(null);
+                        if (v instanceof net.minecraftforge.common.ForgeConfigSpec.ConfigValue<?> cv) {
+                            java.util.List<String> path = cv.getPath();
+                            if (!path.isEmpty() && "scan_white_list".equals(path.get(path.size() - 1))) {
+                                sbwScanList = cv;
+                                break;
+                            }
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                }
+            }
+        }
+        if (sbwScanList == null) return;
+        try {
+            Object current = sbwScanList.get();
+            if (!(current instanceof java.util.List<?> list) || list.contains("ata:*")) return;
+            java.util.List<Object> next = null;
+            for (String id : SBW_SCAN_IDS) {
+                if (list.contains(id)) continue;
+                if (next == null) next = new java.util.ArrayList<>(list);
+                next.add(id);
+            }
+            if (next != null) {
+                ((net.minecraftforge.common.ForgeConfigSpec.ConfigValue<Object>) sbwScanList).set(next);
+            }
+        } catch (Throwable t) {
+            sbwScanList = null;
+        }
+    }
+
+    public static boolean isMissile(Entity entity) {
+        String own = entity.getClass().getSimpleName().toLowerCase(java.util.Locale.ROOT);
+        if (own.contains("drone") || own.contains("decoy") || own.contains("flare")) return false;
+        if (isLoaded()) {
+            if (!missileClassResolved) {
+                missileClassResolved = true;
+                swMissile = tryLoad(SW_MISSILE_CLASS);
+            }
+            if (swMissile != null && swMissile.isInstance(entity)) return true;
+        }
+        boolean known = false;
+        String className = entity.getClass().getName();
+        if (className.startsWith(SW_PKG) || className.startsWith(ASH_PKG) || className.startsWith(VVP_PKG)) known = true;
+        Class<?> clazz = entity.getClass();
+        while (clazz != null && clazz != Object.class) {
+            String sn = clazz.getSimpleName().toLowerCase(java.util.Locale.ROOT);
+            if (sn.contains("missile")) return true;
+            if (known && MISSILE_NAME.matcher(sn).matches()) return true;
+            clazz = clazz.getSuperclass();
+        }
+        return false;
     }
 
     private static byte classifyByHierarchy(Entity entity) {

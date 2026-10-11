@@ -4,6 +4,95 @@
 Based on Air Tactical Arsenal 1.1.0 (Forge 1.20.1). The original [LICENSE](LICENSE) is kept unchanged and
 applies to this fork too.
 
+"WarZone" versions of other mods (SuperbWarfare WarZone, AshVehicles WarZone, MCSP WarZone, and the older
+patched SBW 0.8.7.1 / AshVehicles 4.2 builds) are the author's private forks. They are not published; they're
+named here only because this fork is tested against them, and anything said about them applies only with
+those builds. See the README's "WarZone versions" section.
+
+## 1.1.4-warzone
+
+### Radar: one set of contact types
+- Every contact now has one of four types, whatever mod it comes from:
+  - **PLN** planes and airships (SBW, AshVehicles and other addons);
+  - **HEL** helicopters;
+  - **UAV** large drones: Shahed, Orlan and AshVehicles' MQ-9 Reaper and X-47B (found by name, no list needed);
+  - **MSL** missiles: SBW and AshVehicles guided missiles (air-to-ground, anti-air, anti-tank) and the Iskander.
+- The separate SHD / BAL / ORL tags and their legend rows are gone; the legend shows the four types.
+- Small SBW drones and swarm drones are never shown.
+- The altitude threshold (`radarMinAltitude`) now applies to every contact, the Iskander included.
+- Missiles are found through SBW's missile base class where it exists, and by class name on older SBW
+  builds and on AshVehicles 4.2, so all supported versions keep working. New list `radarMissileIds` for
+  anything that is not detected.
+
+### Radar range and route length
+- New `radarRange` (default 1,500, up to 5,000 blocks). The radar map, range rings, zoom and redstone output
+  follow it; past 1,536 blocks the terrain map gets coarser.
+- Shahed and Orlan routes: default 10,000 blocks as before, now up to 30,000 (was 20,000). The route map
+  grows with the longer of the two limits (coarser when bigger) and the route screens zoom out far enough to show it.
+- Orlan flight time can go up to 180 min (was 120); about 60 min suits a 30,000-block route.
+- Radar and route maps are rebuilt once after the update (their scale is now part of the cache).
+
+### Damage on the SuperbWarfare scale
+- Shahed hits like SBW's medium aerial bomb, the Mk-82: 650 @ 4 / 22 blocks (was 60 @ 3 / 14).
+- Iskander hits like a heavy bomb: 1600 @ 6 / 40 blocks (was 160 @ 5 / 26). That matches the FAB-500 in
+  the private AshVehicles WarZone build; for comparison, upstream SBW's Mk-84 is 1300 / 32.
+- With SBW installed both are in SBW's `superbwarfare:aerial_bomb` entity tag, so each vehicle applies its own
+  aerial-bomb armour modifier to them, the same one it uses for SBW's bombs. The multipliers come from the
+  installed SBW and its addons (the private SuperbWarfare WarZone build uses its own, lower values), so how
+  many hits a vehicle takes depends on the pack.
+- Existing `ata-common.toml` files are updated once: values still at the old defaults (damage, Iskander
+  radii) move to the new defaults, changed values stay.
+
+### Iskander flight sound
+- A new looping roar by **Kalitovskiy** follows the Iskander from launch to impact and can be heard up to
+  3,000 blocks away, fading with distance and keeping its direction. It ends with the speed-of-sound delay, together with the
+  explosion.
+
+### SuperbWarfare air defense
+- SBW's small cannon shells and its laser tower delete any projectile they touch that SBW doesn't know how to
+  damage, so an Iskander could vanish mid-flight. That covers SBW's LAV-AD and addon anti-air vehicles that
+  fire SBW shells (for example the Gepard and Pantsir in AshVehicles and the Typhoon in MCSP). The Iskander now ignores that and keeps flying; it
+  still can't be locked.
+- An Orlan hit that way is shot down with smoke and fire instead of disappearing silently.
+
+### With SuperbWarfare installed
+- Recipes use SBW parts:
+  - Shahed: steel, a fuse, 3 high-energy explosives, a motor and a propeller;
+  - Iskander: steel, a seeker, 3 high-energy explosives and 3 missile engines;
+  - Orlan-10 (new recipe): steel, a seeker, a motor and a propeller.
+  Without SBW the old vanilla Shahed and Iskander recipes apply.
+- Shahed and Iskander explosions play SBW's three huge-explosion sounds (close, far, very far), mixed by ATA
+  according to distance: they keep their direction, carry up to 1,024 / 1,536 blocks and arrive with the
+  speed-of-sound delay. Without SBW, or on an SBW build that lacks those sounds, the old ATA sounds play.
+- Shahed, Orlan and Iskander register with SBW's long-range entity tracking, so SBW radars and the tactical
+  map show them. That tracking exists in SBW 0.8.9.1 and later; on older versions this step is skipped.
+  SBW only tracks entity types in its `scan_white_list` server setting, so ATA adds its three entries there by
+  itself; nothing has to be configured.
+
+### Missiles against Shahed and Orlan
+- Guided missiles locked on a Shahed or Orlan (Igla, Stinger, SBW and AshVehicles anti-air missiles) now
+  detonate when they pass within 4 blocks of it and bring it down. Before, a fast missile often slipped
+  past the small drone between two ticks, lost the target and flew on upwards. Works with any SBW version
+  whose missiles keep a target id.
+
+### Shahed and Orlan launch
+- On launch the drone pointed the opposite way for a moment and then flipped round: its starting heading
+  used a different angle convention from the one used in flight. Launched from the terminal it always
+  started facing south. Both now start facing the way they fly.
+- The Shahed's first moments in flight no longer jitter: the client predicts the climb in the launch
+  direction instead of straight up.
+- The 5-second countdown on the Shahed launcher played a furnace crackle, which sounded like static. It
+  now plays the drone's own engine (the one it will fly with), spinning up in pitch and volume until it
+  takes off.
+
+### Radar map fix
+- In loaded chunks (the square around players) the map showed the block under the surface, so grass looked
+  like dirt and water was one block shallower. It now shows the top block. Radar and route maps rebuild once;
+  terrain tiles fix themselves as players pass by, or right away with `/ata terrain rescan`.
+
+### Upgrade notes
+- Network protocol 13 -> 14: server and all clients must update to 1.1.4-warzone together.
+
 ## 1.1.3-warzone
 
 ### Newer SuperbWarfare and AshVehicles versions
@@ -20,7 +109,7 @@ applies to this fork too.
 - Lock-on with newer versions: SBW 0.8.8+ seekers and AshVehicles 4.3+ missiles lock Shahed and Orlan through
   the same `destroyable_projectile` tag as before; the Iskander stays unlockable.
 - Checked against SBW 0.8.8, 0.8.8-hotfix, 0.8.8-final, 0.8.9-snapshot, 0.8.9, 0.8.9-final, 0.8.9.1, 0.8.9.2
-  and AshVehicles 4.3, 4.5, 4.6. Behaviour with the WarZone-specific patched builds (SBW 0.8.7.1, AshVehicles 4.2)
+  and AshVehicles 4.3, 4.5, 4.6. Behaviour with the private WarZone patched builds (SBW 0.8.7.1, AshVehicles 4.2)
   is unchanged.
 
 ### Iskander range

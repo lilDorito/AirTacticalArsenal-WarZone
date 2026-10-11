@@ -210,7 +210,6 @@ public class OrlanEntity extends Projectile implements GeoEntity {
             Vec3 dir = Vec3.directionFromRotation(0, launcherYaw).normalize();
             this.launchDirection = new Vec3(dir.x, 0, dir.z).normalize();
             this.lastDirection = this.launchDirection;
-            this.setYRot(launcherYaw);
         } else {
             Vec3 targetVec = Vec3.atCenterOf(targetPos);
             Vec3 horizontalDir = new Vec3(targetVec.x - startPos.x, 0, targetVec.z - startPos.z);
@@ -223,6 +222,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
             }
         }
 
+        this.setYRot((float) Math.toDegrees(Math.atan2(this.launchDirection.x, this.launchDirection.z)));
         this.setXRot((float) -LAUNCH_ANGLE_DEG);
         this.entityData.set(FLIGHT_PHASE_ID, this.flightPhase.ordinal());
         this.entityData.set(SYNC_X_ROT, (float) -LAUNCH_ANGLE_DEG);
@@ -280,8 +280,11 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     @Override
     public void tick() {
         if (!this.level().isClientSide && !this.isLegitSpawn) {
-            this.discard();
+            this.removeSelf();
             return;
+        }
+        if (!this.level().isClientSide && this.tickCount % 10 == 0) {
+            com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.registerForSbwRadar(this);
         }
 
         super.tick();
@@ -323,6 +326,17 @@ public class OrlanEntity extends Projectile implements GeoEntity {
             this.setYBodyRot(this.getYRot());
             this.setYHeadRot(this.getYRot());
             return;
+        }
+
+        net.minecraft.world.entity.projectile.Projectile incoming =
+                com.synarsis.airtacticalarsenal.compat.MissileProximityFuse.find(this);
+        if (incoming != null) {
+            Entity shooter = incoming.getOwner();
+            com.synarsis.airtacticalarsenal.compat.MissileProximityFuse.detonate(incoming);
+            if (!this.destroyed && !this.isRemoved()) {
+                this.hurt(this.damageSources().explosion(incoming, shooter), 1000.0f);
+            }
+            if (this.destroyed || this.isRemoved()) return;
         }
 
         Vec3 motion;
@@ -419,7 +433,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
                     (int) Math.floor(newPos.y),
                     (int) Math.floor(newPos.z));
             if (!this.level().getBlockState(checkPos).isAir() && !this.level().getBlockState(checkPos).liquid()) {
-                this.discard();
+                this.removeSelf();
                 return;
             }
         }
@@ -826,7 +840,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
             player.drop(orlanItem, false);
         }
         player.displayClientMessage(Component.translatable("message.ata.orlan.picked_up"), true);
-        this.discard();
+        this.removeSelf();
         return InteractionResult.SUCCESS;
     }
 
@@ -904,11 +918,22 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         return true;
     }
 
+    private boolean selfRemoving = false;
+
+    private void removeSelf() {
+        this.selfRemoving = true;
+        this.discard();
+    }
+
     private void destroyDrone(Entity attacker) {
         if (this.destroyed)
             return;
         this.destroyed = true;
+        spawnShootdownEffects();
+        this.removeSelf();
+    }
 
+    private void spawnShootdownEffects() {
         Vec3 pos = this.position();
 
         if (this.level() instanceof ServerLevel serverLevel) {
@@ -922,8 +947,6 @@ public class OrlanEntity extends Projectile implements GeoEntity {
                 }
             }
         }
-
-        this.discard();
     }
 
     private void spawnDamageEffects() {
@@ -1276,6 +1299,10 @@ public class OrlanEntity extends Projectile implements GeoEntity {
 
     @Override
     public void remove(RemovalReason reason) {
+        if (!this.level().isClientSide && reason == RemovalReason.DISCARDED && !this.selfRemoving && !this.destroyed) {
+            this.destroyed = true;
+            spawnShootdownEffects();
+        }
         if (!this.level().isClientSide) {
 
             activeOrlanRegistry.remove(this.getId());

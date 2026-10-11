@@ -26,6 +26,7 @@ public class ModSounds {
 
     public static final RegistryObject<SoundEvent> ISKANDER_LAUNCH = registerSoundEvent("iskander_launch");
     public static final RegistryObject<SoundEvent> ISKANDER_PREPARING = registerSoundEvent("iskander_preparing");
+    public static final RegistryObject<SoundEvent> ISKANDER_FLIGHT = registerSoundEvent("iskander_flight");
 
     private static RegistryObject<SoundEvent> registerSoundEvent(String name) {
         ResourceLocation id = new ResourceLocation(ShahedMod.MOD_ID, name);

@@ -11,7 +11,7 @@ Adds tactical drones, missiles, radar systems and alert sirens to Minecraft.
 Unofficial fork of "Air Tactical Arsenal by Synarsis", adapted by lilDorito for the WarZone milsim modpack.
 Not affiliated with or endorsed by Synarsis. Non-commercial use only - see LICENSE.
 '''
-credits="Air Tactical Arsenal by Synarsis (original mod, made for KrutEvent). WarZone fork by lilDorito. Second Shahed engine sound by Kalitovskiy."
+credits="Air Tactical Arsenal by Synarsis (original mod, made for KrutEvent). WarZone fork by lilDorito. Second Shahed engine sound and Iskander flight sound by Kalitovskiy."
 authors="Synarsis, lilDorito (WarZone fork)"
 
 [[dependencies.ata]]

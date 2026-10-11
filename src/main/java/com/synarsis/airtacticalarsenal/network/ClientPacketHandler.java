@@ -110,6 +110,12 @@ public class ClientPacketHandler {
             }).start();
         }
 
+        if (ShahedConfig.areCustomExplosionSoundsEnabled()
+                && com.synarsis.airtacticalarsenal.client.sound.SbwExplosionSound.play(explosionPos,
+                        com.synarsis.airtacticalarsenal.client.sound.SbwExplosionSound.SHAHED, 0.95f + random.nextFloat() * 0.1f)) {
+            return;
+        }
+
         Vec3 listenerPos = (mc.cameraEntity != null) ? mc.cameraEntity.position() : mc.player.position();
         double distance = listenerPos.distanceTo(explosionPos);
         float explosionVolume = calculateExplosionVolume(distance);

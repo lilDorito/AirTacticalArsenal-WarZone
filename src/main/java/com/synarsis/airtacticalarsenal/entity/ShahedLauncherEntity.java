@@ -45,6 +45,9 @@ public class ShahedLauncherEntity extends Entity implements GeoEntity {
     private static final EntityDataAccessor<String> DATA_SHAHED_COLOR = SynchedEntityData
             .defineId(ShahedLauncherEntity.class, EntityDataSerializers.STRING);
 
+    private static final EntityDataAccessor<Integer> DATA_ENGINE_SOUND = SynchedEntityData
+            .defineId(ShahedLauncherEntity.class, EntityDataSerializers.INT);
+
     private int storedDroneId = -1;
     private UUID storedDroneUuid;
 
@@ -72,6 +75,11 @@ public class ShahedLauncherEntity extends Entity implements GeoEntity {
         this.entityData.define(DATA_HAS_DRONE, false);
         this.entityData.define(DATA_IS_LAUNCHING, false);
         this.entityData.define(DATA_SHAHED_COLOR, "white");
+        this.entityData.define(DATA_ENGINE_SOUND, 0);
+    }
+
+    public int getEngineSound() {
+        return this.entityData.get(DATA_ENGINE_SOUND);
     }
 
     @Override
@@ -156,16 +164,13 @@ public class ShahedLauncherEntity extends Entity implements GeoEntity {
 
         resolveStoredDrone();
 
+        if (level().isClientSide && isLaunching()) {
+            net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT,
+                    () -> () -> com.synarsis.airtacticalarsenal.client.sound.LauncherSpinUpSound.ensure(this));
+        }
+
         if (launchTimer > 0 && !level().isClientSide) {
             launchTimer--;
-
-            if (launchTimer % 20 == 0 && launchTimer > 0) {
-
-                level().playSound(null, blockPosition(),
-                        net.minecraft.sounds.SoundEvents.FURNACE_FIRE_CRACKLE,
-                        net.minecraft.sounds.SoundSource.HOSTILE, 2.0f,
-                        0.8f + (float) (LAUNCH_DELAY_TICKS - launchTimer) / LAUNCH_DELAY_TICKS * 0.4f);
-            }
 
             if (launchTimer == 0 && level() instanceof ServerLevel serverLevel) {
                 actuallyLaunchDrone(serverLevel);
@@ -273,13 +278,8 @@ public class ShahedLauncherEntity extends Entity implements GeoEntity {
         this.diveMode = mode;
         this.launchingPlayer = player;
         this.launchTimer = LAUNCH_DELAY_TICKS;
+        this.entityData.set(DATA_ENGINE_SOUND, this.random.nextInt(2));
         this.entityData.set(DATA_IS_LAUNCHING, true);
-
-        if (!level().isClientSide) {
-            level().playSound(null, blockPosition(),
-                    net.minecraft.sounds.SoundEvents.FURNACE_FIRE_CRACKLE,
-                    net.minecraft.sounds.SoundSource.HOSTILE, 2.0f, 0.6f);
-        }
     }
 
     public void startLaunchSequenceWithRoute(Player player, BlockPos target, String mode, List<BlockPos> waypoints) {
@@ -310,6 +310,7 @@ public class ShahedLauncherEntity extends Entity implements GeoEntity {
         }
 
         drone.setShahedColor(this.shahedColor);
+        drone.setEngineSound(getEngineSound());
 
         if (this.routeWaypoints != null && !this.routeWaypoints.isEmpty()) {
             drone.setWaypoints(this.routeWaypoints);

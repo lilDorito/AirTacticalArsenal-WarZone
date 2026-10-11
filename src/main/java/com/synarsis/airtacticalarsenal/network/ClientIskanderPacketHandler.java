@@ -1,5 +1,6 @@
 package com.synarsis.airtacticalarsenal.network;
 
+import com.synarsis.airtacticalarsenal.client.sound.IskanderFlightSoundClient;
 import com.synarsis.airtacticalarsenal.client.sound.IskanderLaunchSoundClient;
 import com.synarsis.airtacticalarsenal.config.ShahedConfig;
 import com.synarsis.airtacticalarsenal.entity.IskanderEntity;
@@ -21,6 +22,7 @@ import java.util.Random;
 public class ClientIskanderPacketHandler {
 
     private static final Map<Integer, IskanderLaunchSoundClient> activeSounds = new HashMap<>();
+    private static final Map<Integer, IskanderFlightSoundClient> flightSounds = new HashMap<>();
 
     private static final java.util.Set<Integer> launchSoundPlayed = new java.util.HashSet<>();
     private static final Random random = new Random();
@@ -38,6 +40,8 @@ public class ClientIskanderPacketHandler {
                 iskander.syncTrajectoryData(startPos, launchEndPos, finalTargetPos);
             }
         }
+
+        updateFlightSound(entityId, currentPos, flightPhase);
 
         IskanderLaunchSoundClient existingSound = activeSounds.get(entityId);
         if (existingSound != null) {
@@ -64,8 +68,24 @@ public class ClientIskanderPacketHandler {
         }
     }
 
+    private static void updateFlightSound(int entityId, Vec3 pos, int flightPhase) {
+        flightSounds.values().removeIf(IskanderFlightSoundClient::isStopped);
+        IskanderFlightSoundClient flight = flightSounds.get(entityId);
+        if (flight != null) {
+            flight.update(pos);
+        } else if (flightPhase >= IskanderEntity.PHASE_LAUNCH && flightPhase < IskanderEntity.PHASE_IMPACT) {
+            flight = new IskanderFlightSoundClient(entityId, pos);
+            flightSounds.put(entityId, flight);
+            Minecraft.getInstance().execute(flight::start);
+        }
+    }
+
     public static void handleIskanderRemove(int entityId) {
         launchSoundPlayed.remove(entityId);
+        IskanderFlightSoundClient flight = flightSounds.remove(entityId);
+        if (flight != null) {
+            flight.finish(null);
+        }
         IskanderLaunchSoundClient sound = activeSounds.remove(entityId);
         if (sound != null && !sound.isStopped()) {
             sound.stopSound();
@@ -85,6 +105,12 @@ public class ClientIskanderPacketHandler {
     public static void handleExplosion(Vec3 explosionPos) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) {
+            return;
+        }
+
+        if (ShahedConfig.areCustomExplosionSoundsEnabled()
+                && com.synarsis.airtacticalarsenal.client.sound.SbwExplosionSound.play(explosionPos,
+                        com.synarsis.airtacticalarsenal.client.sound.SbwExplosionSound.ISKANDER, 0.85f + random.nextFloat() * 0.1f)) {
             return;
         }
 
@@ -139,6 +165,10 @@ public class ClientIskanderPacketHandler {
 
     public static void clearAll() {
         launchSoundPlayed.clear();
+        for (IskanderFlightSoundClient flight : flightSounds.values()) {
+            flight.finish(null);
+        }
+        flightSounds.clear();
         for (IskanderLaunchSoundClient sound : activeSounds.values()) {
             if (!sound.isStopped()) {
                 sound.stopSound();

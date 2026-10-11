@@ -1,23 +1,72 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "pattern": [
-    " I ",
-    "ITI",
-    "IFI"
-  ],
-  "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "superbwarfare"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          "SFS",
+          "HHH",
+          "SMP"
+        ],
+        "key": {
+          "S": {
+            "item": "superbwarfare:steel_ingot"
+          },
+          "F": {
+            "item": "superbwarfare:fusee"
+          },
+          "H": {
+            "item": "superbwarfare:high_energy_explosives"
+          },
+          "M": {
+            "item": "superbwarfare:motor"
+          },
+          "P": {
+            "item": "superbwarfare:propeller"
+          }
+        },
+        "result": {
+          "item": "ata:shahed",
+          "count": 1
+        }
+      }
     },
-    "T": {
-      "item": "minecraft:tnt"
-    },
-    "F": {
-      "item": "minecraft:fire_charge"
+    {
+      "conditions": [
+        {
+          "type": "forge:true"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          " I ",
+          "ITI",
+          "IFI"
+        ],
+        "key": {
+          "I": {
+            "item": "minecraft:iron_ingot"
+          },
+          "T": {
+            "item": "minecraft:tnt"
+          },
+          "F": {
+            "item": "minecraft:fire_charge"
+          }
+        },
+        "result": {
+          "item": "ata:shahed",
+          "count": 1
+        }
+      }
     }
-  },
-  "result": {
-    "item": "ata:shahed",
-    "count": 1
-  }
+  ]
 }

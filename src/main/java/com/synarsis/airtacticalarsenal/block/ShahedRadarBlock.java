@@ -55,7 +55,6 @@ public class ShahedRadarBlock extends Block implements EntityBlock {
     }
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final IntegerProperty POWER = BlockStateProperties.POWER;
-    private static final int RADAR_RANGE = 1500;
 
     public ShahedRadarBlock(Properties properties) {
         super(properties);
@@ -161,8 +160,8 @@ public class ShahedRadarBlock extends Block implements EntityBlock {
         double top = Math.max(level.getMaxBuildHeight(),
                 com.synarsis.airtacticalarsenal.config.ShahedConfig.getIskanderMaxFlightHeight()) + 64;
         AABB searchBox = new AABB(
-            radarCenter.x - RADAR_RANGE, level.getMinBuildHeight(), radarCenter.z - RADAR_RANGE,
-            radarCenter.x + RADAR_RANGE, top, radarCenter.z + RADAR_RANGE
+            radarCenter.x - com.synarsis.airtacticalarsenal.config.ShahedConfig.getRadarRange(), level.getMinBuildHeight(), radarCenter.z - com.synarsis.airtacticalarsenal.config.ShahedConfig.getRadarRange(),
+            radarCenter.x + com.synarsis.airtacticalarsenal.config.ShahedConfig.getRadarRange(), top, radarCenter.z + com.synarsis.airtacticalarsenal.config.ShahedConfig.getRadarRange()
         );
 
         double closestDistance = Double.MAX_VALUE;
@@ -186,18 +185,19 @@ public class ShahedRadarBlock extends Block implements EntityBlock {
             return 0;
         }
 
-        if (closestDistance < 50) return 15;
-        if (closestDistance < 100) return 14;
-        if (closestDistance < 200) return 13;
-        if (closestDistance < 300) return 12;
-        if (closestDistance < 400) return 10;
-        if (closestDistance < 600) return 8;
-        if (closestDistance < 800) return 6;
-        if (closestDistance < 1000) return 5;
-        if (closestDistance < 1100) return 4;
-        if (closestDistance < 1200) return 3;
-        if (closestDistance < 1350) return 2;
-        if (closestDistance < 1500) return 1;
+        double d = closestDistance * 1500.0 / com.synarsis.airtacticalarsenal.config.ShahedConfig.getRadarRange();
+        if (d < 50) return 15;
+        if (d < 100) return 14;
+        if (d < 200) return 13;
+        if (d < 300) return 12;
+        if (d < 400) return 10;
+        if (d < 600) return 8;
+        if (d < 800) return 6;
+        if (d < 1000) return 5;
+        if (d < 1100) return 4;
+        if (d < 1200) return 3;
+        if (d < 1350) return 2;
+        if (d < 1500) return 1;
         return 0;
     }
 

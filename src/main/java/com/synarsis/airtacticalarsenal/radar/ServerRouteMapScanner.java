@@ -16,15 +16,15 @@ import java.util.stream.Stream;
 public class ServerRouteMapScanner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("ATA-RouteMap");
-    public static final int CACHE_SIZE = 2048;
-    public static final int CACHE_BPP = 10;
-    private static final int CACHE_VERSION = 18;
+    public static final int CACHE_SIZE = com.synarsis.airtacticalarsenal.util.MapScale.ROUTE_CACHE_SIZE;
+    private static final int CACHE_VERSION = 20;
     private static final long MAX_TICK_MS = 25;
     public static final int REUSE_RADIUS = 500;
 
     private static final Map<String, ServerRouteMapScanner> INSTANCES = new LinkedHashMap<>();
 
     private final BlockPos centerPos;
+    private final int bpp;
     private final int originX, originZ;
     private MapScanJob job;
     private boolean ready = false;
@@ -34,9 +34,10 @@ public class ServerRouteMapScanner {
 
     public ServerRouteMapScanner(BlockPos centerPos) {
         this.centerPos = centerPos;
-        this.originX = centerPos.getX() - (CACHE_SIZE / 2) * CACHE_BPP;
-        this.originZ = centerPos.getZ() - (CACHE_SIZE / 2) * CACHE_BPP;
-        this.refresher = new MapRefresher(CACHE_SIZE, CACHE_BPP, originX, originZ);
+        this.bpp = com.synarsis.airtacticalarsenal.util.MapScale.serverRouteBpp();
+        this.originX = centerPos.getX() - (CACHE_SIZE / 2) * bpp;
+        this.originZ = centerPos.getZ() - (CACHE_SIZE / 2) * bpp;
+        this.refresher = new MapRefresher(CACHE_SIZE, bpp, originX, originZ);
     }
 
     public static synchronized ServerRouteMapScanner findNear(BlockPos pos) {
@@ -52,6 +53,10 @@ public class ServerRouteMapScanner {
 
     public BlockPos getCenterPos() { return centerPos; }
 
+    private static String filePrefix(int bpp) {
+        return "route_v" + CACHE_VERSION + "_b" + bpp + "_";
+    }
+
     public static String key(BlockPos pos) {
         return "route_" + pos.getX() + "_" + pos.getZ();
     }
@@ -59,7 +64,10 @@ public class ServerRouteMapScanner {
     public static synchronized ServerRouteMapScanner getOrCreate(BlockPos pos, ServerLevel level) {
 
         ServerRouteMapScanner near = findNear(pos);
-        if (near != null) return near;
+        if (near != null) {
+            if (near.bpp == com.synarsis.airtacticalarsenal.util.MapScale.serverRouteBpp()) return near;
+            INSTANCES.remove(key(near.centerPos));
+        }
 
         String k = key(pos);
         ServerRouteMapScanner scanner = new ServerRouteMapScanner(pos);
@@ -86,7 +94,7 @@ public class ServerRouteMapScanner {
             }
         }
 
-        scanner.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, scanner.originX, scanner.originZ, true, false);
+        scanner.job = new MapScanJob(CACHE_SIZE, scanner.bpp, scanner.originX, scanner.originZ, true, false);
         scanner.buildStartOrder = ++ServerTerrainScanner.GLOBAL_BUILD_ORDER;
         INSTANCES.put(k, scanner);
         return scanner;
@@ -96,7 +104,7 @@ public class ServerRouteMapScanner {
         try {
             Path cacheDir = level.getServer().getWorldPath(LevelResource.ROOT).resolve("ata_radar_cache");
             if (!Files.exists(cacheDir)) return null;
-            String prefix = "route_v" + CACHE_VERSION + "_";
+            String prefix = filePrefix(com.synarsis.airtacticalarsenal.util.MapScale.serverRouteBpp());
             try (Stream<Path> stream = Files.list(cacheDir)) {
                 return stream
                     .map(p -> p.getFileName().toString())
@@ -179,7 +187,7 @@ public class ServerRouteMapScanner {
         for (ServerRouteMapScanner s : INSTANCES.values()) {
             s.ready = false;
             s.refresher.cancel();
-            s.job = new MapScanJob(CACHE_SIZE, CACHE_BPP, s.originX, s.originZ, true, false);
+            s.job = new MapScanJob(CACHE_SIZE, s.bpp, s.originX, s.originZ, true, false);
             s.buildStartOrder = ++ServerTerrainScanner.GLOBAL_BUILD_ORDER;
         }
     }
@@ -224,7 +232,7 @@ public class ServerRouteMapScanner {
 
     private byte[] tryLoadFromFile(ServerLevel level) {
         try {
-            Path file = getCacheDir(level).resolve("route_v" + CACHE_VERSION + "_" + centerPos.getX() + "_" + centerPos.getZ() + ".png");
+            Path file = getCacheDir(level).resolve(filePrefix(bpp) + centerPos.getX() + "_" + centerPos.getZ() + ".png");
             if (Files.exists(file)) {
                 LOGGER.info("[ATA] Loading cached route map from {}", file);
                 return Files.readAllBytes(file);
@@ -241,7 +249,7 @@ public class ServerRouteMapScanner {
         try {
             Path dir = getCacheDir(level);
             Files.createDirectories(dir);
-            Path file = dir.resolve("route_v" + CACHE_VERSION + "_" + centerPos.getX() + "_" + centerPos.getZ() + ".png");
+            Path file = dir.resolve(filePrefix(bpp) + centerPos.getX() + "_" + centerPos.getZ() + ".png");
             Files.write(file, png);
             for (int v = 1; v < CACHE_VERSION; v++) {
                 Files.deleteIfExists(dir.resolve("route_v" + v + "_" + centerPos.getX() + "_" + centerPos.getZ() + ".png"));

@@ -7,7 +7,6 @@ import com.synarsis.airtacticalarsenal.config.ShahedConfig;
 import com.synarsis.airtacticalarsenal.network.NetworkHandler;
 import com.synarsis.airtacticalarsenal.network.RequestRouteMapPacket;
 import com.synarsis.airtacticalarsenal.network.SaveShahedRoutePacket;
-import com.synarsis.airtacticalarsenal.radar.ServerRouteMapScanner;
 import com.synarsis.airtacticalarsenal.util.LauncherZoneValidator;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
@@ -48,7 +47,6 @@ public class ShahedRouteScreen extends AtaScaledScreen {
 
     private double scale = 10.0;
     private static final double MIN_SCALE = 2.0;
-    private static final double MAX_SCALE = 80.0;
 
     private double viewCenterX;
     private double viewCenterZ;
@@ -615,7 +613,7 @@ public class ShahedRouteScreen extends AtaScaledScreen {
             return super.mouseScrolledScaled(mouseX, mouseY, delta);
 
         double factor = delta > 0 ? 0.8 : 1.25;
-        scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * factor));
+        scale = Math.max(MIN_SCALE, Math.min(maxScale(), scale * factor));
         return true;
     }
 
@@ -1031,7 +1029,7 @@ public class ShahedRouteScreen extends AtaScaledScreen {
 
         if (terrainRenderer.hasCacheData()) {
             int texSize = terrainRenderer.getTextureSize();
-            double bpp = ServerRouteMapScanner.CACHE_BPP;
+            double bpp = terrainRenderer.getBpp();
 
             double viewRadius = (MAP_SIZE / 2.0) * scale;
 
@@ -1481,5 +1479,11 @@ public class ShahedRouteScreen extends AtaScaledScreen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    private static double maxScale() {
+        int radius = Math.max(com.synarsis.airtacticalarsenal.client.ClientRouteLimits.shahed(),
+                com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan());
+        return Math.max(80.0, radius * 1.1 / (MAP_SIZE / 2.0));
     }
 }

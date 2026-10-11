@@ -141,5 +141,18 @@
         "attenuation_distance": 70
       }
     ]
+  },
+  "iskander_flight": {
+    "subtitle": "subtitles.ata.iskander_flight",
+    "sounds": [
+      {
+        "name": "ata:iskander_flight",
+        "stream": true,
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 3000
+      }
+    ]
   }
 }

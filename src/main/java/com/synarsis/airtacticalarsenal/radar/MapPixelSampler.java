@@ -44,7 +44,7 @@ public final class MapPixelSampler {
         return new Column() {
             @Override public int minY() { return chunk.getMinBuildHeight(); }
             @Override public int surfaceY(int wx, int wz) {
-                return chunk.getHeight(Heightmap.Types.WORLD_SURFACE, wx & 15, wz & 15) - 1;
+                return chunk.getHeight(Heightmap.Types.WORLD_SURFACE, wx & 15, wz & 15);
             }
             @Override public BlockState state(int wx, int y, int wz) {
                 return chunk.getBlockState(mPos.set(wx, y, wz));
@@ -104,7 +104,7 @@ public final class MapPixelSampler {
         if (tmp.kind != KIND_LAND) return tmp.color;
         LevelChunk n = level.getChunkSource().getChunkNow((wx - step) >> 4, (wz - step) >> 4);
         int nh = n == null ? tmp.height
-                : n.getHeight(Heightmap.Types.WORLD_SURFACE, (wx - step) & 15, (wz - step) & 15);
+                : n.getHeight(Heightmap.Types.WORLD_SURFACE, (wx - step) & 15, (wz - step) & 15) + 1;
         return shadeLand(tmp.color, tmp.height, nh, step);
     }
 

@@ -25,10 +25,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ShahedRadarScreen extends Screen {
 
     private final BlockPos radarPos;
-    private static final int DRONE_DETECT_RADIUS = 1500;
     private static final int UPDATE_INTERVAL = 20;
 
-    private static final int[] ZOOM_LEVELS = {1, 2, 4, 8};
+    private static final int[] ZOOM_LEVELS = {1, 2, 4, 8, 12, 16, 20};
     private int zoomIndex = 2;
 
     private static ShahedRadarScreen currentInstance = null;
@@ -60,10 +59,8 @@ public class ShahedRadarScreen extends Screen {
     private static final int COL_COMPASS    = 0xFF508868;
     private static final int COL_SW_HELI    = 0xFF40c0ff;
     private static final int COL_SW_PLANE   = 0xFFff8040;
-    private static final int COL_SW_DRONE   = 0xFFc040ff;
-    private static final int COL_SHAHED   = 0xFFFF2A2A;
-    private static final int COL_ISKANDER = 0xFFFFE62A;
-    private static final int COL_ORLAN    = 0xFF2AFFFF;
+    private static final int COL_UAV        = 0xFFFF2A2A;
+    private static final int COL_MISSILE    = 0xFFFFE62A;
 
     private static class RadarTarget {
         final int entityId;
@@ -274,10 +271,10 @@ public class ShahedRadarScreen extends Screen {
         double panDeltaX = viewCenterX - terrainMap.getRadarX();
         double panDeltaZ = viewCenterZ - terrainMap.getRadarZ();
 
-        float srcLeft = (float)(texSize / 2.0 + panDeltaX / TerrainMapRenderer.CACHE_BPP - viewRadius / TerrainMapRenderer.CACHE_BPP);
-        float srcTop = (float)(texSize / 2.0 + panDeltaZ / TerrainMapRenderer.CACHE_BPP - viewRadius / TerrainMapRenderer.CACHE_BPP);
-        float srcRight = (float)(texSize / 2.0 + panDeltaX / TerrainMapRenderer.CACHE_BPP + viewRadius / TerrainMapRenderer.CACHE_BPP);
-        float srcBottom = (float)(texSize / 2.0 + panDeltaZ / TerrainMapRenderer.CACHE_BPP + viewRadius / TerrainMapRenderer.CACHE_BPP);
+        float srcLeft = (float)(texSize / 2.0 + panDeltaX / terrainMap.getBpp() - viewRadius / terrainMap.getBpp());
+        float srcTop = (float)(texSize / 2.0 + panDeltaZ / terrainMap.getBpp() - viewRadius / terrainMap.getBpp());
+        float srcRight = (float)(texSize / 2.0 + panDeltaX / terrainMap.getBpp() + viewRadius / terrainMap.getBpp());
+        float srcBottom = (float)(texSize / 2.0 + panDeltaZ / terrainMap.getBpp() + viewRadius / terrainMap.getBpp());
 
         int side = half * 2;
         int dstLeft = cx - half;
@@ -317,17 +314,17 @@ public class ShahedRadarScreen extends Screen {
         int[] rp = getRadarScreenPos(cx, cy, half);
 
         float scale = (float) half / getWorldRadius();
-        int detectPx = (int) (DRONE_DETECT_RADIUS * scale);
+        int detectPx = (int) (detectRadius() * scale);
         if (detectPx > 8 && detectPx < half * 3) {
             drawCircle(g, rp[0], rp[1], detectPx, 0xC040c070, 48);
-            String distLabel = Tr.s("gui.ata.radar.meters", DRONE_DETECT_RADIUS);
+            String distLabel = Tr.s("gui.ata.radar.meters", detectRadius());
             g.drawString(font, distLabel, rp[0] + 3, rp[1] - detectPx - 11, 0xFF60e080, false);
         }
 
         int halfPx = detectPx / 2;
         if (halfPx > 8) {
             drawCircle(g, rp[0], rp[1], halfPx, 0x9030a058, 32);
-            String halfLabel = Tr.s("gui.ata.radar.meters", DRONE_DETECT_RADIUS / 2);
+            String halfLabel = Tr.s("gui.ata.radar.meters", detectRadius() / 2);
             g.drawString(font, halfLabel, rp[0] + 3, rp[1] - halfPx - 11, 0xFF50b068, false);
         }
     }
@@ -336,7 +333,7 @@ public class ShahedRadarScreen extends Screen {
         int[] rp = getRadarScreenPos(cx, cy, half);
 
         float scale = (float) half / getWorldRadius();
-        int detectPx = (int) (DRONE_DETECT_RADIUS * scale);
+        int detectPx = (int) (detectRadius() * scale);
         int sweepLen = Math.min(detectPx, half + 50);
 
         double rad = Math.toRadians(scanAngle);
@@ -430,7 +427,7 @@ public class ShahedRadarScreen extends Screen {
         int ly = cy - half + 14;
         int wr = getWorldRadius();
         g.drawString(this.font, String.format("RANGE %dm", wr), lx + 3, ly, COL_TEXT_DIM);
-        g.drawString(this.font, String.format("SCALE %d bl/px", ZOOM_LEVELS[zoomIndex]),
+        g.drawString(this.font, String.format("SCALE %d bl/px", ZOOM_LEVELS[Math.min(zoomIndex, maxZoomIndex())]),
                 lx + 3, ly + 11, COL_TEXT_DIM);
 
         if (terrainMap != null && terrainMap.isQueued()) {
@@ -594,50 +591,27 @@ public class ShahedRadarScreen extends Screen {
         g.hLine(px + 2, px + pw - 2, bottomY, 0xFF1a3028);
         bottomY -= 2;
 
-        boolean hasSw = com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.isLoaded();
-        boolean hasVvp = com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.isVvpLoaded();
-        if (hasSw || hasVvp) {
-            if (hasSw) {
-                bottomY -= 10; g.drawString(font, Tr.s("gui.ata.radar.legend.plane"), px + 4, bottomY, COL_SW_PLANE, false);
-            }
-            bottomY -= 10; g.drawString(font, Tr.s("gui.ata.radar.legend.heli"), px + 4, bottomY, COL_SW_HELI, false);
-            bottomY -= 10; g.drawString(font, Tr.s("gui.ata.radar.legend.uav"), px + 4, bottomY, COL_SW_DRONE, false);
-            bottomY -= 4;
-            g.hLine(px + 2, px + pw - 2, bottomY, 0xFF1a3028);
-            bottomY -= 2;
-        }
-
-        int valCol = 0xFF80c890;
-        bottomY -= 10;
-        g.drawString(font, Tr.s("gui.ata.radar.legend.orlan"), px + 4, bottomY, COL_ORLAN, false);
-        g.drawString(font, "V:16-24 ALT:100-350", px + 62, bottomY, valCol, false);
-        bottomY -= 10;
-        g.drawString(font, Tr.s("gui.ata.radar.legend.iskander"), px + 4, bottomY, COL_ISKANDER, false);
-        g.drawString(font, "V:50-100 ALT:200+", px + 62, bottomY, valCol, false);
-        bottomY -= 10;
-        g.drawString(font, Tr.s("gui.ata.radar.legend.shahed"), px + 4, bottomY, COL_SHAHED, false);
-        g.drawString(font, "V:10-30 ALT:80-250", px + 62, bottomY, valCol, false);
+        bottomY -= 10; g.drawString(font, Tr.s("gui.ata.radar.legend.missile"), px + 4, bottomY, COL_MISSILE, false);
+        bottomY -= 10; g.drawString(font, Tr.s("gui.ata.radar.legend.uav"), px + 4, bottomY, COL_UAV, false);
+        bottomY -= 10; g.drawString(font, Tr.s("gui.ata.radar.legend.heli"), px + 4, bottomY, COL_SW_HELI, false);
+        bottomY -= 10; g.drawString(font, Tr.s("gui.ata.radar.legend.plane"), px + 4, bottomY, COL_SW_PLANE, false);
         bottomY -= 2;
         g.hLine(px + 2, px + pw - 2, bottomY, 0xFF1a3028);
     }
 
     private static int getTargetColor(byte type) {
         return switch (type) {
-            case 0 -> COL_SHAHED;
-            case 1 -> COL_ISKANDER;
-            case 2 -> COL_ORLAN;
+            case 1 -> COL_MISSILE;
             case 3 -> COL_SW_HELI;
             case 4 -> COL_SW_PLANE;
-            case 5 -> COL_SW_DRONE;
+            case 5 -> COL_UAV;
             default -> COL_TARGET;
         };
     }
 
     private static String getTargetTypeTag(byte type) {
         return switch (type) {
-            case 0 -> "SHD";
-            case 1 -> "BAL";
-            case 2 -> "ORL";
+            case 1 -> "MSL";
             case 3 -> "HEL";
             case 4 -> "PLN";
             case 5 -> "UAV";
@@ -694,7 +668,19 @@ public class ShahedRadarScreen extends Screen {
     }
 
     private int getWorldRadius() {
-        return ZOOM_LEVELS[zoomIndex] * 256;
+        return ZOOM_LEVELS[Math.min(zoomIndex, maxZoomIndex())] * 256;
+    }
+
+    private static int detectRadius() {
+        return com.synarsis.airtacticalarsenal.client.ClientRouteLimits.radarRange();
+    }
+
+    private static int maxZoomIndex() {
+        int need = (int) (detectRadius() * 1.05);
+        for (int i = 3; i < ZOOM_LEVELS.length; i++) {
+            if (ZOOM_LEVELS[i] * 256 >= need) return i;
+        }
+        return ZOOM_LEVELS.length - 1;
     }
 
     @Override
@@ -710,7 +696,7 @@ public class ShahedRadarScreen extends Screen {
             return true;
         }
         if (delta > 0) zoomIndex = Math.max(zoomIndex - 1, 0);
-        else           zoomIndex = Math.min(zoomIndex + 1, ZOOM_LEVELS.length - 1);
+        else           zoomIndex = Math.min(zoomIndex + 1, maxZoomIndex());
         return true;
     }
 

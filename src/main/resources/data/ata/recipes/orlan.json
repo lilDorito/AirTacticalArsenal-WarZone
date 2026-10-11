@@ -1,0 +1,32 @@
+{
+  "conditions": [
+    {
+      "type": "forge:mod_loaded",
+      "modid": "superbwarfare"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SKS",
+    "SMS",
+    " P "
+  ],
+  "key": {
+    "S": {
+      "item": "superbwarfare:steel_ingot"
+    },
+    "K": {
+      "item": "superbwarfare:seeker"
+    },
+    "M": {
+      "item": "superbwarfare:motor"
+    },
+    "P": {
+      "item": "superbwarfare:propeller"
+    }
+  },
+  "result": {
+    "item": "ata:orlan",
+    "count": 1
+  }
+}

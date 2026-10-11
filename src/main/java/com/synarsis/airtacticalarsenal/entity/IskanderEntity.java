@@ -482,8 +482,11 @@ public class IskanderEntity extends Projectile implements GeoEntity {
     @Override
     public void tick() {
         if (!this.level().isClientSide && !this.isLegitSpawn) {
-            this.discard();
+            this.removeSelf();
             return;
+        }
+        if (!this.level().isClientSide && this.tickCount % 10 == 0) {
+            com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.registerForSbwRadar(this);
         }
 
         super.tick();
@@ -1171,11 +1174,21 @@ public class IskanderEntity extends Projectile implements GeoEntity {
                 com.synarsis.airtacticalarsenal.event.OrlanCameraExplosionHelper.sendExplosionChunkUpdates(sl, pos);
             }
         }
+        this.removeSelf();
+    }
+
+    private boolean selfRemoving = false;
+
+    private void removeSelf() {
+        this.selfRemoving = true;
         this.discard();
     }
 
     @Override
     public void remove(RemovalReason reason) {
+        if (!this.level().isClientSide && reason == RemovalReason.DISCARDED && !this.selfRemoving && this.isLegitSpawn) {
+            return;
+        }
         if (!this.level().isClientSide) {
 
             MissileChunkManager.unregisterMissile(this);

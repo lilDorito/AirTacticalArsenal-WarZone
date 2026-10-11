@@ -14,13 +14,13 @@ import java.io.ByteArrayOutputStream;
 @OnlyIn(Dist.CLIENT)
 public class TerrainMapRenderer {
 
-    public static final int CACHE_SIZE = 1536;
-    public static final int CACHE_BPP = 2;
+    public static final int CACHE_SIZE = com.synarsis.airtacticalarsenal.util.MapScale.RADAR_CACHE_SIZE;
     private static final int DARK = nativeColor(12, 14, 18);
 
     private NativeImage cacheImage;
     private boolean cacheReady = false;
 
+    private final int bpp;
     private final int cacheOriginX, cacheOriginZ;
     private final int radarX, radarZ;
 
@@ -39,15 +39,16 @@ public class TerrainMapRenderer {
     private static TerrainMapRenderer currentInstance;
 
     private static byte[] cachedPngBytes;
-    private static int cachedRadarX, cachedRadarZ;
+    private static int cachedRadarX, cachedRadarZ, cachedBpp;
     private static long cachedAt;
     private static final long CACHE_MAX_AGE_MS = 5 * 60_000L;
 
     public TerrainMapRenderer(int radarX, int radarZ) {
         this.radarX = radarX;
         this.radarZ = radarZ;
-        this.cacheOriginX = radarX - (CACHE_SIZE / 2) * CACHE_BPP;
-        this.cacheOriginZ = radarZ - (CACHE_SIZE / 2) * CACHE_BPP;
+        this.bpp = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.radarBpp();
+        this.cacheOriginX = radarX - (CACHE_SIZE / 2) * bpp;
+        this.cacheOriginZ = radarZ - (CACHE_SIZE / 2) * bpp;
 
         displayTexture = new DynamicTexture(CACHE_SIZE, CACHE_SIZE, false);
         NativeImage d = displayTexture.getPixels();
@@ -61,7 +62,7 @@ public class TerrainMapRenderer {
         textureRegistered = true;
         currentInstance = this;
 
-        if (cachedPngBytes != null && cachedRadarX == radarX && cachedRadarZ == radarZ
+        if (cachedPngBytes != null && cachedRadarX == radarX && cachedRadarZ == radarZ && cachedBpp == bpp
                 && System.currentTimeMillis() - cachedAt <= CACHE_MAX_AGE_MS) {
             loadFromPngBytes(cachedPngBytes);
         }
@@ -121,6 +122,7 @@ public class TerrainMapRenderer {
             cachedPngBytes = pngBytes;
             cachedRadarX = radarX;
             cachedRadarZ = radarZ;
+            cachedBpp = bpp;
             cachedAt = System.currentTimeMillis();
 
             NativeImage d = displayTexture.getPixels();
@@ -149,7 +151,8 @@ public class TerrainMapRenderer {
     public int getRadarZ() { return radarZ; }
     public int getCacheOriginX() { return cacheOriginX; }
     public int getCacheOriginZ() { return cacheOriginZ; }
-    public int getCacheWorldRadius() { return (CACHE_SIZE / 2) * CACHE_BPP; }
+    public int getCacheWorldRadius() { return (CACHE_SIZE / 2) * bpp; }
+    public int getBpp() { return bpp; }
 
     public void close() {
         if (textureLocation != null) {
