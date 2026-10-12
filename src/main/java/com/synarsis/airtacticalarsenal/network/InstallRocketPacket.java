@@ -1,7 +1,7 @@
 package com.synarsis.airtacticalarsenal.network;
 
 import com.synarsis.airtacticalarsenal.block.IskanderRocketBlock;
-import com.synarsis.airtacticalarsenal.block.LauncherBlock;
+import com.synarsis.airtacticalarsenal.block.MissileLaunchpadBlock;
 import com.synarsis.airtacticalarsenal.item.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -43,17 +43,17 @@ public class InstallRocketPacket {
             Level level = player.level();
 
             BlockState launcherState = level.getBlockState(launcherPos);
-            if (!(launcherState.getBlock() instanceof LauncherBlock launcher)) {
+            if (!(launcherState.getBlock() instanceof MissileLaunchpadBlock launcher)) {
                 player.displayClientMessage(Component.translatable("message.ata.rocket.invalid_launcher"), true);
                 return;
             }
 
-            if (launcherState.getValue(LauncherBlock.PART) != LauncherBlock.LauncherPart.CENTER) {
+            if (launcherState.getValue(MissileLaunchpadBlock.PART) != MissileLaunchpadBlock.LauncherPart.CENTER) {
                 player.displayClientMessage(Component.translatable("message.ata.rocket.invalid_launcher"), true);
                 return;
             }
 
-            if (launcherState.getValue(LauncherBlock.LOADED)) {
+            if (launcherState.getValue(MissileLaunchpadBlock.LOADED)) {
                 player.displayClientMessage(Component.translatable("message.ata.rocket.already_loaded"), true);
                 return;
             }
@@ -79,7 +79,7 @@ public class InstallRocketPacket {
 
             player.getInventory().items.get(rocketSlot).shrink(1);
 
-            Direction facing = launcherState.getValue(LauncherBlock.FACING);
+            Direction facing = launcherState.getValue(MissileLaunchpadBlock.FACING);
             if (IskanderRocketBlock.placeRocket(level, launcherPos, facing)) {
 
                 launcher.setLoaded(level, launcherPos, true);

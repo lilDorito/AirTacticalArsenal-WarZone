@@ -4,7 +4,7 @@ import com.synarsis.airtacticalarsenal.util.Tr;
 
 import com.synarsis.airtacticalarsenal.config.ShahedConfig;
 import com.synarsis.airtacticalarsenal.network.NetworkHandler;
-import com.synarsis.airtacticalarsenal.network.SetLauncherTargetPacket;
+import com.synarsis.airtacticalarsenal.network.SetLaunchpadTargetPacket;
 import com.synarsis.airtacticalarsenal.client.ClientWaypointManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -31,7 +31,7 @@ public class TargetSettingsScreen extends AtaScaledScreen {
     @Override
     protected int designHeight() { return GUI_HEIGHT; }
 
-    private final UnifiedTerminalScreen parentScreen;
+    private final MissileTerminalScreen parentScreen;
     private final BlockPos launcherPos;
     private final BlockPos terminalPos;
 
@@ -54,7 +54,7 @@ public class TargetSettingsScreen extends AtaScaledScreen {
     private double calculatedCEP = 0;
     private String errorMessage = "";
 
-    public TargetSettingsScreen(UnifiedTerminalScreen parent, BlockPos launcherPos, BlockPos terminalPos) {
+    public TargetSettingsScreen(MissileTerminalScreen parent, BlockPos launcherPos, BlockPos terminalPos) {
         super(Component.translatable("gui.ata.target_settings.screen_title"));
         this.parentScreen = parent;
         this.launcherPos = launcherPos;
@@ -286,7 +286,7 @@ public class TargetSettingsScreen extends AtaScaledScreen {
 
             BlockPos target = new BlockPos(targetX, targetY, targetZ);
 
-            NetworkHandler.sendToServer(new SetLauncherTargetPacket(launcherPos, target));
+            NetworkHandler.sendToServer(new SetLaunchpadTargetPacket(launcherPos, target));
             parentScreen.updateLauncherTarget(launcherPos, target, calculatedDistance, calculatedCEP);
             Minecraft.getInstance().setScreen(parentScreen);
 

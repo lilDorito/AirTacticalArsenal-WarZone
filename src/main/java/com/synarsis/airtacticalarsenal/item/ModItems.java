@@ -21,17 +21,17 @@ public class ModItems {
                     .stacksTo(1)
                     .rarity(Rarity.RARE)));
 
-    public static final RegistryObject<Item> LAUNCH_INTERFACE_CABLE = ITEMS.register("launch_interface_cable",
-            () -> new LaunchInterfaceCableItem(new Item.Properties()
+    public static final RegistryObject<Item> MISSILE_LINK_CABLE = ITEMS.register("missile_link_cable",
+            () -> new MissileLinkCableItem(new Item.Properties()
                     .stacksTo(16)));
 
-    public static final RegistryObject<Item> SHAHED_LAUNCHER = ITEMS.register("shahed_launcher",
-            () -> new ShahedLauncherItem(new Item.Properties()
+    public static final RegistryObject<Item> STRIKE_UAV_LAUNCHER = ITEMS.register("strike_uav_launcher",
+            () -> new StrikeUavLauncherItem(new Item.Properties()
                     .stacksTo(1)
                     .rarity(Rarity.EPIC)));
 
-    public static final RegistryObject<Item> CONTROL_TABLET = ITEMS.register("control_tablet",
-            () -> new ControlTabletItem(new Item.Properties()
+    public static final RegistryObject<Item> STRIKE_UAV_TABLET = ITEMS.register("strike_uav_tablet",
+            () -> new StrikeUavTabletItem(new Item.Properties()
                     .stacksTo(1)
                     .rarity(Rarity.RARE)));
 
@@ -44,8 +44,8 @@ public class ModItems {
             () -> new SprayCanItem(new Item.Properties()
                     .stacksTo(1)));
 
-    public static final RegistryObject<Item> ORLAN_LAUNCHER = ITEMS.register("orlan_launcher",
-            () -> new OrlanLauncherItem(new Item.Properties()
+    public static final RegistryObject<Item> RECON_UAV_LAUNCHER = ITEMS.register("recon_uav_launcher",
+            () -> new ReconUavLauncherItem(new Item.Properties()
                     .stacksTo(1)
                     .rarity(Rarity.EPIC)));
 
@@ -54,8 +54,8 @@ public class ModItems {
                     .stacksTo(1)
                     .rarity(Rarity.RARE)));
 
-    public static final RegistryObject<Item> ORLAN_TABLET = ITEMS.register("orlan_tablet",
-            () -> new OrlanTabletItem(new Item.Properties()
+    public static final RegistryObject<Item> RECON_UAV_TABLET = ITEMS.register("recon_uav_tablet",
+            () -> new ReconUavTabletItem(new Item.Properties()
                     .stacksTo(1)
                     .rarity(Rarity.EPIC)));
 

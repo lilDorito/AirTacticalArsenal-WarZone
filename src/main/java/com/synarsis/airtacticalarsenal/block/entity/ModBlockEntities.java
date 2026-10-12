@@ -17,9 +17,9 @@ public class ModBlockEntities {
             BlockEntityType.Builder.of(IskanderRocketBlockEntity::new, ModBlocks.ISKANDER_ROCKET.get())
                 .build(null));
 
-    public static final RegistryObject<BlockEntityType<UnifiedTerminalBlockEntity>> UNIFIED_TERMINAL = 
-        BLOCK_ENTITIES.register("unified_terminal", () -> 
-            BlockEntityType.Builder.of(UnifiedTerminalBlockEntity::new, ModBlocks.UNIFIED_TERMINAL.get())
+    public static final RegistryObject<BlockEntityType<MissileTerminalBlockEntity>> MISSILE_TERMINAL = 
+        BLOCK_ENTITIES.register("missile_terminal", () -> 
+            BlockEntityType.Builder.of(MissileTerminalBlockEntity::new, ModBlocks.MISSILE_TERMINAL.get())
                 .build(null));
 
     public static final RegistryObject<BlockEntityType<LoadingHatchBlockEntity>> LOADING_HATCH = 
@@ -27,9 +27,9 @@ public class ModBlockEntities {
             BlockEntityType.Builder.of(LoadingHatchBlockEntity::new, ModBlocks.LOADING_HATCH.get())
                 .build(null));
 
-    public static final RegistryObject<BlockEntityType<LauncherBlockEntity>> LAUNCHER = 
-        BLOCK_ENTITIES.register("launcher", () -> 
-            BlockEntityType.Builder.of(LauncherBlockEntity::new, ModBlocks.LAUNCHER.get())
+    public static final RegistryObject<BlockEntityType<MissileLaunchpadBlockEntity>> MISSILE_LAUNCHPAD = 
+        BLOCK_ENTITIES.register("missile_launchpad", () -> 
+            BlockEntityType.Builder.of(MissileLaunchpadBlockEntity::new, ModBlocks.MISSILE_LAUNCHPAD.get())
                 .build(null));
 
     public static final RegistryObject<BlockEntityType<ShahedRadarBlockEntity>> SHAHED_RADAR =

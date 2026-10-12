@@ -1,6 +1,6 @@
 package com.synarsis.airtacticalarsenal.entity;
 
-import com.synarsis.airtacticalarsenal.block.LauncherBlock;
+import com.synarsis.airtacticalarsenal.block.MissileLaunchpadBlock;
 import com.synarsis.airtacticalarsenal.chunk.MissileChunkManager;
 import com.synarsis.airtacticalarsenal.config.ShahedConfig;
 import com.synarsis.airtacticalarsenal.network.NetworkHandler;
@@ -186,13 +186,13 @@ public class IskanderEntity extends Projectile implements GeoEntity {
     private void releaseLauncher() {
         if (!launcherReleased && launcherPos != null && !this.level().isClientSide) {
             BlockState state = this.level().getBlockState(launcherPos);
-            if (state.getBlock() instanceof LauncherBlock launcher) {
+            if (state.getBlock() instanceof MissileLaunchpadBlock launcher) {
                 launcher.setLoaded(this.level(), launcherPos, false);
                 launcher.setLaunching(this.level(), launcherPos, false);
             }
 
             net.minecraft.world.level.block.entity.BlockEntity be = this.level().getBlockEntity(launcherPos);
-            if (be instanceof com.synarsis.airtacticalarsenal.block.entity.LauncherBlockEntity launcherEntity) {
+            if (be instanceof com.synarsis.airtacticalarsenal.block.entity.MissileLaunchpadBlockEntity launcherEntity) {
                 launcherEntity.setInFlight(false);
             }
             launcherReleased = true;
@@ -204,10 +204,10 @@ public class IskanderEntity extends Projectile implements GeoEntity {
         double dz = target.getZ() - start.z;
         this.horizontalDistance = Math.sqrt(dx * dx + dz * dz);
 
-        int groundY = findGroundLevel(target);
-        this.finalTargetPos = new Vec3(target.getX() + 0.5, groundY, target.getZ() + 0.5);
-
+        this.finalTargetPos = new Vec3(target.getX() + 0.5, target.getY(), target.getZ() + 0.5);
         applyKVO();
+        int groundY = findGroundLevel(BlockPos.containing(this.finalTargetPos.x, target.getY(), this.finalTargetPos.z));
+        this.finalTargetPos = new Vec3(this.finalTargetPos.x, groundY, this.finalTargetPos.z);
 
         double cruiseSpeed = ShahedConfig.getIskanderCruiseSpeed();
         int prepareTicks = ShahedConfig.getIskanderPrepareTicks();
@@ -371,14 +371,10 @@ public class IskanderEntity extends Projectile implements GeoEntity {
     private int findGroundLevel(BlockPos target) {
         if (this.level() == null)
             return target.getY();
-
-        for (int y = target.getY() + 50; y > target.getY() - 100; y--) {
-            BlockPos checkPos = new BlockPos(target.getX(), y, target.getZ());
-            if (!this.level().getBlockState(checkPos).isAir()) {
-                return y + 1;
-            }
-        }
-        return target.getY();
+        int top = this.level().getChunk(target.getX() >> 4, target.getZ() >> 4)
+                .getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, target.getX() & 15, target.getZ() & 15) + 1;
+        if (top <= this.level().getMinBuildHeight()) return target.getY();
+        return top;
     }
 
     private void applyKVO() {
@@ -485,7 +481,7 @@ public class IskanderEntity extends Projectile implements GeoEntity {
             this.removeSelf();
             return;
         }
-        if (!this.level().isClientSide && this.tickCount % 10 == 0) {
+        if (!this.level().isClientSide && this.tickCount % 3 == 0) {
             com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.registerForSbwRadar(this);
         }
 
@@ -611,9 +607,9 @@ public class IskanderEntity extends Projectile implements GeoEntity {
                             this.startPos, this.launchEndPos, this.finalTargetPos));
 
             if (launcherPos != null && phase >= PHASE_LAUNCH) {
-                NetworkHandler.sendToAllPlayers(new com.synarsis.airtacticalarsenal.network.LauncherStateUpdatePacket(
+                NetworkHandler.sendToAllPlayers(new com.synarsis.airtacticalarsenal.network.LaunchpadStateUpdatePacket(
                         launcherPos,
-                        com.synarsis.airtacticalarsenal.network.LauncherStateUpdatePacket.LauncherState.IN_FLIGHT,
+                        com.synarsis.airtacticalarsenal.network.LaunchpadStateUpdatePacket.LauncherState.IN_FLIGHT,
                         0, 0, flightTicks));
             }
         }
@@ -1081,9 +1077,9 @@ public class IskanderEntity extends Projectile implements GeoEntity {
             releaseLauncher();
 
             if (launcherPos != null) {
-                NetworkHandler.sendToAllPlayers(new com.synarsis.airtacticalarsenal.network.LauncherStateUpdatePacket(
+                NetworkHandler.sendToAllPlayers(new com.synarsis.airtacticalarsenal.network.LaunchpadStateUpdatePacket(
                         launcherPos,
-                        com.synarsis.airtacticalarsenal.network.LauncherStateUpdatePacket.LauncherState.EMPTY,
+                        com.synarsis.airtacticalarsenal.network.LaunchpadStateUpdatePacket.LauncherState.EMPTY,
                         0, 0, 0));
             }
 

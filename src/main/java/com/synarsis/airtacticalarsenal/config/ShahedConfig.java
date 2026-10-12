@@ -33,6 +33,11 @@ public class ShahedConfig {
     public static final ForgeConfigSpec.DoubleValue SHAHED_MIN_CALIBER_DAMAGE;
     public static final ForgeConfigSpec.BooleanValue SHAHED_SMOKE_ON_DAMAGE;
     public static final ForgeConfigSpec.BooleanValue SHAHED_CRITICAL_DETONATION;
+    public static final ForgeConfigSpec.BooleanValue DRONE_CRASH_ON_SHOOTDOWN;
+    public static final ForgeConfigSpec.BooleanValue SHAHED_CRASH_DETONATION;
+    public static final ForgeConfigSpec.DoubleValue AIRBURST_DAMAGE_MULTIPLIER;
+    public static final ForgeConfigSpec.DoubleValue FLAK_HIT_DAMAGE_PERCENT;
+    public static final ForgeConfigSpec.DoubleValue SHOT_DETONATION_CHANCE;
     public static final ForgeConfigSpec.DoubleValue ISKANDER_LAUNCH_SPEED;
     public static final ForgeConfigSpec.DoubleValue ISKANDER_CRUISE_SPEED;
     public static final ForgeConfigSpec.DoubleValue ISKANDER_TERMINAL_SPEED;
@@ -67,7 +72,6 @@ public class ShahedConfig {
     public static final ForgeConfigSpec.BooleanValue RADAR_DARK_BACKGROUND;
     public static final ForgeConfigSpec.IntValue MAP_REFRESH_MINUTES;
     public static final ForgeConfigSpec.BooleanValue MAP_READ_SAVED_CHUNKS;
-    public static final ForgeConfigSpec.BooleanValue ALLOW_CLIENT_LANGUAGE;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> RADAR_PLANE_IDS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> RADAR_HELICOPTER_IDS;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> RADAR_DRONE_IDS;
@@ -158,6 +162,11 @@ public class ShahedConfig {
     public static double getShahedMinCaliberDamage() { return SHAHED_MIN_CALIBER_DAMAGE.get(); }
     public static boolean isShahedSmokeOnDamageEnabled() { return SHAHED_SMOKE_ON_DAMAGE.get(); }
     public static boolean isShahedCriticalDetonationEnabled() { return SHAHED_CRITICAL_DETONATION.get(); }
+    public static boolean isDroneCrashOnShootdown() { return DRONE_CRASH_ON_SHOOTDOWN.get(); }
+    public static boolean isShahedCrashDetonation() { return SHAHED_CRASH_DETONATION.get(); }
+    public static double getAirburstDamageMultiplier() { return AIRBURST_DAMAGE_MULTIPLIER.get(); }
+    public static double getFlakHitDamagePercent() { return FLAK_HIT_DAMAGE_PERCENT.get(); }
+    public static double getShotDetonationChance() { return SHOT_DETONATION_CHANCE.get(); }
 
     public static double getIskanderLaunchSpeed() { return ISKANDER_LAUNCH_SPEED.get(); }
     public static double getIskanderCruiseSpeed() { return ISKANDER_CRUISE_SPEED.get(); }
@@ -200,7 +209,6 @@ public class ShahedConfig {
     public static boolean isRadarDarkBackground() { return RADAR_DARK_BACKGROUND.get(); }
     public static int getMapRefreshMinutes() { return MAP_REFRESH_MINUTES.get(); }
     public static boolean isMapReadSavedChunks() { return MAP_READ_SAVED_CHUNKS.get(); }
-    public static boolean isClientLanguageAllowed() { return ALLOW_CLIENT_LANGUAGE.get(); }
     public static List<? extends String> getRadarPlaneIds()      { return RADAR_PLANE_IDS.get(); }
     public static List<? extends String> getRadarHelicopterIds() { return RADAR_HELICOPTER_IDS.get(); }
     public static List<? extends String> getRadarDroneIds()      { return RADAR_DRONE_IDS.get(); }
@@ -294,6 +302,26 @@ public class ShahedConfig {
         SHAHED_MIN_CALIBER_DAMAGE = BUILDER.comment("Minimum damage threshold - shots below this are ignored (filters weak weapons)").defineInRange("shahedMinCaliberDamage", 2.0, 0.0, 20.0);
         SHAHED_SMOKE_ON_DAMAGE = BUILDER.comment("Show smoke effects when Shahed is damaged").define("shahedSmokeOnDamage", true);
         SHAHED_CRITICAL_DETONATION = BUILDER.comment("Warhead hits at low HP can cause premature detonation").define("shahedCriticalDetonation", true);
+        DRONE_CRASH_ON_SHOOTDOWN = BUILDER.comment(
+                "Shot-down Shaheds and Orlans fall out of the sky instead of exploding in the air:",
+                "engine hits make them glide down, a lost wing sends them into a spin, other kills make them tumble.",
+                "Engine and wings also fail on their own before the drone's health runs out.")
+                .define("droneCrashOnShootdown", true);
+        SHAHED_CRASH_DETONATION = BUILDER.comment("A crashing Shahed's warhead explodes when it hits the ground")
+                .define("shahedCrashDetonation", true);
+        AIRBURST_DAMAGE_MULTIPLIER = BUILDER.comment(
+                "A single hit dealing at least this many times the drone's max health (a missile, a direct flak burst)",
+                "blows it apart in the air instead of bringing it down")
+                .defineInRange("airburstDamageMultiplier", 3.0, 1.0, 100.0);
+        FLAK_HIT_DAMAGE_PERCENT = BUILDER.comment(
+                "SuperbWarfare anti-air shells and the laser tower delete any projectile they touch. Shaheds and Orlans",
+                "take this much damage per touch instead (percent of max health), so it takes several hits to bring",
+                "one down. Direct hits from other SuperbWarfare cannon shells (AP, HE...) always bring it down.")
+                .defineInRange("flakHitDamagePercent", 15.0, 1.0, 100.0);
+        SHOT_DETONATION_CHANCE = BUILDER.comment(
+                "Chance (percent) that a Shahed blows up in the air the moment it is shot down, instead of falling.",
+                "A Shahed that is already falling blows up when it is hit again.")
+                .defineInRange("shahedShotDetonationChance", 15.0, 0.0, 100.0);
         BUILDER.pop();
 
         BUILDER.push("Iskander Settings");
@@ -381,15 +409,6 @@ public class ShahedConfig {
             .defineList("radarMissileIds", Arrays.asList(), obj -> obj instanceof String);
         RADAR_EXCLUDED_IDS = BUILDER.comment("Never shown on the radar")
             .defineList("radarExcludedIds", Arrays.asList(), obj -> obj instanceof String);
-        BUILDER.pop();
-
-        BUILDER.push("Language");
-        ALLOW_CLIENT_LANGUAGE = BUILDER.comment(
-            "ATA texts are English by default for every player, regardless of their Minecraft language.",
-            "true  = players may switch ATA to Russian or Ukrainian in their own config/ata-client.toml (or /atalang).",
-            "false = force English for all players on this server; their personal choice is ignored while connected.",
-            "Sent to players when they join (changes apply on the next join).")
-            .define("allowClientLanguage", true);
         BUILDER.pop();
 
         SPEC = BUILDER.build();

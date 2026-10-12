@@ -37,8 +37,6 @@ public class ServerForgeEvents {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-            NetworkHandler.sendToPlayer(serverPlayer, new com.synarsis.airtacticalarsenal.network.LanguagePolicyPacket(
-                    com.synarsis.airtacticalarsenal.config.ShahedConfig.isClientLanguageAllowed()));
             NetworkHandler.sendToPlayer(serverPlayer, com.synarsis.airtacticalarsenal.network.RouteLimitsPacket.fromConfig());
         }
     }

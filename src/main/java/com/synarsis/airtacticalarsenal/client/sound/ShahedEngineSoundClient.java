@@ -240,6 +240,12 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance {
 
         if (mc.level != null) {
             net.minecraft.world.entity.Entity entity = mc.level.getEntity(this.entityId);
+            if (entity instanceof com.synarsis.airtacticalarsenal.entity.ShahedEntity crashing
+                    && !entity.isRemoved() && crashing.isCrashing()) {
+                this.ticksEntityNotFound = 0;
+                tickCrashing(crashing, player);
+                return;
+            }
             if (entity != null && !entity.isRemoved()) {
                 this.ticksEntityNotFound = 0;
                 this.entityRemovedLocally = false;
@@ -390,6 +396,36 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance {
         if (this.currentDronePos.distanceTo(targetVec) < 2.0) {
             this.markExploded(this.currentDronePos);
         }
+    }
+
+    private int crashTicks = 0;
+
+    private void tickCrashing(com.synarsis.airtacticalarsenal.entity.ShahedEntity shahed, LocalPlayer player) {
+        this.crashTicks++;
+        this.currentDronePos = shahed.position();
+        this.x = this.currentDronePos.x;
+        this.y = this.currentDronePos.y;
+        this.z = this.currentDronePos.z;
+        double distance = player.position().distanceTo(this.currentDronePos);
+        float t = this.crashTicks;
+        float factor;
+        float pitch;
+        switch (shahed.getCrashMode()) {
+            case ENGINE_OUT -> {
+                factor = Math.max(0.0f, 1.0f - t / 60.0f) * (0.85f + 0.15f * (float) Math.sin(t * 0.45f));
+                pitch = Math.max(0.7f, this.currentPitch - t * 0.004f);
+            }
+            case SPIN -> {
+                factor = Math.max(0.3f, 1.0f - t / 80.0f);
+                pitch = this.currentPitch + Math.min(0.08f, t * 0.002f) + 0.03f * (float) Math.sin(t * 0.3f);
+            }
+            default -> {
+                factor = Math.max(0.0f, 1.0f - t / 20.0f);
+                pitch = Math.max(0.5f, this.currentPitch - t * 0.02f);
+            }
+        }
+        this.pitch = pitch;
+        this.volume = calculateVolume(distance) * factor;
     }
 
     private float calculateVolume(double distance) {

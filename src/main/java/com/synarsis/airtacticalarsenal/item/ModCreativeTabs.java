@@ -16,26 +16,26 @@ public class ModCreativeTabs {
 
     public static final RegistryObject<CreativeModeTab> ATA_TAB = CREATIVE_MODE_TABS.register("ata_tab",
             () -> CreativeModeTab.builder()
-                    .icon(() -> new ItemStack(ModBlocks.UNIFIED_TERMINAL.get()))
+                    .icon(() -> new ItemStack(ModBlocks.MISSILE_TERMINAL.get()))
                     .title(Component.literal("Air Tactical Arsenal WarZone"))
                     .displayItems((parameters, output) -> {
                         output.accept(ModBlocks.SHAHED_RADAR.get());
                         output.accept(ModBlocks.SIREN.get());
-                        output.accept(ModBlocks.UNIFIED_TERMINAL.get());
-                        output.accept(ModBlocks.LAUNCHER.get());
+                        output.accept(ModBlocks.MISSILE_TERMINAL.get());
+                        output.accept(ModBlocks.MISSILE_LAUNCHPAD.get());
                         output.accept(ModItems.ISKANDER.get());
                         output.accept(ModItems.SHAHED.get());
-                        output.accept(ModItems.SHAHED_LAUNCHER.get());
-                        output.accept(ModItems.CONTROL_TABLET.get());
-                        output.accept(ModItems.LAUNCH_INTERFACE_CABLE.get());
+                        output.accept(ModItems.STRIKE_UAV_LAUNCHER.get());
+                        output.accept(ModItems.STRIKE_UAV_TABLET.get());
+                        output.accept(ModItems.MISSILE_LINK_CABLE.get());
                         output.accept(ModItems.PAINT_STAND.get());
 
                         ItemStack fullSprayCan = new ItemStack(ModItems.SPRAY_CAN.get());
                         SprayCanItem.setCharge(fullSprayCan, SprayCanItem.MAX_CHARGE);
                         output.accept(fullSprayCan);
-                        output.accept(ModItems.ORLAN_LAUNCHER.get());
+                        output.accept(ModItems.RECON_UAV_LAUNCHER.get());
                         output.accept(ModItems.ORLAN.get());
-                        output.accept(ModItems.ORLAN_TABLET.get());
+                        output.accept(ModItems.RECON_UAV_TABLET.get());
                     })
                     .build());
 

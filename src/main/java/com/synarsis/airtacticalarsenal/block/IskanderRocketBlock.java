@@ -105,7 +105,7 @@ public class IskanderRocketBlock extends Block implements EntityBlock {
 
         BlockPos launcherPos = rocketPos.below();
         BlockState state = level.getBlockState(launcherPos);
-        if (state.getBlock() instanceof LauncherBlock launcher) {
+        if (state.getBlock() instanceof MissileLaunchpadBlock launcher) {
             launcher.setLoaded(level, launcherPos, false);
         }
     }

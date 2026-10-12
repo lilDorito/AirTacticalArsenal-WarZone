@@ -18,7 +18,7 @@
 Forge 1.20.1 mod that adds tactical drones, ballistic missiles, an air-defense
 radar and alert sirens to Minecraft.
 
-modId: `ata` (same as upstream) · version: `1.1.4-warzone`
+modId: `ata` (same as upstream) · version: `1.2.0-warzone`
 
 ## Contents
 
@@ -71,6 +71,7 @@ WarZone", it only applies with those private builds; with the public mods the pu
 Full list in [CHANGELOG.md](CHANGELOG.md). Main points:
 
 - **Radar**: radar and route maps show the real terrain (top blocks with hill shading), from a one-time whole-map scan (`/ata terrain scan`) plus live updates; one set of contact types for every mod: **PLN** planes, **HEL** helicopters, **UAV** large drones (Shahed, Orlan, MQ-9, X-47B), **MSL** missiles (guided missiles of SBW and AshVehicles and the Iskander); small SBW drones and swarm drones are never shown; configurable range (default 1,500, up to 5,000 blocks); uses SBW's FuMO 25 model when SBW is installed; needs open sky (**WEAK SIGNAL**); tracks the Iskander for its whole flight; configurable horizon and entity lists; drops itself when mined; servers can swap the biome map for a plain dark background (`radarDarkBackground`).
+- **Shootdowns**: shot-down Shaheds and Orlans fall instead of exploding in the air: an engine hit makes them glide down smoking, a wing hit sends them into a spin, other kills make them tumble; a falling Shahed still explodes on impact.
 - **Air defense**: SBW and AshVehicles seekers lock Shahed and Orlan, never the Iskander; anti-air guns that
   fire SBW shells and SBW's laser tower can't delete the Iskander, and an Orlan they hit is shot down properly.
 - **Damage**: the Shahed hits like SBW's Mk-82 and the Iskander like a heavy bomb (1600 / 40 blocks); with
@@ -79,11 +80,11 @@ Full list in [CHANGELOG.md](CHANGELOG.md). Main points:
   configurable Orlan flight time (default 30 min).
 - **With SuperbWarfare**: recipes use SBW parts, explosions play SBW's explosion sounds mixed by distance,
   and Shahed, Orlan and Iskander show on SBW radars and the tactical map (SBW 0.8.9.1+).
-- **Sound**: the Iskander roars in flight (sound by Kalitovskiy) and can be heard up to 3,000 blocks away; engine and countdown sounds come back when Minecraft drops them, only reach players in the
+- **Sound**: the Iskander roars in flight (sound by Kalitovskiy) and can be heard from 1,500 blocks away; engine and countdown sounds come back when Minecraft drops them, only reach players in the
   same dimension, and the siren behaves properly. Each Shahed randomly gets one of two engine sounds
   (second one by Kalitovskiy).
-- **Language**: English by default, Russian and Ukrainian per player, can be forced to English per server;
-  no hard-coded Russian text left.
+- **Language**: English, Ukrainian and Russian, following each player's Minecraft language like SuperbWarfare
+  WarZone; no hard-coded Russian text left.
 - **UI**: screens scale to fit, HUD and radar overlaps fixed.
 - **Cleanup**: broken pickaxe tag fixed, dead code, config options and assets removed, versions and
   metadata fixed.
@@ -93,25 +94,26 @@ Full list in [CHANGELOG.md](CHANGELOG.md). Main points:
 ### Strike
 
 - **Shahed-136** — kamikaze UAV, two attack profiles (low dive and high dive)
-- **Iskander-M** — ballistic missile, needs a 5x5 launch pad, 7-second
+- **Iskander-M** — ballistic missile, launched from the 5x5 Missile Launchpad, 7-second
   countdown
 - chunk-aware flight: chunks along the flight path stay loaded
 
 ### Recon
 
-- **Orlan-10** — recon drone with launch pad, control tablet and FPV camera
+- **Orlan-10** — recon drone, launched from the Recon UAV Launcher and flown from the Recon UAV Tablet with an
+  FPV camera
 - night vision shader for the FPV view
 - waypoint route planning with terrain preview
 
 ### Control and detection
 
-- **Shahed Control Tablet** — links up to several Shahed launch platforms,
-  plans routes on a terrain map and launches
-- **Iskander Control Terminal** — unified launcher control, can manage
-  several pads, shows ETA and status
+- **Strike UAV Launcher** and **Strike UAV Tablet** — the tablet links several launchers, plans routes on a
+  terrain map and launches (Shahed-136 today)
+- **Missile Launchpad** and **Missile Targeting Terminal** — the terminal manages several launchpads, sets
+  targets and shows countdown and status (Iskander-M today)
 - **Air Defense Radar** — tactical map with zoom, pan and typed target markers (PLN / HEL / UAV / MSL);
   needs open sky above it
-- **Launch Interface Cable** — links launcher to terminal, up to 60 blocks
+- **Missile Link Cable** — links a launchpad to the terminal, up to 60 blocks
 - **Alert Siren** — alarm block with sound
 
 ### Other
@@ -120,8 +122,7 @@ Full list in [CHANGELOG.md](CHANGELOG.md). Main points:
 - `/ata` command for config and admin launches
 - target whitelist and blacklist zones
 - GeckoLib animations and custom sounds
-- English by default; Russian and Ukrainian selectable per player
-  (`config/ata-client.toml` or `/atalang`)
+- English, Ukrainian and Russian, picked from each player's Minecraft language
 
 ## Requirements
 
@@ -138,7 +139,7 @@ Build the jar:
 .\gradlew.bat build
 ```
 
-Output: `build\libs\air-tactical-arsenal-1.1.4-warzone.jar`.
+Output: `build\libs\air-tactical-arsenal-1.2.0-warzone.jar`.
 
 Run a dev client:
 
@@ -159,25 +160,26 @@ Other tasks:
 
 ### Shahed-136
 
-1. Place a Shahed launch platform and right-click it with a Shahed to mount the drone.
-2. Right-click the platform with the Shahed Control Tablet to link it.
+1. Place a Strike UAV Launcher and right-click it with a Shahed to mount the drone.
+2. Right-click the launcher with the Strike UAV Tablet to link it.
 3. Right-click with the tablet to open it, plan the route on the map, save it.
-4. Stand within 30 blocks of the platform and hit LAUNCH.
+4. Stand within 30 blocks of the launcher and hit LAUNCH.
 
 Admin shortcut: `/ata attack shahed <start> <target> low|high`
 (and `/ata attack iskander <start> <target>`).
 
 ### Iskander-M
 
-1. Build a 5x5 launch pad on flat ground with open sky above.
-2. Install the Iskander rocket on the pad.
-3. Open the Iskander Control Terminal, pick the pad and the target.
-4. Confirm - 7 second countdown starts.
+1. Place the 5x5 Missile Launchpad on flat ground with open sky above.
+2. Load the Iskander onto the launchpad through its loading hatch.
+3. Link the launchpad to a Missile Targeting Terminal with the Missile Link Cable.
+4. Open the terminal, pick the launchpad and the target.
+5. Confirm - 7 second countdown starts.
 
 ### Orlan-10
 
-1. Place the Orlan launch pad and spawn the drone.
-2. Open the Orlan Tablet, plan the route.
+1. Place the Recon UAV Launcher and mount an Orlan-10 on it.
+2. Link it with the Recon UAV Tablet, open the tablet and plan the route.
 3. Switch to FPV view. Toggle NVG if you need it.
 
 ### Air Defense Radar
@@ -206,22 +208,19 @@ from it, and chunks loaded around players are painted in every `mapRefreshMinute
 
 - `/ata config` for live tweaks
 - `config/ata-common.toml` for server settings (explosion damage, craters,
-  radar, UAV route length, Orlan flight time, whitelist/blacklist zones,
-  language policy)
-- `config/ata-client.toml` for per-player settings (language)
+  radar, UAV route length, Orlan flight time, whitelist/blacklist zones)
 
 ## Project layout
 
 ```
 src/main/java/com/synarsis/airtacticalarsenal
 ├── ShahedMod.java              entry point, @Mod("ata")
-├── block/                      blocks: terminal, launcher, radar, siren
+├── block/                      blocks: missile terminal, missile launchpad, radar, siren
 │   └── entity/                 block entities
 ├── entity/                     Shahed, Iskander, Orlan, paint stand
 ├── item/                       rockets, drones, tablets, cable
 ├── client/
 │   ├── gui/                    terminal, tablet, radar, route screens
-│   ├── lang/                   per-player language selection
 │   ├── radar/                  terrain map and route preview
 │   ├── shader/                 night vision shader
 │   ├── model/ renderer/ sound/ rendering and audio

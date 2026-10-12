@@ -12,11 +12,12 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
 public class IskanderFlightSoundClient extends AbstractTickableSoundInstance {
-    public static final double REACH = 3000.0;
-    private static final double FALLOFF = 1.5;
+    public static final double REACH = 1500.0;
+    private static final double FALLOFF = 2.0;
+    private static final float MAX_GAIN = 0.6f;
     private static final int FADE_IN_TICKS = 60;
     private static final int FADE_OUT_TICKS = 8;
-    private static final int STALE_TICKS = 100;
+    private static final int STALE_TICKS = 40;
 
     private final int entityId;
     private Vec3 pos;
@@ -95,7 +96,7 @@ public class IskanderFlightSoundClient extends AbstractTickableSoundInstance {
 
         Vec3 listener = listener(mc);
         double d = listener == null ? REACH : listener.distanceTo(pos);
-        float gain = d >= REACH ? 0f : (float) Math.pow(1.0 - d / REACH, FALLOFF);
+        float gain = d >= REACH ? 0f : MAX_GAIN * (float) Math.pow(1.0 - d / REACH, FALLOFF);
         gain *= Math.min(1f, age / (float) FADE_IN_TICKS);
         if (stopAt >= 0 && age >= stopAt) {
             int t = age - stopAt;

@@ -31,6 +31,8 @@ public class OrlanEngineSoundClient extends AbstractTickableSoundInstance {
         this.z = z;
     }
 
+    private int crashTicks = 0;
+
     public int getEntityId() { return entityId; }
 
     public void start() {
@@ -70,6 +72,23 @@ public class OrlanEngineSoundClient extends AbstractTickableSoundInstance {
             this.z = entity.getZ();
             double dist = mc.player.position().distanceTo(entity.position());
             updateVolumeByDistance(dist);
+            if (entity instanceof com.synarsis.airtacticalarsenal.entity.OrlanEntity orlan && orlan.isCrashing()) {
+                crashTicks++;
+                switch (orlan.getCrashMode()) {
+                    case ENGINE_OUT -> {
+                        this.volume *= Math.max(0.0f, 1.0f - crashTicks / 50.0f);
+                        this.pitch = Math.max(0.7f, 1.0f - crashTicks * 0.005f);
+                    }
+                    case SPIN -> {
+                        this.volume *= Math.max(0.3f, 1.0f - crashTicks / 80.0f);
+                        this.pitch = 1.0f + Math.min(0.08f, crashTicks * 0.002f) + 0.03f * (float) Math.sin(crashTicks * 0.3f);
+                    }
+                    default -> {
+                        this.volume *= Math.max(0.0f, 1.0f - crashTicks / 20.0f);
+                        this.pitch = Math.max(0.5f, 1.0f - crashTicks * 0.02f);
+                    }
+                }
+            }
         } else {
             ticksNotFound++;
             if (ticksNotFound > MAX_NOT_FOUND) {

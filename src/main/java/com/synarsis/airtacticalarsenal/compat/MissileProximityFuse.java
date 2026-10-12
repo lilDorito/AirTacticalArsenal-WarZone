@@ -33,6 +33,19 @@ public final class MissileProximityFuse {
         return null;
     }
 
+    private static final Map<Integer, Long> LAST_BURST = new ConcurrentHashMap<>();
+
+    public static void airBurst(Entity drone) {
+        if (drone.level().isClientSide) return;
+        long now = drone.level().getGameTime();
+        Long last = LAST_BURST.get(drone.getId());
+        if (last != null && now - last < 10) return;
+        LAST_BURST.put(drone.getId(), now);
+        if (LAST_BURST.size() > 256) LAST_BURST.entrySet().removeIf(e -> now - e.getValue() > 200);
+        com.synarsis.airtacticalarsenal.network.NetworkHandler.sendToDimension(drone.level(),
+                new com.synarsis.airtacticalarsenal.network.DroneAirBurstPacket(drone.getBoundingBox().getCenter()));
+    }
+
     public static void detonate(Projectile missile) {
         Method m = EXPLODE.computeIfAbsent(missile.getClass(), c -> {
             try {

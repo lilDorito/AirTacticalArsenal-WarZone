@@ -1,10 +1,10 @@
 package com.synarsis.airtacticalarsenal.block.entity;
 
-import com.synarsis.airtacticalarsenal.block.LauncherBlock;
+import com.synarsis.airtacticalarsenal.block.MissileLaunchpadBlock;
 import com.synarsis.airtacticalarsenal.entity.IskanderEntity;
 import com.synarsis.airtacticalarsenal.network.NetworkHandler;
 import com.synarsis.airtacticalarsenal.network.RocketLaunchStatePacket;
-import com.synarsis.airtacticalarsenal.network.LauncherStateUpdatePacket;
+import com.synarsis.airtacticalarsenal.network.LaunchpadStateUpdatePacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -71,9 +71,9 @@ public class IskanderRocketBlockEntity extends BlockEntity implements GeoBlockEn
                     .sendToDimension(level, new RocketLaunchStatePacket(pos, launchTicks, LAUNCH_COUNTDOWN_TICKS, true));
 
             if (launcherCenterPos != null) {
-                NetworkHandler.sendToAllPlayers(new LauncherStateUpdatePacket(
+                NetworkHandler.sendToAllPlayers(new LaunchpadStateUpdatePacket(
                         launcherCenterPos,
-                        LauncherStateUpdatePacket.LauncherState.COUNTDOWN,
+                        LaunchpadStateUpdatePacket.LauncherState.COUNTDOWN,
                         launchTicks,
                         LAUNCH_COUNTDOWN_TICKS,
                         0));
@@ -163,12 +163,12 @@ public class IskanderRocketBlockEntity extends BlockEntity implements GeoBlockEn
 
         if (launcherCenterPos != null) {
             BlockState launcherState = level.getBlockState(launcherCenterPos);
-            if (launcherState.getBlock() instanceof LauncherBlock launcher) {
+            if (launcherState.getBlock() instanceof MissileLaunchpadBlock launcher) {
                 launcher.setLaunching(level, launcherCenterPos, true);
             }
 
             BlockEntity launcherBE = level.getBlockEntity(launcherCenterPos);
-            if (launcherBE instanceof LauncherBlockEntity launcherEntity) {
+            if (launcherBE instanceof MissileLaunchpadBlockEntity launcherEntity) {
                 BlockPos hatchPos = launcherEntity.getLoadingHatchPos();
                 if (hatchPos != null) {
                     BlockEntity hatchBE = level.getBlockEntity(hatchPos);
@@ -187,9 +187,9 @@ public class IskanderRocketBlockEntity extends BlockEntity implements GeoBlockEn
                 launcherEntity.setInFlight(true);
             }
 
-            NetworkHandler.sendToAllPlayers(new LauncherStateUpdatePacket(
+            NetworkHandler.sendToAllPlayers(new LaunchpadStateUpdatePacket(
                     launcherCenterPos,
-                    LauncherStateUpdatePacket.LauncherState.IN_FLIGHT,
+                    LaunchpadStateUpdatePacket.LauncherState.IN_FLIGHT,
                     0,
                     0,
                     0 

@@ -9,6 +9,105 @@ patched SBW 0.8.7.1 / AshVehicles 4.2 builds) are the author's private forks. Th
 named here only because this fork is tested against them, and anything said about them applies only with
 those builds. See the README's "WarZone versions" section.
 
+## 1.2.0-warzone
+
+### Shot-down drones fall out of the sky
+- Shaheds and Orlans no longer just explode in the air when shot down. Where you hit them decides how they go
+  down:
+  - **engine** (the tail): the engine dies and the drone glides down in a widening turn, trailing smoke;
+  - **wing**: it goes down spinning and burning, in one of three ways picked at random: a flat spin, a
+    corkscrew dive rolling around its flight path, or a steep nose-down plunge rolling around its own axis;
+  - **body or warhead**: it tumbles end over end.
+- Engine and wings have their own share of the drone's health (40% and 30% each), so enough hits on one of them
+  bring it down before the drone's total health runs out.
+- A falling Shahed's warhead explodes when it hits the ground (`shahedCrashDetonation`, default on); a falling
+  Orlan crashes with a small blast, fire, smoke and debris, seen up to 512 blocks and heard up to about 450
+  (SuperbWarfare's explosion sounds when installed, ATA's otherwise).
+- The engine sound follows what happens: it winds down after an engine hit, keeps its normal sound but fades
+  and rises slightly in pitch in a spin, and cuts out in a tumble.
+- A single hit of at least 3 times the drone's max health (a missile or a direct flak burst) still blows it
+  apart in the air (`airburstDamageMultiplier`). Warhead hits at low health can still set the warhead off.
+- Every drone is a little different: each one gets its own random toughness (incoming damage is divided by 1 to
+  2.5) and slightly different engine and wing strength, and it takes 2 to 5 hits before it can start falling at
+  all. Direct hits from SuperbWarfare cannon shells and missile bursts still bring it down at once.
+- A Shahed's warhead sometimes goes off the moment it is shot down: 15% of the time it explodes in the air instead
+  of falling (`shahedShotDetonationChance`).
+- A falling drone takes another 3 to 8 hits (random for each drone) before it gives up: then a Shahed's warhead
+  explodes and an Orlan breaks apart in the air with the same small blast, fire and debris as its ground crash.
+  The Orlan has no warhead, so it never blows up the moment it is shot down.
+- Turn it all off with `droneCrashOnShootdown = false` to get the old mid-air explosion.
+
+### Drones stop circling waypoints
+- A Shahed or Orlan no longer flies a full circle back to a waypoint it has already flown past. After launch it
+  climbs straight for 300 blocks, so a first waypoint closer than that, or two waypoints close together with a
+  sharp turn, used to make it loop back around. It now counts the waypoint as reached and flies on to the next one.
+  A waypoint that really lies behind the launcher is still flown to.
+- A Shahed whose target lies inside its turning circle starts its dive instead of circling the target forever.
+
+### Iskander hits the ground
+- The Iskander could explode in mid-air: it looked for the ground only from 50 blocks above to 100 blocks below the
+  target height setting (`targetYLevel`, default 64), so on superflat worlds, deep valleys and high mountains it
+  found nothing and burst at that height. It now loads the target chunk at launch and takes the real top block at
+  the impact point, after the random miss distance is applied, so it also no longer bursts above a hillside next
+  to the target.
+- The Shahed finds the ground the same way, which is also much cheaper than scanning every block of the column.
+
+### Fair anti-air damage
+- SuperbWarfare anti-air shells and the laser tower delete any projectile they touch, so a single AA shell used to
+  blow a Shahed apart and an Orlan out of the sky. Each touch now deals 15% of the drone's max health
+  (`flakHitDamagePercent`), to a random part of it, so a burst of several hits brings it down, usually falling.
+- Direct hits from other SuperbWarfare cannon shells (AP, HE and the rest) always bring a drone down. Their blast
+  still damages a drone it bursts next to.
+
+### Louder Iskander impact, audible missile kills
+- The Iskander's impact is the loudest explosion in the pack. It stacks SuperbWarfare's epic explosion layers
+  (out to 2,048 blocks; the huge ones on SBW builds without them), SBW's huge explosion close up, and ATA's own
+  blast twice, out to 1,600 and 1,000 blocks with a slow fade. Without SuperbWarfare the old ATA sound plays as
+  before.
+- A missile that downs a Shahed or Orlan (Igla, Stinger, other anti-air missiles) now makes a full-volume air
+  burst heard up to 1,200 blocks, louder than an anti-air shell burst. Before, only the missile's own small
+  explosion was heard, so it was quieter than the AA guns.
+
+### Quieter Iskander
+- The flight roar now ends together with the explosion it leads to, and a late position update can no longer
+  start it again after the impact.
+- The Iskander's flight roar is softer and starts much closer: faintly at 1,500 blocks (was 3,000), growing
+  gradually as it approaches, and peaking at about 60% of the old volume.
+
+### Lockable from far away, sounds that don't drop out
+- With SuperbWarfare WarZone, Shaheds, Orlans and Iskanders are sent to players beyond normal entity range, so
+  radar-guided missiles (AIM-120 and the like) can lock a drone out to the weapon's own seek range instead of only
+  inside the server's view distance. They also show on the SBW tactical map once a radar sees them.
+- The Orlan engine and the Iskander countdown and flight sounds are no longer streamed, so they keep playing when
+  many other long sounds are running.
+
+### Launchers, tablets and terminal for every drone and missile
+- The launch gear is no longer named after one drone or missile, so later addons can use it for theirs:
+
+  | Old name | New name | New id |
+  |----------|----------|--------|
+  | Shahed Launch Platform | Strike UAV Launcher | `ata:strike_uav_launcher` |
+  | Shahed Control Tablet | Strike UAV Tablet | `ata:strike_uav_tablet` |
+  | Orlan-10 Launch Platform | Recon UAV Launcher | `ata:recon_uav_launcher` |
+  | Orlan-10 Control Tablet | Recon UAV Tablet | `ata:recon_uav_tablet` |
+  | Missile Launcher (Iskander pad) | Missile Launchpad | `ata:missile_launchpad` |
+  | Iskander Control Terminal | Missile Targeting Terminal | `ata:missile_terminal` |
+  | Launch Interface Cable | Missile Link Cable | `ata:missile_link_cable` |
+
+- Existing worlds keep everything: placed blocks, launchers, items in inventories and chests are moved to the new
+  ids when the world loads. Commands, datapacks and recipes from other mods that name the old ids need the new
+  ones.
+- Names are updated in English, Ukrainian and Russian, and the screens are titled after the new names.
+
+### Language follows Minecraft
+- ATA texts now use each player's Minecraft language, the same way SuperbWarfare WarZone and its addons do:
+  Ukrainian or Russian when the game is set to it, English otherwise. Nothing depends on the server any more.
+- Removed the separate ATA language setting (`config/ata-client.toml`, `/atalang`) and the server's
+  `allowClientLanguage` option.
+
+### Upgrade notes
+- Network protocol 14 -> 15: server and all clients must update to 1.2.0-warzone together.
+
 ## 1.1.4-warzone
 
 ### Radar: one set of contact types

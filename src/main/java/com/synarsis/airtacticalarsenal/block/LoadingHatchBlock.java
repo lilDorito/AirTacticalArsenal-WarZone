@@ -1,7 +1,7 @@
 package com.synarsis.airtacticalarsenal.block;
 
 import com.synarsis.airtacticalarsenal.block.entity.LoadingHatchBlockEntity;
-import com.synarsis.airtacticalarsenal.block.entity.LauncherBlockEntity;
+import com.synarsis.airtacticalarsenal.block.entity.MissileLaunchpadBlockEntity;
 import com.synarsis.airtacticalarsenal.item.IskanderItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -76,13 +76,13 @@ public class LoadingHatchBlock extends Block implements EntityBlock {
             }
 
             BlockEntity launcherBECheck = world.getBlockEntity(launcherPos);
-            if (launcherBECheck instanceof LauncherBlockEntity launcherCheck && launcherCheck.isInFlight()) {
+            if (launcherBECheck instanceof MissileLaunchpadBlockEntity launcherCheck && launcherCheck.isInFlight()) {
                 player.sendSystemMessage(Component.translatable("message.ata.hatch.iskander_in_flight"));
                 return InteractionResult.FAIL;
             }
 
             BlockState launcherState = world.getBlockState(launcherPos);
-            if (launcherState.getBlock() instanceof LauncherBlock launcher) {
+            if (launcherState.getBlock() instanceof MissileLaunchpadBlock launcher) {
                 if (launcher.isBlocked(world, launcherPos)) {
                     player.sendSystemMessage(Component.translatable("message.ata.hatch.blocked"));
                     return InteractionResult.FAIL;
@@ -99,8 +99,8 @@ public class LoadingHatchBlock extends Block implements EntityBlock {
                 launcherPos.getX(), launcherPos.getY(), launcherPos.getZ()));
 
             BlockState launcherState2 = world.getBlockState(launcherPos);
-            if (launcherState2.getBlock() instanceof LauncherBlock launcher) {
-                Direction facing = launcherState2.getValue(LauncherBlock.FACING);
+            if (launcherState2.getBlock() instanceof MissileLaunchpadBlock launcher) {
+                Direction facing = launcherState2.getValue(MissileLaunchpadBlock.FACING);
 
                 IskanderRocketBlock.placeRocket(world, launcherPos, facing);
 
@@ -108,7 +108,7 @@ public class LoadingHatchBlock extends Block implements EntityBlock {
             }
 
             BlockEntity launcherBE = world.getBlockEntity(launcherPos);
-            if (launcherBE instanceof LauncherBlockEntity launcherEntity) {
+            if (launcherBE instanceof MissileLaunchpadBlockEntity launcherEntity) {
                 launcherEntity.setRocketLoaded(true);
             }
 
@@ -145,12 +145,12 @@ public class LoadingHatchBlock extends Block implements EntityBlock {
             }
 
             BlockState launcherState = world.getBlockState(launcherPos);
-            if (launcherState.getBlock() instanceof LauncherBlock launcher) {
+            if (launcherState.getBlock() instanceof MissileLaunchpadBlock launcher) {
                 launcher.setLoaded(world, launcherPos, false);
             }
 
             BlockEntity launcherBE = world.getBlockEntity(launcherPos);
-            if (launcherBE instanceof LauncherBlockEntity launcherEntity) {
+            if (launcherBE instanceof MissileLaunchpadBlockEntity launcherEntity) {
                 launcherEntity.setRocketLoaded(false);
             }
 
@@ -180,7 +180,7 @@ public class LoadingHatchBlock extends Block implements EntityBlock {
                     BlockPos launcherPos = hatch.getParentLauncher();
                     if (launcherPos != null) {
                         BlockState launcherState = world.getBlockState(launcherPos);
-                        if (launcherState.getBlock() instanceof LauncherBlock) {
+                        if (launcherState.getBlock() instanceof MissileLaunchpadBlock) {
 
                             world.destroyBlock(launcherPos, true);
                         }

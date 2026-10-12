@@ -56,8 +56,6 @@ public class ShahedMod {
         ModRecipes.register(modEventBus);
         modEventBus.addListener(this::commonSetup);
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ShahedConfig.SPEC, "ata-common.toml");
-        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT,
-                com.synarsis.airtacticalarsenal.config.AtaClientConfig.SPEC, "ata-client.toml");
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new CreateBlockingHandler());
     }

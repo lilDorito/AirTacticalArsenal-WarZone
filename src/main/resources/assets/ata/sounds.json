@@ -108,7 +108,7 @@
     "sounds": [
       {
         "name": "ata:orlan_engine",
-        "stream": true,
+        "stream": false,
         "volume": 1.0,
         "pitch": 1.0,
         "weight": 1,
@@ -134,7 +134,7 @@
     "sounds": [
       {
         "name": "ata:iskander_preparing",
-        "stream": true,
+        "stream": false,
         "volume": 1.0,
         "pitch": 1.0,
         "weight": 1,
@@ -147,11 +147,11 @@
     "sounds": [
       {
         "name": "ata:iskander_flight",
-        "stream": true,
+        "stream": false,
         "volume": 1.0,
         "pitch": 1.0,
         "weight": 1,
-        "attenuation_distance": 3000
+        "attenuation_distance": 1500
       }
     ]
   }

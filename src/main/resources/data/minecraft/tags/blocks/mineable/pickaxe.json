@@ -1,10 +1,10 @@
 {
   "replace": false,
   "values": [
-    "ata:launcher",
+    "ata:missile_launchpad",
     "ata:loading_hatch",
     "ata:shahed_radar",
     "ata:siren",
-    "ata:unified_terminal"
+    "ata:missile_terminal"
   ]
 }

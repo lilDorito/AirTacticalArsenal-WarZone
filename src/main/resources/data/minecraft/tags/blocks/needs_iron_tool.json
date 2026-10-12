@@ -1,8 +1,8 @@
 {
   "replace": false,
   "values": [
-    "ata:launcher",
+    "ata:missile_launchpad",
     "ata:loading_hatch",
-    "ata:unified_terminal"
+    "ata:missile_terminal"
   ]
 }

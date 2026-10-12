@@ -34,10 +34,13 @@ public class OrlanRenderer extends GeoEntityRenderer<OrlanEntity> {
         float prevPitch = animatable.xRotO;
 
         float interpYaw = lerpAngle(prevYaw, yaw, partialTick);
-        float interpPitch = prevPitch + (pitch - prevPitch) * partialTick;
+        float interpPitch = lerpAngle(prevPitch, pitch, partialTick);
 
         poseStack.mulPose(Axis.YP.rotationDegrees(interpYaw));
         poseStack.mulPose(Axis.XP.rotationDegrees(-interpPitch));
+        if (animatable.isCrashing()) {
+            poseStack.mulPose(Axis.ZP.rotationDegrees(animatable.getRoll(partialTick)));
+        }
     }
 
     private float lerpAngle(float from, float to, float t) {

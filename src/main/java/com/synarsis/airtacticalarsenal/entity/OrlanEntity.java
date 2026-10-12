@@ -2,6 +2,9 @@ package com.synarsis.airtacticalarsenal.entity;
 
 import com.synarsis.airtacticalarsenal.chunk.MissileChunkManager;
 import com.synarsis.airtacticalarsenal.compat.CreateCompat;
+import com.synarsis.airtacticalarsenal.config.ShahedConfig;
+import com.synarsis.airtacticalarsenal.entity.crash.CrashDynamics;
+import com.synarsis.airtacticalarsenal.entity.crash.CrashEffects;
 import com.synarsis.airtacticalarsenal.network.NetworkHandler;
 import com.synarsis.airtacticalarsenal.network.OrlanSpawnPacket;
 import com.synarsis.airtacticalarsenal.network.OrlanCameraViewPacket;
@@ -119,6 +122,18 @@ public class OrlanEntity extends Projectile implements GeoEntity {
             EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> SYNC_Y_ROT = SynchedEntityData.defineId(OrlanEntity.class,
             EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Integer> CRASH_MODE = SynchedEntityData.defineId(OrlanEntity.class,
+            EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Float> SYNC_ROLL = SynchedEntityData.defineId(OrlanEntity.class,
+            EntityDataSerializers.FLOAT);
+
+    private final CrashDynamics crash = new CrashDynamics();
+    private final com.synarsis.airtacticalarsenal.entity.crash.Durability durability =
+            new com.synarsis.airtacticalarsenal.entity.crash.Durability();
+    private boolean discardOnLoad = false;
+    private int clientCrashTicks = 0;
+    private float roll;
+    private float rollO;
     private static final EntityDataAccessor<Float> HEALTH = SynchedEntityData.defineId(OrlanEntity.class,
             EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> IS_DAMAGED = SynchedEntityData.defineId(OrlanEntity.class,
@@ -268,6 +283,8 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         this.entityData.define(FLIGHT_PHASE_ID, 0);
         this.entityData.define(SYNC_X_ROT, 0.0f);
         this.entityData.define(SYNC_Y_ROT, 0.0f);
+        this.entityData.define(CRASH_MODE, 0);
+        this.entityData.define(SYNC_ROLL, 0.0f);
         this.entityData.define(HEALTH, DEFAULT_MAX_HEALTH);
         this.entityData.define(IS_DAMAGED, false);
         this.entityData.define(LINKED_PLAYER, "");
@@ -283,7 +300,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
             this.removeSelf();
             return;
         }
-        if (!this.level().isClientSide && this.tickCount % 10 == 0) {
+        if (!this.level().isClientSide && this.tickCount % 3 == 0) {
             com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.registerForSbwRadar(this);
         }
 
@@ -317,6 +334,11 @@ public class OrlanEntity extends Projectile implements GeoEntity {
                 }
             }
 
+            if (isCrashing()) {
+                tickCrashClient();
+                return;
+            }
+
             float syncedXRot = this.entityData.get(SYNC_X_ROT);
             float syncedYRot = this.entityData.get(SYNC_Y_ROT);
             this.yRotO = this.getYRot();
@@ -328,11 +350,24 @@ public class OrlanEntity extends Projectile implements GeoEntity {
             return;
         }
 
+        if (this.discardOnLoad) {
+            this.destroyed = true;
+            this.removeSelf();
+            return;
+        }
+
+        if (isCrashing()) {
+            tickCrashServer();
+            if (!this.isRemoved()) tickLinkedCamera();
+            return;
+        }
+
         net.minecraft.world.entity.projectile.Projectile incoming =
                 com.synarsis.airtacticalarsenal.compat.MissileProximityFuse.find(this);
         if (incoming != null) {
             Entity shooter = incoming.getOwner();
             com.synarsis.airtacticalarsenal.compat.MissileProximityFuse.detonate(incoming);
+            com.synarsis.airtacticalarsenal.compat.MissileProximityFuse.airBurst(this);
             if (!this.destroyed && !this.isRemoved()) {
                 this.hurt(this.damageSources().explosion(incoming, shooter), 1000.0f);
             }
@@ -454,6 +489,10 @@ public class OrlanEntity extends Projectile implements GeoEntity {
                     this.flightPhase.ordinal(), this.getRemainingFlightTicks()));
         }
 
+        tickLinkedCamera();
+    }
+
+    private void tickLinkedCamera() {
         String linkedUUID = getLinkedPlayerUUID();
         if (!linkedUUID.isEmpty() && this.level() instanceof ServerLevel srvLevel) {
             try {
@@ -599,9 +638,9 @@ public class OrlanEntity extends Projectile implements GeoEntity {
             navTarget = new Vec3(wp.getX() + 0.5, this.targetAltitude, wp.getZ() + 0.5);
             isFinalLeg = false;
 
-            double distToWp = Math.sqrt(
-                    Math.pow(navTarget.x - currentPos.x, 2) + Math.pow(navTarget.z - currentPos.z, 2));
-            if (distToWp < 50.0) {
+            Vec3 prevPos = currentWaypointIndex == 0 ? this.launchStartPos
+                    : Vec3.atCenterOf(waypoints.get(currentWaypointIndex - 1));
+            if (RouteNav.reached(currentPos, this.lastDirection, prevPos, navTarget, 50.0)) {
                 currentWaypointIndex++;
 
             }
@@ -893,24 +932,157 @@ public class OrlanEntity extends Projectile implements GeoEntity {
 
         Entity directEntity = source.getDirectEntity();
         if (directEntity instanceof Projectile) {
-            float oldHealth = this.getHealth();
-            this.setHealth(oldHealth - amount);
-            if (this.getHealth() <= 0) {
-                destroyDrone(source.getEntity());
+            if (com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.isMissile(directEntity)) {
+                com.synarsis.airtacticalarsenal.compat.MissileProximityFuse.airBurst(this);
             }
+            boolean heavy = ShahedEntity.isHeavyShell(directEntity) && !source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION);
+            if (heavy) {
+                amount = Math.max(amount, this.maxHealth * 1.5f);
+            }
+            applyDamage(amount, source.getEntity(), directEntity.position(), false, heavy);
             return true;
         }
 
         if (source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)) {
-            float oldHealth = this.getHealth();
-            this.setHealth(oldHealth - amount * 2.0f);
-            if (this.getHealth() <= 0) {
-                destroyDrone(source.getEntity());
-            }
+            applyDamage(amount * 2.0f, source.getEntity(), this.position(), true);
             return true;
         }
 
         return false;
+    }
+
+    private void applyDamage(float amount, Entity attacker, Vec3 hitPos, boolean explosion) {
+        applyDamage(amount, attacker, hitPos, explosion, false);
+    }
+
+    private void applyDamage(float amount, Entity attacker, Vec3 hitPos, boolean explosion, boolean heavy) {
+        boolean airburst = amount >= this.maxHealth * ShahedConfig.getAirburstDamageMultiplier();
+        this.durability.ensure(this.maxHealth, this.random);
+        if (isCrashing()) {
+            if (airburst) destroyDrone(attacker);
+            else if (this.durability.fallingHit()) crashImpact();
+            return;
+        }
+        if (!heavy && !airburst) amount = this.durability.scale(amount);
+        boolean canFall = this.durability.hit() || heavy || airburst;
+        float newHealth = this.getHealth() - amount;
+        if (!canFall) newHealth = Math.max(newHealth, 1.0f);
+        this.setHealth(newHealth);
+        boolean crashAllowed = ShahedConfig.isDroneCrashOnShootdown() && !airburst
+                && this.flightPhase != FlightPhase.LANDED && this.flightPhase != FlightPhase.LAUNCHING
+                && this.flightPhase != FlightPhase.LANDING;
+        int zone = explosion ? CrashDynamics.ZONE_BODY : CrashDynamics.zoneOf(hitPos.subtract(this.position()), this.lastDirection, 0.8);
+        switch (zone) {
+            case CrashDynamics.ZONE_ENGINE -> this.durability.engineHp -= amount;
+            case CrashDynamics.ZONE_WING_LEFT -> this.durability.wingLeftHp -= amount;
+            case CrashDynamics.ZONE_WING_RIGHT -> this.durability.wingRightHp -= amount;
+            default -> {
+            }
+        }
+        if (!canFall) return;
+        if (!crashAllowed) {
+            if (this.getHealth() <= 0) destroyDrone(attacker);
+            return;
+        }
+        if (this.getHealth() <= 0) {
+            startCrash(CrashDynamics.modeForZone(zone, explosion, this.random), CrashDynamics.sideForZone(zone, this.random));
+        } else if (this.durability.wingLeftHp <= 0) {
+            startCrash(CrashDynamics.Mode.SPIN, -1);
+        } else if (this.durability.wingRightHp <= 0) {
+            startCrash(CrashDynamics.Mode.SPIN, 1);
+        } else if (this.durability.engineHp <= 0) {
+            startCrash(CrashDynamics.Mode.ENGINE_OUT, this.random.nextBoolean() ? 1 : -1);
+        }
+    }
+
+    public boolean isCrashing() {
+        return this.level().isClientSide ? this.entityData.get(CRASH_MODE) != 0 : this.crash.active();
+    }
+
+    public CrashDynamics.Mode getCrashMode() {
+        return CrashDynamics.Mode.of(this.entityData.get(CRASH_MODE));
+    }
+
+    public float getRoll(float partialTick) {
+        return this.rollO + net.minecraft.util.Mth.wrapDegrees(this.roll - this.rollO) * partialTick;
+    }
+
+    private void startCrash(CrashDynamics.Mode mode, int side) {
+        if (this.destroyed || this.crash.active() || this.level().isClientSide) return;
+        Vec3 motion = this.getDeltaMovement();
+        if (motion.lengthSqr() < 0.01) motion = this.lastDirection.normalize().scale(CRUISE_SPEED);
+        this.crash.start(mode, motion, this.getYRot(), this.getXRot(), side, this.random);
+        this.entityData.set(CRASH_MODE, mode.ordinal());
+    }
+
+    private void tickCrashServer() {
+        Vec3 motion = this.crash.step(this.random);
+        this.setDeltaMovement(motion);
+        this.yRotO = this.getYRot();
+        this.xRotO = this.getXRot();
+        this.setYRot(this.crash.yaw());
+        this.setXRot(this.crash.pitch());
+        this.rollO = this.roll;
+        this.roll = this.crash.roll();
+        this.entityData.set(SYNC_Y_ROT, this.crash.yaw());
+        this.entityData.set(SYNC_X_ROT, this.crash.pitch());
+        this.entityData.set(SYNC_ROLL, this.crash.roll());
+
+        if (this.level() instanceof ServerLevel serverLevel) {
+            MissileChunkManager.updateChunksWithRadius(this, serverLevel, 1);
+        }
+
+        Vec3 from = this.position();
+        Vec3 to = from.add(motion);
+        net.minecraft.world.phys.BlockHitResult blockHit = this.level().clip(new net.minecraft.world.level.ClipContext(
+                from, to, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                net.minecraft.world.level.ClipContext.Fluid.ANY, this));
+        if (blockHit.getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
+            this.setPos(blockHit.getLocation());
+            crashImpact();
+            return;
+        }
+        this.setPos(to);
+        if (to.y < this.level().getMinBuildHeight() || this.crash.ticks() > CrashDynamics.MAX_TICKS) {
+            crashImpact();
+        }
+    }
+
+    private void tickCrashClient() {
+        float syncedYRot = this.entityData.get(SYNC_Y_ROT);
+        float syncedXRot = this.entityData.get(SYNC_X_ROT);
+        this.yRotO = this.getYRot();
+        this.xRotO = this.getXRot();
+        this.setYRot(syncedYRot);
+        this.setXRot(syncedXRot);
+        this.setYBodyRot(syncedYRot);
+        this.setYHeadRot(syncedYRot);
+        this.rollO = this.roll;
+        this.roll = this.entityData.get(SYNC_ROLL);
+        this.clientCrashTicks++;
+        Vec3 motion = new Vec3(this.getX() - this.xo, this.getY() - this.yo, this.getZ() - this.zo);
+        CrashEffects.trail(this.level(), this.position().add(0, 0.3, 0), motion, getCrashMode(),
+                this.clientCrashTicks, 1.0f, this.random);
+    }
+
+    private void crashImpact() {
+        if (this.destroyed) return;
+        this.destroyed = true;
+        Vec3 pos = this.position();
+        this.level().explode(this, pos.x, pos.y, pos.z, 1.2f, Level.ExplosionInteraction.NONE);
+        NetworkHandler.sendToDimension(this.level(), new com.synarsis.airtacticalarsenal.network.OrlanCrashPacket(pos));
+        if (this.level() instanceof ServerLevel serverLevel) {
+            for (ServerPlayer player : serverLevel.players()) {
+                if (player.distanceToSqr(pos) > 512.0 * 512.0) continue;
+                serverLevel.sendParticles(player, ParticleTypes.EXPLOSION, true, pos.x, pos.y + 0.5, pos.z, 3, 0.6, 0.4, 0.6, 0.0);
+                serverLevel.sendParticles(player, ParticleTypes.LARGE_SMOKE, true, pos.x, pos.y + 0.8, pos.z, 40, 1.2, 0.8, 1.2, 0.04);
+                serverLevel.sendParticles(player, ParticleTypes.FLAME, true, pos.x, pos.y + 0.4, pos.z, 20, 0.7, 0.4, 0.7, 0.03);
+                serverLevel.sendParticles(player, ParticleTypes.CAMPFIRE_COSY_SMOKE, true, pos.x, pos.y + 1.0, pos.z, 12, 0.6, 0.5, 0.6, 0.02);
+                serverLevel.sendParticles(player, com.synarsis.airtacticalarsenal.particle.ModParticles.DEBRIS.get(), true,
+                        pos.x, pos.y + 0.5, pos.z, 25, 0.5, 0.5, 0.5, 0.4);
+            }
+        }
+        this.removeSelf();
     }
 
     @Override
@@ -919,6 +1091,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     }
 
     private boolean selfRemoving = false;
+    private int lastFlakTick = -1;
 
     private void removeSelf() {
         this.selfRemoving = true;
@@ -1130,6 +1303,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         tag.putInt("TargetY", target.getY());
         tag.putInt("TargetZ", target.getZ());
         tag.putInt("FlightPhase", this.flightPhase.ordinal());
+        tag.putBoolean("Crashing", this.crash.active());
         tag.putInt("PhaseTicks", this.phaseTicks);
         tag.putDouble("CurrentSpeed", this.currentSpeed);
         tag.putDouble("LaunchStartY", this.launchStartY);
@@ -1175,6 +1349,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        this.discardOnLoad = tag.getBoolean("Crashing");
         if (tag.contains("LegitSpawn")) {
             this.isLegitSpawn = tag.getBoolean("LegitSpawn");
         }
@@ -1299,6 +1474,16 @@ public class OrlanEntity extends Projectile implements GeoEntity {
 
     @Override
     public void remove(RemovalReason reason) {
+        if (!this.level().isClientSide && reason == RemovalReason.DISCARDED && !this.selfRemoving && !this.destroyed
+                && this.isLegitSpawn && this.flightPhase != FlightPhase.LANDED) {
+            if (this.tickCount != this.lastFlakTick) {
+                this.lastFlakTick = this.tickCount;
+                Vec3 hit = this.position().add((this.random.nextDouble() - 0.5) * 2.0, this.random.nextDouble() * 0.6,
+                        (this.random.nextDouble() - 0.5) * 2.0);
+                applyDamage(this.maxHealth * (float) ShahedConfig.getFlakHitDamagePercent() / 100.0f, null, hit, false);
+            }
+            return;
+        }
         if (!this.level().isClientSide && reason == RemovalReason.DISCARDED && !this.selfRemoving && !this.destroyed) {
             this.destroyed = true;
             spawnShootdownEffects();

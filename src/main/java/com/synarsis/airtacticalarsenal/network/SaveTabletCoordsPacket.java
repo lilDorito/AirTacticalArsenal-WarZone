@@ -1,7 +1,7 @@
 package com.synarsis.airtacticalarsenal.network;
 
-import com.synarsis.airtacticalarsenal.item.ControlTabletItem;
-import com.synarsis.airtacticalarsenal.item.OrlanTabletItem;
+import com.synarsis.airtacticalarsenal.item.StrikeUavTabletItem;
+import com.synarsis.airtacticalarsenal.item.ReconUavTabletItem;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -50,23 +50,23 @@ public class SaveTabletCoordsPacket {
 
             ItemStack tablet = null;
             boolean isOrlan = false;
-            if (mainHand.getItem() instanceof OrlanTabletItem) {
+            if (mainHand.getItem() instanceof ReconUavTabletItem) {
                 tablet = mainHand;
                 isOrlan = true;
-            } else if (offHand.getItem() instanceof OrlanTabletItem) {
+            } else if (offHand.getItem() instanceof ReconUavTabletItem) {
                 tablet = offHand;
                 isOrlan = true;
-            } else if (mainHand.getItem() instanceof ControlTabletItem) {
+            } else if (mainHand.getItem() instanceof StrikeUavTabletItem) {
                 tablet = mainHand;
-            } else if (offHand.getItem() instanceof ControlTabletItem) {
+            } else if (offHand.getItem() instanceof StrikeUavTabletItem) {
                 tablet = offHand;
             }
 
             if (tablet != null) {
                 if (isOrlan) {
-                    OrlanTabletItem.setSavedCoords(tablet, coords);
+                    ReconUavTabletItem.setSavedCoords(tablet, coords);
                 } else {
-                    ControlTabletItem.setSavedCoords(tablet, coords);
+                    StrikeUavTabletItem.setSavedCoords(tablet, coords);
                 }
             }
         });

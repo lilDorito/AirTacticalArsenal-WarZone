@@ -1,6 +1,6 @@
 package com.synarsis.airtacticalarsenal.network;
 
-import com.synarsis.airtacticalarsenal.block.LauncherBlock;
+import com.synarsis.airtacticalarsenal.block.MissileLaunchpadBlock;
 import com.synarsis.airtacticalarsenal.block.entity.IskanderRocketBlockEntity;
 import com.synarsis.airtacticalarsenal.config.ShahedConfig;
 import net.minecraft.core.BlockPos;
@@ -50,12 +50,12 @@ public class LaunchRocketPacket {
             Level level = player.level();
 
             BlockState launcherState = level.getBlockState(launcherPos);
-            if (!(launcherState.getBlock() instanceof LauncherBlock launcher)) {
+            if (!(launcherState.getBlock() instanceof MissileLaunchpadBlock launcher)) {
                 player.displayClientMessage(Component.translatable("message.ata.rocket.invalid_launcher"), true);
                 return;
             }
 
-            if (!launcherState.getValue(LauncherBlock.LOADED)) {
+            if (!launcherState.getValue(MissileLaunchpadBlock.LOADED)) {
                 player.displayClientMessage(Component.translatable("message.ata.rocket.not_loaded"), true);
                 return;
             }

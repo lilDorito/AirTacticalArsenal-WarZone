@@ -20,10 +20,10 @@ public class ModBlocks {
             () -> new ShahedRadarBlock(BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops()));
     public static final RegistryObject<Block> SIREN = registerBlock("siren",
             () -> new SirenBlock(BlockBehaviour.Properties.of().strength(2.0f).sound(SoundType.METAL).requiresCorrectToolForDrops()));
-    public static final RegistryObject<Block> UNIFIED_TERMINAL = registerBlock("unified_terminal",
-            () -> new UnifiedTerminalBlock(BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops()));
-    public static final RegistryObject<Block> LAUNCHER = registerBlock("launcher",
-            () -> new LauncherBlock(BlockBehaviour.Properties.of().strength(4.0f).sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion()));
+    public static final RegistryObject<Block> MISSILE_TERMINAL = registerBlock("missile_terminal",
+            () -> new MissileTerminalBlock(BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops()));
+    public static final RegistryObject<Block> MISSILE_LAUNCHPAD = registerBlock("missile_launchpad",
+            () -> new MissileLaunchpadBlock(BlockBehaviour.Properties.of().strength(4.0f).sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion()));
 
     public static final RegistryObject<Block> ISKANDER_ROCKET = registerBlockNoItem("iskander_rocket",
             () -> new IskanderRocketBlock(BlockBehaviour.Properties.of().strength(2.0f).sound(SoundType.METAL).noOcclusion().noLootTable()));

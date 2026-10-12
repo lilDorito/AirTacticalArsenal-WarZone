@@ -1,7 +1,7 @@
 package com.synarsis.airtacticalarsenal.network;
 
 import com.synarsis.airtacticalarsenal.client.ClientWorldMapData;
-import com.synarsis.airtacticalarsenal.client.gui.UnifiedTerminalScreen;
+import com.synarsis.airtacticalarsenal.client.gui.MissileTerminalScreen;
 import com.synarsis.airtacticalarsenal.client.sound.OrlanEngineSoundClient;
 import com.synarsis.airtacticalarsenal.client.sound.ShahedEngineSoundClient;
 import com.synarsis.airtacticalarsenal.config.ShahedConfig;
@@ -28,7 +28,7 @@ public class ClientPacketHandler {
     private static final Random random = new Random();
     private static final int ORLAN_LANDED_PHASE = 6;
 
-    private static final Map<BlockPos, LauncherStateUpdatePacket.LauncherState> launcherStates = new HashMap<>();
+    private static final Map<BlockPos, LaunchpadStateUpdatePacket.LauncherState> launcherStates = new HashMap<>();
     private static final Map<BlockPos, int[]> launcherTimers = new HashMap<>(); 
 
     private static final Map<Integer, int[]> orlanDataCache = new HashMap<>();
@@ -203,10 +203,10 @@ public class ClientPacketHandler {
                 packet.getTotalChunks());
     }
 
-    public static void handleOpenUnifiedTerminal(OpenUnifiedTerminalPacket packet) {
+    public static void handleOpenMissileTerminal(OpenMissileTerminalPacket packet) {
         Minecraft mc = Minecraft.getInstance();
         mc.execute(() -> {
-            UnifiedTerminalScreen screen = new UnifiedTerminalScreen(
+            MissileTerminalScreen screen = new MissileTerminalScreen(
                     packet.getTerminalPos(),
                     packet.getLauncherPositions(),
                     packet.getLauncherLoadedStates(),
@@ -230,19 +230,19 @@ public class ClientPacketHandler {
         });
     }
 
-    public static void handleLauncherStateUpdate(BlockPos launcherPos, LauncherStateUpdatePacket.LauncherState state,
+    public static void handleLauncherStateUpdate(BlockPos launcherPos, LaunchpadStateUpdatePacket.LauncherState state,
             int countdownTicks, int totalCountdownTicks, int flightTicks) {
         launcherStates.put(launcherPos, state);
         launcherTimers.put(launcherPos, new int[] { countdownTicks, totalCountdownTicks, flightTicks });
 
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen instanceof UnifiedTerminalScreen terminalScreen) {
+        if (mc.screen instanceof MissileTerminalScreen terminalScreen) {
             terminalScreen.updateLauncherState(launcherPos, state, countdownTicks, totalCountdownTicks, flightTicks);
         }
     }
 
-    public static LauncherStateUpdatePacket.LauncherState getLauncherState(BlockPos pos) {
-        return launcherStates.getOrDefault(pos, LauncherStateUpdatePacket.LauncherState.EMPTY);
+    public static LaunchpadStateUpdatePacket.LauncherState getLauncherState(BlockPos pos) {
+        return launcherStates.getOrDefault(pos, LaunchpadStateUpdatePacket.LauncherState.EMPTY);
     }
 
     public static int[] getLauncherTimers(BlockPos pos) {

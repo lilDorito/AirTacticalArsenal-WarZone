@@ -23,6 +23,7 @@ public class ClientIskanderPacketHandler {
 
     private static final Map<Integer, IskanderLaunchSoundClient> activeSounds = new HashMap<>();
     private static final Map<Integer, IskanderFlightSoundClient> flightSounds = new HashMap<>();
+    private static final java.util.Set<Integer> finishedFlights = new java.util.HashSet<>();
 
     private static final java.util.Set<Integer> launchSoundPlayed = new java.util.HashSet<>();
     private static final Random random = new Random();
@@ -70,6 +71,7 @@ public class ClientIskanderPacketHandler {
 
     private static void updateFlightSound(int entityId, Vec3 pos, int flightPhase) {
         flightSounds.values().removeIf(IskanderFlightSoundClient::isStopped);
+        if (finishedFlights.contains(entityId)) return;
         IskanderFlightSoundClient flight = flightSounds.get(entityId);
         if (flight != null) {
             flight.update(pos);
@@ -82,13 +84,34 @@ public class ClientIskanderPacketHandler {
 
     public static void handleIskanderRemove(int entityId) {
         launchSoundPlayed.remove(entityId);
-        IskanderFlightSoundClient flight = flightSounds.remove(entityId);
-        if (flight != null) {
-            flight.finish(null);
-        }
+        finishFlight(entityId, null);
         IskanderLaunchSoundClient sound = activeSounds.remove(entityId);
         if (sound != null && !sound.isStopped()) {
             sound.stopSound();
+        }
+    }
+
+    private static void finishFlight(int entityId, Vec3 at) {
+        finishedFlights.add(entityId);
+        if (finishedFlights.size() > 64) finishedFlights.clear();
+        IskanderFlightSoundClient flight = flightSounds.remove(entityId);
+        if (flight != null) {
+            flight.finish(at);
+        }
+    }
+
+    private static void finishFlightsNear(Vec3 explosionPos) {
+        java.util.List<Integer> done = new java.util.ArrayList<>();
+        for (Map.Entry<Integer, IskanderFlightSoundClient> e : flightSounds.entrySet()) {
+            IskanderFlightSoundClient f = e.getValue();
+            if (new Vec3(f.getX(), f.getY(), f.getZ()).distanceTo(explosionPos) < 128.0) done.add(e.getKey());
+        }
+        for (int id : done) finishFlight(id, explosionPos);
+        for (Map.Entry<Integer, IskanderLaunchSoundClient> e : activeSounds.entrySet()) {
+            IskanderLaunchSoundClient l = e.getValue();
+            if (!l.isStopped() && new Vec3(l.getX(), l.getY(), l.getZ()).distanceTo(explosionPos) < 128.0) {
+                l.markExploded(explosionPos);
+            }
         }
     }
 
@@ -107,10 +130,17 @@ public class ClientIskanderPacketHandler {
         if (mc.player == null) {
             return;
         }
+        finishFlightsNear(explosionPos);
 
         if (ShahedConfig.areCustomExplosionSoundsEnabled()
-                && com.synarsis.airtacticalarsenal.client.sound.SbwExplosionSound.play(explosionPos,
+                && com.synarsis.airtacticalarsenal.client.sound.SbwExplosionSound.playEpic(explosionPos,
                         com.synarsis.airtacticalarsenal.client.sound.SbwExplosionSound.ISKANDER, 0.85f + random.nextFloat() * 0.1f)) {
+            com.synarsis.airtacticalarsenal.client.sound.SbwExplosionSound.play(explosionPos,
+                    com.synarsis.airtacticalarsenal.client.sound.SbwExplosionSound.SHAHED, 0.8f + random.nextFloat() * 0.1f);
+            com.synarsis.airtacticalarsenal.client.sound.SbwExplosionSound.playAta(explosionPos, 1600.0, 0.35,
+                    0.85f + random.nextFloat() * 0.1f);
+            com.synarsis.airtacticalarsenal.client.sound.SbwExplosionSound.playAta(explosionPos, 1000.0, 0.35,
+                    0.7f + random.nextFloat() * 0.1f);
             return;
         }
 
@@ -169,6 +199,7 @@ public class ClientIskanderPacketHandler {
             flight.finish(null);
         }
         flightSounds.clear();
+        finishedFlights.clear();
         for (IskanderLaunchSoundClient sound : activeSounds.values()) {
             if (!sound.isStopped()) {
                 sound.stopSound();

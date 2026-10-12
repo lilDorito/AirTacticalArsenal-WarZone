@@ -1,6 +1,6 @@
 package com.synarsis.airtacticalarsenal.client.sound;
 
-import com.synarsis.airtacticalarsenal.entity.ShahedLauncherEntity;
+import com.synarsis.airtacticalarsenal.entity.StrikeUavLauncherEntity;
 import com.synarsis.airtacticalarsenal.sound.ModSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
@@ -18,11 +18,11 @@ public class LauncherSpinUpSound extends AbstractTickableSoundInstance {
     private static final int RAMP_TICKS = 100;
     private static final int FADE_TICKS = 6;
 
-    private final ShahedLauncherEntity launcher;
+    private final StrikeUavLauncherEntity launcher;
     private int age;
     private int fade = -1;
 
-    public static void ensure(ShahedLauncherEntity launcher) {
+    public static void ensure(StrikeUavLauncherEntity launcher) {
         LauncherSpinUpSound current = ACTIVE.get(launcher.getId());
         if (current != null && !current.isStopped()) return;
         LauncherSpinUpSound sound = new LauncherSpinUpSound(launcher);
@@ -30,7 +30,7 @@ public class LauncherSpinUpSound extends AbstractTickableSoundInstance {
         Minecraft.getInstance().getSoundManager().play(sound);
     }
 
-    private LauncherSpinUpSound(ShahedLauncherEntity launcher) {
+    private LauncherSpinUpSound(StrikeUavLauncherEntity launcher) {
         super(launcher.getEngineSound() == 1 ? ModSounds.SHAHED_ENGINE_2.get() : ModSounds.SHAHED_ENGINE.get(),
                 SoundSource.HOSTILE, SoundInstance.createUnseededRandom());
         this.launcher = launcher;

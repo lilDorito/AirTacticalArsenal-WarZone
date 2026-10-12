@@ -1,6 +1,6 @@
 package com.synarsis.airtacticalarsenal.network;
 
-import com.synarsis.airtacticalarsenal.entity.OrlanLauncherEntity;
+import com.synarsis.airtacticalarsenal.entity.ReconUavLauncherEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -46,7 +46,7 @@ public class SaveOrlanRoutePacket {
             if (player == null) return;
 
             ServerLevel level = player.serverLevel();
-            OrlanLauncherEntity launcher = findLauncher(level, launcherPos);
+            ReconUavLauncherEntity launcher = findLauncher(level, launcherPos);
 
             if (launcher == null) {
                 player.displayClientMessage(Component.translatable("message.ata.launcher.not_found"), true);
@@ -74,10 +74,10 @@ public class SaveOrlanRoutePacket {
         ctx.get().setPacketHandled(true);
     }
 
-    private OrlanLauncherEntity findLauncher(ServerLevel level, BlockPos pos) {
+    private ReconUavLauncherEntity findLauncher(ServerLevel level, BlockPos pos) {
         AABB searchBox = new AABB(pos).inflate(2.0);
-        List<OrlanLauncherEntity> launchers = level.getEntitiesOfClass(
-                OrlanLauncherEntity.class, searchBox);
+        List<ReconUavLauncherEntity> launchers = level.getEntitiesOfClass(
+                ReconUavLauncherEntity.class, searchBox);
         return launchers.isEmpty() ? null : launchers.get(0);
     }
 }

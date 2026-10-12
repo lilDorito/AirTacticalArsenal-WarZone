@@ -7,7 +7,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    private static final String PROTOCOL_VERSION = "14";
+    private static final String PROTOCOL_VERSION = "15";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(com.synarsis.airtacticalarsenal.ShahedMod.MOD_ID, "main"),
             () -> PROTOCOL_VERSION,
@@ -77,15 +77,15 @@ public class NetworkHandler {
                 .decoder(IskanderRemovePacket::new)
                 .consumerMainThread(IskanderRemovePacket::handle)
                 .add();
-        INSTANCE.messageBuilder(OpenUnifiedTerminalPacket.class, id++)
-                .encoder(OpenUnifiedTerminalPacket::encode)
-                .decoder(OpenUnifiedTerminalPacket::new)
-                .consumerMainThread(OpenUnifiedTerminalPacket::handle)
+        INSTANCE.messageBuilder(OpenMissileTerminalPacket.class, id++)
+                .encoder(OpenMissileTerminalPacket::encode)
+                .decoder(OpenMissileTerminalPacket::new)
+                .consumerMainThread(OpenMissileTerminalPacket::handle)
                 .add();
-        INSTANCE.messageBuilder(LaunchFromUnifiedTerminalPacket.class, id++)
-                .encoder(LaunchFromUnifiedTerminalPacket::encode)
-                .decoder(LaunchFromUnifiedTerminalPacket::new)
-                .consumerMainThread(LaunchFromUnifiedTerminalPacket::handle)
+        INSTANCE.messageBuilder(LaunchFromMissileTerminalPacket.class, id++)
+                .encoder(LaunchFromMissileTerminalPacket::encode)
+                .decoder(LaunchFromMissileTerminalPacket::new)
+                .consumerMainThread(LaunchFromMissileTerminalPacket::handle)
                 .add();
         INSTANCE.messageBuilder(RocketLaunchStatePacket.class, id++)
                 .encoder(RocketLaunchStatePacket::encode)
@@ -107,25 +107,25 @@ public class NetworkHandler {
                 .decoder(RemoveRocketPacket::new)
                 .consumerMainThread(RemoveRocketPacket::handle)
                 .add();
-        INSTANCE.messageBuilder(LauncherStateUpdatePacket.class, id++)
-                .encoder(LauncherStateUpdatePacket::encode)
-                .decoder(LauncherStateUpdatePacket::new)
-                .consumerMainThread(LauncherStateUpdatePacket::handle)
+        INSTANCE.messageBuilder(LaunchpadStateUpdatePacket.class, id++)
+                .encoder(LaunchpadStateUpdatePacket::encode)
+                .decoder(LaunchpadStateUpdatePacket::new)
+                .consumerMainThread(LaunchpadStateUpdatePacket::handle)
                 .add();
-        INSTANCE.messageBuilder(SetLauncherTargetPacket.class, id++)
-                .encoder(SetLauncherTargetPacket::encode)
-                .decoder(SetLauncherTargetPacket::new)
-                .consumerMainThread(SetLauncherTargetPacket::handle)
+        INSTANCE.messageBuilder(SetLaunchpadTargetPacket.class, id++)
+                .encoder(SetLaunchpadTargetPacket::encode)
+                .decoder(SetLaunchpadTargetPacket::new)
+                .consumerMainThread(SetLaunchpadTargetPacket::handle)
                 .add();
-        INSTANCE.messageBuilder(LaunchShahedFromTabletPacket.class, id++)
-                .encoder(LaunchShahedFromTabletPacket::encode)
-                .decoder(LaunchShahedFromTabletPacket::new)
-                .consumerMainThread(LaunchShahedFromTabletPacket::handle)
+        INSTANCE.messageBuilder(LaunchFromStrikeUavTabletPacket.class, id++)
+                .encoder(LaunchFromStrikeUavTabletPacket::encode)
+                .decoder(LaunchFromStrikeUavTabletPacket::new)
+                .consumerMainThread(LaunchFromStrikeUavTabletPacket::handle)
                 .add();
-        INSTANCE.messageBuilder(OpenShahedTabletPacket.class, id++)
-                .encoder(OpenShahedTabletPacket::encode)
-                .decoder(OpenShahedTabletPacket::new)
-                .consumerMainThread(OpenShahedTabletPacket::handle)
+        INSTANCE.messageBuilder(OpenStrikeUavTabletPacket.class, id++)
+                .encoder(OpenStrikeUavTabletPacket::encode)
+                .decoder(OpenStrikeUavTabletPacket::new)
+                .consumerMainThread(OpenStrikeUavTabletPacket::handle)
                 .add();
         INSTANCE.messageBuilder(RemoveLauncherFromTabletPacket.class, id++)
                 .encoder(RemoveLauncherFromTabletPacket::encode)
@@ -147,15 +147,15 @@ public class NetworkHandler {
                 .decoder(OrlanRemovePacket::new)
                 .consumerMainThread(OrlanRemovePacket::handle)
                 .add();
-        INSTANCE.messageBuilder(OpenOrlanTabletPacket.class, id++)
-                .encoder(OpenOrlanTabletPacket::encode)
-                .decoder(OpenOrlanTabletPacket::new)
-                .consumerMainThread(OpenOrlanTabletPacket::handle)
+        INSTANCE.messageBuilder(OpenReconUavTabletPacket.class, id++)
+                .encoder(OpenReconUavTabletPacket::encode)
+                .decoder(OpenReconUavTabletPacket::new)
+                .consumerMainThread(OpenReconUavTabletPacket::handle)
                 .add();
-        INSTANCE.messageBuilder(LaunchOrlanFromTabletPacket.class, id++)
-                .encoder(LaunchOrlanFromTabletPacket::encode)
-                .decoder(LaunchOrlanFromTabletPacket::new)
-                .consumerMainThread(LaunchOrlanFromTabletPacket::handle)
+        INSTANCE.messageBuilder(LaunchFromReconUavTabletPacket.class, id++)
+                .encoder(LaunchFromReconUavTabletPacket::encode)
+                .decoder(LaunchFromReconUavTabletPacket::new)
+                .consumerMainThread(LaunchFromReconUavTabletPacket::handle)
                 .add();
         INSTANCE.messageBuilder(OrlanCameraViewPacket.class, id++)
                 .encoder(OrlanCameraViewPacket::encode)
@@ -252,10 +252,15 @@ public class NetworkHandler {
                 .decoder(RouteLimitsPacket::new)
                 .consumerMainThread(RouteLimitsPacket::handle)
                 .add();
-        INSTANCE.messageBuilder(LanguagePolicyPacket.class, id++)
-                .encoder(LanguagePolicyPacket::toBytes)
-                .decoder(LanguagePolicyPacket::new)
-                .consumerMainThread(LanguagePolicyPacket::handle)
+        INSTANCE.messageBuilder(OrlanCrashPacket.class, id++)
+                .encoder(OrlanCrashPacket::toBytes)
+                .decoder(OrlanCrashPacket::new)
+                .consumerMainThread(OrlanCrashPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(DroneAirBurstPacket.class, id++)
+                .encoder(DroneAirBurstPacket::toBytes)
+                .decoder(DroneAirBurstPacket::new)
+                .consumerMainThread(DroneAirBurstPacket::handle)
                 .add();
     }
 
