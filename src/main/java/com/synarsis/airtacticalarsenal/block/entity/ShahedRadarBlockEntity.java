@@ -23,6 +23,29 @@ public class ShahedRadarBlockEntity extends BlockEntity implements GeoBlockEntit
         super(ModBlockEntities.SHAHED_RADAR.get(), pos, state);
     }
 
+    private String ownerName = "";
+
+    public String getOwnerName() {
+        return ownerName;
+    }
+
+    public void setOwnerName(String name) {
+        this.ownerName = name == null ? "" : name;
+        setChanged();
+    }
+
+    @Override
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        this.ownerName = tag.getString("OwnerName");
+    }
+
+    @Override
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        if (!ownerName.isEmpty()) tag.putString("OwnerName", ownerName);
+    }
+
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
     }

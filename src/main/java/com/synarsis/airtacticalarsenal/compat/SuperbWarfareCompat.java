@@ -174,6 +174,7 @@ public class SuperbWarfareCompat {
 
     private static boolean bvrResolved = false;
     private static java.lang.reflect.Method bvrRegister;
+    private static int bvrFailures;
 
     public static void registerForSbwRadar(Entity entity) {
         if (!isLoaded()) return;
@@ -192,8 +193,9 @@ public class SuperbWarfareCompat {
         ensureSbwScanList();
         try {
             bvrRegister.invoke(null, entity);
+            bvrFailures = 0;
         } catch (Throwable t) {
-            bvrRegister = null;
+            if (++bvrFailures >= 50) bvrRegister = null;
         }
     }
 

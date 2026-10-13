@@ -1,0 +1,13 @@
+{
+  "vehicles": [
+    "ashvehicle:f-35a",
+    "ashvehicle:f-35b"
+  ],
+  "radar": {
+    "type": "aesa",
+    "shape": "cone",
+    "range": 1800,
+    "half_angle": 60,
+    "refresh_per_second": 4
+  }
+}

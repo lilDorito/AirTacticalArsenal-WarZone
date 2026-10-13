@@ -362,15 +362,13 @@ public class ReconUavTabletScreen extends AtaScaledScreen {
         this.statusMessage = "";
     }
 
-    private static final double MAX_TABLET_DISTANCE = 30.0;
-
     private boolean isPlayerInRange(int launcherIdx) {
         if (launcherIdx < 0 || launcherIdx >= launcherPositions.size()) return false;
         if (Minecraft.getInstance().player == null) return false;
         BlockPos lPos = launcherPositions.get(launcherIdx);
         double dist = Minecraft.getInstance().player.position().distanceTo(
                 new net.minecraft.world.phys.Vec3(lPos.getX() + 0.5, lPos.getY() + 0.5, lPos.getZ() + 0.5));
-        return dist <= MAX_TABLET_DISTANCE;
+        return dist <= com.synarsis.airtacticalarsenal.client.ClientRouteLimits.tabletRange();
     }
 
     private void updateButtonStates() {
@@ -385,8 +383,8 @@ public class ReconUavTabletScreen extends AtaScaledScreen {
         this.routeButton.active = hasSelection || !checkedLaunchers.isEmpty();
 
         if (hasSelection && !inRange) {
-            statusMessage = Tr.s("gui.ata.tablet.too_far");
-        } else if (statusMessage.equals(Tr.s("gui.ata.tablet.too_far"))) {
+            statusMessage = Tr.s("gui.ata.tablet.too_far", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.tabletRange());
+        } else if (statusMessage.equals(Tr.s("gui.ata.tablet.too_far", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.tabletRange()))) {
             statusMessage = "";
         }
     }
@@ -564,7 +562,7 @@ public class ReconUavTabletScreen extends AtaScaledScreen {
             if (!inRange) {
                 g.drawString(this.font, Tr.s("gui.ata.tablet.too_far_warn"), rightX, y, 0xFF4444, false);
                 y += 11;
-                g.drawString(this.font, Tr.s("gui.ata.tablet.max_range_hint"), rightX, y, 0x888888, false);
+                g.drawString(this.font, Tr.s("gui.ata.tablet.max_range_hint", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.tabletRange()), rightX, y, 0x888888, false);
                 y += 14;
             } else {
                 y += 4;

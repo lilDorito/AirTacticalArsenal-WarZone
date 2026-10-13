@@ -24,13 +24,15 @@ public class RadarUpdatePacket {
         public final Vec3 pos;
         public final float heading;
         public final float speed;
+        public final boolean friendly;
 
-        public TargetData(int entityId, byte type, Vec3 pos, float heading, float speed) {
+        public TargetData(int entityId, byte type, Vec3 pos, float heading, float speed, boolean friendly) {
             this.entityId = entityId;
             this.type = type;
             this.pos = pos;
             this.heading = heading;
             this.speed = speed;
+            this.friendly = friendly;
         }
     }
 
@@ -53,7 +55,8 @@ public class RadarUpdatePacket {
                     buf.readByte(),
                     new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()),
                     buf.readFloat(),
-                    buf.readFloat()
+                    buf.readFloat(),
+                    buf.readBoolean()
             ));
         }
     }
@@ -71,6 +74,7 @@ public class RadarUpdatePacket {
             buf.writeDouble(t.pos.z);
             buf.writeFloat(t.heading);
             buf.writeFloat(t.speed);
+            buf.writeBoolean(t.friendly);
         }
     }
 

@@ -1,8 +1,6 @@
 package com.synarsis.airtacticalarsenal.block;
 
 import com.synarsis.airtacticalarsenal.block.entity.ShahedRadarBlockEntity;
-import com.synarsis.airtacticalarsenal.entity.ShahedEntity;
-import com.synarsis.airtacticalarsenal.entity.IskanderEntity;
 import com.synarsis.airtacticalarsenal.network.NetworkHandler;
 import com.synarsis.airtacticalarsenal.network.OpenRadarScreenPacket;
 import com.synarsis.airtacticalarsenal.radar.ServerTerrainScanner;
@@ -14,6 +12,8 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -38,7 +38,6 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraftforge.fml.ModList;
 
-import java.util.List;
 
 public class ShahedRadarBlock extends Block implements EntityBlock {
 
@@ -154,31 +153,49 @@ public class ShahedRadarBlock extends Block implements EntityBlock {
         return true;
     }
 
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (!level.isClientSide && placer instanceof Player player
+                && level.getBlockEntity(pos) instanceof com.synarsis.airtacticalarsenal.block.entity.ShahedRadarBlockEntity radar) {
+            radar.setOwnerName(player.getScoreboardName());
+        }
+    }
+
+    private static net.minecraft.world.scores.Team ownerTeam(ServerLevel level, BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof com.synarsis.airtacticalarsenal.block.entity.ShahedRadarBlockEntity radar
+                && !radar.getOwnerName().isEmpty()) {
+            return level.getScoreboard().getPlayersTeam(radar.getOwnerName());
+        }
+        return null;
+    }
+
     private int calculateSignalStrength(ServerLevel level, BlockPos pos) {
         if (!hasOpenSky(level, pos)) return 0;
         Vec3 radarCenter = Vec3.atCenterOf(pos);
+        int range = com.synarsis.airtacticalarsenal.config.ShahedConfig.getRadarRange();
+        int minAltitude = com.synarsis.airtacticalarsenal.config.ShahedConfig.getRadarMinAltitude();
         double top = Math.max(level.getMaxBuildHeight(),
                 com.synarsis.airtacticalarsenal.config.ShahedConfig.getIskanderMaxFlightHeight()) + 64;
         AABB searchBox = new AABB(
-            radarCenter.x - com.synarsis.airtacticalarsenal.config.ShahedConfig.getRadarRange(), level.getMinBuildHeight(), radarCenter.z - com.synarsis.airtacticalarsenal.config.ShahedConfig.getRadarRange(),
-            radarCenter.x + com.synarsis.airtacticalarsenal.config.ShahedConfig.getRadarRange(), top, radarCenter.z + com.synarsis.airtacticalarsenal.config.ShahedConfig.getRadarRange()
+            radarCenter.x - range, level.getMinBuildHeight(), radarCenter.z - range,
+            radarCenter.x + range, top, radarCenter.z + range
         );
+        net.minecraft.world.scores.Team team = ownerTeam(level, pos);
 
         double closestDistance = Double.MAX_VALUE;
+        double rangeSq = (double) range * range;
 
-        List<Entity> entities = level.getEntities(null, searchBox);
-        for (Entity entity : entities) {
-            boolean isFlying = entity instanceof ShahedEntity shahed
-                    && (shahed.getFlightPhase() == ShahedEntity.FlightPhase.LAUNCHING
-                        || shahed.getFlightPhase() == ShahedEntity.FlightPhase.CLIMBING
-                        || shahed.getFlightPhase() == ShahedEntity.FlightPhase.CRUISING
-                        || shahed.getFlightPhase() == ShahedEntity.FlightPhase.DIVING);
-            if (isFlying || entity instanceof IskanderEntity) {
-                double dist = entity.position().distanceTo(radarCenter);
-                if (dist < closestDistance) {
-                    closestDistance = dist;
-                }
-            }
+        for (Entity entity : level.getEntities(null, searchBox)) {
+            if (com.synarsis.airtacticalarsenal.radar.RadarContacts.classify(entity) < 0) continue;
+            if (entity.getY() < minAltitude) continue;
+            double dx = entity.getX() - radarCenter.x;
+            double dz = entity.getZ() - radarCenter.z;
+            double horizontalSq = dx * dx + dz * dz;
+            if (horizontalSq > rangeSq) continue;
+            if (com.synarsis.airtacticalarsenal.radar.RadarContacts.isFriendly(team, null, entity)) continue;
+            double dist = Math.sqrt(horizontalSq);
+            if (dist < closestDistance) closestDistance = dist;
         }
 
         if (closestDistance == Double.MAX_VALUE) {

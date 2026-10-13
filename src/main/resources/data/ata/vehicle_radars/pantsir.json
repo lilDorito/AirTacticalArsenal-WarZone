@@ -1,0 +1,12 @@
+{
+  "vehicles": [
+    "ashvehicle:pa_pantsir"
+  ],
+  "radar": {
+    "type": "mca",
+    "shape": "round",
+    "range": 1500,
+    "sweep_seconds": 1.5,
+    "min_altitude": 20
+  }
+}

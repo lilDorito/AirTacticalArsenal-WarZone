@@ -1,0 +1,12 @@
+{
+  "vehicles": [
+    "ashvehicle:gepard-1a2"
+  ],
+  "radar": {
+    "type": "mca",
+    "shape": "round",
+    "range": 1000,
+    "sweep_seconds": 2.0,
+    "min_altitude": 20
+  }
+}

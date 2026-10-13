@@ -51,6 +51,7 @@ public class ShahedConfig {
     public static final ForgeConfigSpec.DoubleValue ISKANDER_CRATER_RADIUS;
     public static final ForgeConfigSpec.DoubleValue SHAHED_CRATER_RADIUS;
     public static final ForgeConfigSpec.IntValue SHAHED_MAX_ROUTE_DISTANCE;
+    public static final ForgeConfigSpec.IntValue TABLET_LAUNCHER_RANGE;
     public static final ForgeConfigSpec.IntValue ORLAN_MAX_ROUTE_DISTANCE;
     public static final ForgeConfigSpec.IntValue ORLAN_FLIGHT_TIME_MINUTES;
 
@@ -69,6 +70,7 @@ public class ShahedConfig {
     public static final ForgeConfigSpec.IntValue RADAR_RANGE;
     public static final ForgeConfigSpec.IntValue CONFIG_VERSION;
     public static final ForgeConfigSpec.BooleanValue RADAR_REQUIRES_OPEN_SKY;
+    public static final ForgeConfigSpec.BooleanValue VEHICLE_RADARS;
     public static final ForgeConfigSpec.BooleanValue RADAR_DARK_BACKGROUND;
     public static final ForgeConfigSpec.IntValue MAP_REFRESH_MINUTES;
     public static final ForgeConfigSpec.BooleanValue MAP_READ_SAVED_CHUNKS;
@@ -181,6 +183,7 @@ public class ShahedConfig {
     public static double getIskanderCraterRadius() { return ISKANDER_CRATER_RADIUS.get(); }
     public static double getShahedCraterRadius() { return SHAHED_CRATER_RADIUS.get(); }
     public static int getShahedMaxRouteDistance() { return SHAHED_MAX_ROUTE_DISTANCE.get(); }
+    public static int getTabletLauncherRange() { return TABLET_LAUNCHER_RANGE.get(); }
     public static int getOrlanMaxRouteDistance() { return ORLAN_MAX_ROUTE_DISTANCE.get(); }
     public static int getOrlanFlightTimeMinutes() { return ORLAN_FLIGHT_TIME_MINUTES.get(); }
 
@@ -206,6 +209,7 @@ public class ShahedConfig {
     public static int getRadarMinAltitude() { return RADAR_MIN_ALTITUDE.get(); }
     public static int getRadarRange() { return RADAR_RANGE.get(); }
     public static boolean isRadarOpenSkyRequired() { return RADAR_REQUIRES_OPEN_SKY.get(); }
+    public static boolean areVehicleRadarsEnabled() { return VEHICLE_RADARS.get(); }
     public static boolean isRadarDarkBackground() { return RADAR_DARK_BACKGROUND.get(); }
     public static int getMapRefreshMinutes() { return MAP_REFRESH_MINUTES.get(); }
     public static boolean isMapReadSavedChunks() { return MAP_READ_SAVED_CHUNKS.get(); }
@@ -276,6 +280,10 @@ public class ShahedConfig {
                 "Enforced by the server; players get this value when they join (route screen shows it).",
                 "The route map grows with the larger of this and orlanMaxRouteDistance (coarser when bigger).")
                 .defineInRange("shahedMaxRouteDistance", 10000, 1000, 30000);
+        TABLET_LAUNCHER_RANGE = BUILDER.comment(
+                "How close (in blocks) a player must be to a Strike or Recon UAV launcher to save a route",
+                "or launch from a tablet. Sent to players on join.")
+                .defineInRange("tabletLauncherRange", 100, 30, 250);
         BUILDER.pop();
 
         BUILDER.push("Orlan Settings");
@@ -380,6 +388,10 @@ public class ShahedConfig {
             "If true, the radar needs open sky: no blocks at all (glass, leaves, water included) above the 5x5 area",
             "centred on it. Otherwise it shows WEAK SIGNAL with an empty map and its redstone output is 0.")
             .define("radarRequiresOpenSky", true);
+        VEHICLE_RADARS = BUILDER.comment(
+            "Radars on board SuperbWarfare and addon vehicles (fighters, attack helicopters, AA vehicles).",
+            "Which vehicle gets which radar is set by data files in data/ata/vehicle_radars (datapacks can change them).")
+            .define("vehicleRadars", true);
         RADAR_DARK_BACKGROUND = BUILDER.comment(
             "If true, the radar screen shows a plain dark background instead of the biome/terrain map.",
             "The terrain around radars is then never scanned, which also saves server work.",

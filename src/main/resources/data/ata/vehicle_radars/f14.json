@@ -1,0 +1,12 @@
+{
+  "vehicles": [
+    "ashvehicle:f14"
+  ],
+  "radar": {
+    "type": "mca",
+    "shape": "cone",
+    "range": 2000,
+    "half_angle": 65,
+    "sweep_seconds": 3.0
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "vehicles": [
+    "superbwarfare:lav_ad"
+  ],
+  "radar": {
+    "type": "mca",
+    "shape": "round",
+    "range": 700,
+    "sweep_seconds": 2.0,
+    "min_altitude": 20
+  }
+}

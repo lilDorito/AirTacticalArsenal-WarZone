@@ -9,10 +9,12 @@ public final class ClientRouteLimits {
     private static volatile int radarRange = -1;
     private static volatile int iskanderMin = -1;
     private static volatile int iskanderMax = -1;
+    private static volatile int tabletRange = -1;
 
     private ClientRouteLimits() {}
 
-    public static void set(int shahed, int orlan, int iskMin, int iskMax, int radar) {
+    public static void set(int shahed, int orlan, int iskMin, int iskMax, int radar, int tablet) {
+        tabletRange = tablet;
         radarRange = radar;
         shahedMax = shahed;
         orlanMax = orlan;
@@ -46,6 +48,11 @@ public final class ClientRouteLimits {
     public static int iskanderMin() {
         int v = iskanderMin;
         return v > 0 ? v : ShahedConfig.getIskanderMinDistance();
+    }
+
+    public static int tabletRange() {
+        int v = tabletRange;
+        return v > 0 ? v : ShahedConfig.getTabletLauncherRange();
     }
 
     public static int iskanderMax() {

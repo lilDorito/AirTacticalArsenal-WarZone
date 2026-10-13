@@ -1,10 +1,6 @@
 package com.synarsis.airtacticalarsenal.network;
 
-import com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat;
 import com.synarsis.airtacticalarsenal.config.ShahedConfig;
-import com.synarsis.airtacticalarsenal.entity.ShahedEntity;
-import com.synarsis.airtacticalarsenal.entity.IskanderEntity;
-import com.synarsis.airtacticalarsenal.entity.OrlanEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
@@ -58,13 +54,7 @@ public class RequestRadarUpdatePacket {
             int minAltitude = ShahedConfig.getRadarMinAltitude();
 
             for (Entity entity : level.getEntities(null, searchBox)) {
-                byte type = -1;
-                if (entity instanceof ShahedEntity || entity instanceof OrlanEntity) type = SuperbWarfareCompat.TYPE_SW_DRONE;
-                else if (entity instanceof IskanderEntity) type = SuperbWarfareCompat.TYPE_MISSILE;
-                else {
-                    byte swType = SuperbWarfareCompat.getRadarType(entity);
-                    if (swType >= 0) type = swType;
-                }
+                byte type = com.synarsis.airtacticalarsenal.radar.RadarContacts.classify(entity);
                 if (type < 0) continue;
 
                 double dx = entity.getX() - radarCenter.x;
@@ -76,7 +66,8 @@ public class RequestRadarUpdatePacket {
                 Vec3 delta = entity.getDeltaMovement();
                 float speed = (float) Math.sqrt(delta.x * delta.x + delta.z * delta.z);
                 targets.add(new RadarUpdatePacket.TargetData(
-                        entity.getId(), type, entity.position(), entity.getYRot(), speed
+                        entity.getId(), type, entity.position(), entity.getYRot(), speed,
+                        com.synarsis.airtacticalarsenal.radar.RadarContacts.isFriendly(player.getTeam(), player, entity)
                 ));
             }
 

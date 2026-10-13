@@ -1,0 +1,12 @@
+{
+  "vehicles": [
+    "ashvehicle:su-34"
+  ],
+  "radar": {
+    "type": "aesa",
+    "shape": "cone",
+    "range": 1400,
+    "half_angle": 55,
+    "refresh_per_second": 2
+  }
+}

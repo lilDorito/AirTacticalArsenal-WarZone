@@ -1,0 +1,13 @@
+{
+  "vehicles": [
+    "ashvehicle:eurofighter",
+    "ashvehicle:f-18"
+  ],
+  "radar": {
+    "type": "mca",
+    "shape": "cone",
+    "range": 1500,
+    "half_angle": 60,
+    "sweep_seconds": 2.0
+  }
+}

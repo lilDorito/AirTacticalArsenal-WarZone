@@ -1,0 +1,16 @@
+{
+  "vehicles": [
+    "ashvehicle:ah-64",
+    "ashvehicle:ka52",
+    "superbwarfare:mi_28",
+    "ashvehicle:rah_66"
+  ],
+  "radar": {
+    "type": "mca",
+    "shape": "cone",
+    "range": 900,
+    "half_angle": 90,
+    "sweep_seconds": 2.0,
+    "min_altitude": 10
+  }
+}

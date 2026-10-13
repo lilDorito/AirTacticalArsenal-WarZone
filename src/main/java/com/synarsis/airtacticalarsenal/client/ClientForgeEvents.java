@@ -33,6 +33,7 @@ class ClientForgeEvents {
         OrlanCameraHandler.stopCameraView();
         RouteTerrainRenderer.clearCache();
         SurfaceHeightCache.clear();
+        com.synarsis.airtacticalarsenal.client.radar.VehicleRadarClient.reset();
     }
 
     @SubscribeEvent
@@ -46,6 +47,12 @@ class ClientForgeEvents {
         OrlanCameraHandler.tick();
         OrlanCameraHandler.tickLockOn();
         OrlanCameraHandler.tickAltitude();
+        com.synarsis.airtacticalarsenal.client.radar.VehicleRadarClient.tick();
+        while (AtaKeys.VEHICLE_RADAR.consumeClick()) {
+            boolean show = !com.synarsis.airtacticalarsenal.config.AtaClientConfig.VEHICLE_RADAR_HUD.get();
+            com.synarsis.airtacticalarsenal.config.AtaClientConfig.VEHICLE_RADAR_HUD.set(show);
+            com.synarsis.airtacticalarsenal.config.AtaClientConfig.VEHICLE_RADAR_HUD.save();
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

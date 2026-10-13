@@ -15,20 +15,24 @@
 >
 > This is not an official release. It is not affiliated with or endorsed by Synarsis.
 
-Forge 1.20.1 mod that adds tactical drones, ballistic missiles, an air-defense
-radar and alert sirens to Minecraft.
+Forge 1.20.1 mod that adds strike and recon drones (**Shahed-136**, **Orlan-10**), the **Iskander-M**
+ballistic missile, an **air defense radar**, **on-board radars** for SuperbWarfare and AshVehicles aircraft
+and AA vehicles, and **alert sirens**.
 
-modId: `ata` (same as upstream) · version: `1.2.0-warzone`
+modId: `ata` (same as upstream) · version: `1.3.0-warzone`
 
 ## Contents
 
 - [Why this fork](#why-this-fork)
 - [WarZone versions](#warzone-versions)
-- [What changed](#what-changed)
+- [What's different from upstream](#whats-different-from-upstream)
 - [Features](#features)
 - [Requirements](#requirements)
 - [Build](#build)
 - [How to play](#how-to-play)
+- [Vehicle radar data](#vehicle-radar-data)
+- [Terrain maps](#terrain-maps)
+- [Config](#config)
 - [Project layout](#project-layout)
 - [Mod compat](#mod-compat)
 - [Credits](#credits)
@@ -37,12 +41,12 @@ modId: `ata` (same as upstream) · version: `1.2.0-warzone`
 ## Why this fork
 
 I made this fork for my own milsim project, the **WarZone** modpack (Superb Warfare, AshVehicles, and
-more). Upstream ATA works well on its own, but it needed fixes and changes to fit that pack:
+more). Upstream ATA works well on its own, but it needed changes to fit that pack:
 
-- aircraft from other mods had to appear on the radar, and AshVehicles jets had to be able to lock and shoot
-  down ATA drones;
+- aircraft and missiles from other mods had to appear on the radar, and their weapons had to be able to
+  find, lock and shoot down ATA drones;
 - damage had to be balanced against SBW vehicles and players instead of one-shotting everything;
-- the pack is English-first, with Russian and Ukrainian as an option;
+- the pack is English-first, with Ukrainian and Russian as options;
 - bugs, leftovers and missing polish found while testing had to be fixed.
 
 The mod id stays `ata`, so it replaces upstream ATA in a pack. Don't install both.
@@ -50,79 +54,122 @@ The mod id stays `ata`, so it replaces upstream ATA in a pack. Don't install bot
 ## WarZone versions
 
 "WarZone" versions are my own **private** forks of other mods, made for the WarZone pack. They are not
-published and can't be downloaded; they're mentioned in this README and the changelog only because this
-fork is tested against them. ATA WarZone needs none of them and works with the public versions listed in
+published and can't be downloaded; they're mentioned here and in the changelog only because this fork is
+tested against them. ATA WarZone needs none of them and works with the public versions listed in
 [Supported versions](#supported-versions).
 
 Each one keeps the original mod id, so ATA treats it like the public version it's based on:
 
 | WarZone version | Based on | What differs |
 |-----------------|----------|--------------|
-| SuperbWarfare WarZone `0.8.9.2-warzone-1.0.1` | SuperbWarfare 0.8.9.2 | own vehicle and damage balance (for example lower aerial-bomb armour multipliers), Ukrainian translation, bug fixes; lists ATA in `scan_white_list` by default |
-| AshVehicles WarZone `4.6-warzone-1.0.1` | AshVehicles 4.6 | own weapon loadouts and balance (for example the FAB-500 at 1600 / 40 blocks), Ukrainian translation, bug fixes |
-| MCSP WarZone `1.0.10-warzone-1.0.1` | MCSP 1.0.10 | own balance, Ukrainian translation, bug fixes |
+| SuperbWarfare WarZone `0.8.9.2-warzone-1.0.1` | SuperbWarfare 0.8.9.2 | own balance and fixes; lists ATA in `scan_white_list` by default; sends ATA drones and missiles to players beyond entity range, so they show on the tactical map and seekers can lock them from afar |
+| AshVehicles WarZone `4.6-warzone-1.0.1` | AshVehicles 4.6 | own weapon loadouts and balance, fixes |
+| MCSP WarZone `1.0.10-warzone-1.0.1` | MCSP 1.0.10 | own balance, fixes |
 | SuperbWarfare `0.8.7.1` and AshVehicles `4.2` patched builds | SuperbWarfare 0.8.7.1, AshVehicles 4.2 | older WarZone builds, kept working by earlier ATA WarZone versions |
 
-When this README or the changelog gives a number or behaviour "in SuperbWarfare WarZone" or "in AshVehicles
-WarZone", it only applies with those private builds; with the public mods the public values apply.
+When this README or the changelog describes something "in SuperbWarfare WarZone" or "in AshVehicles
+WarZone", it only applies with those private builds.
 
-## What changed
+## What's different from upstream
 
-Full list in [CHANGELOG.md](CHANGELOG.md). Main points:
+The full history is in [CHANGELOG.md](CHANGELOG.md). In short:
 
-- **Radar**: radar and route maps show the real terrain (top blocks with hill shading), from a one-time whole-map scan (`/ata terrain scan`) plus live updates; one set of contact types for every mod: **PLN** planes, **HEL** helicopters, **UAV** large drones (Shahed, Orlan, MQ-9, X-47B), **MSL** missiles (guided missiles of SBW and AshVehicles and the Iskander); small SBW drones and swarm drones are never shown; configurable range (default 1,500, up to 5,000 blocks); uses SBW's FuMO 25 model when SBW is installed; needs open sky (**WEAK SIGNAL**); tracks the Iskander for its whole flight; configurable horizon and entity lists; drops itself when mined; servers can swap the biome map for a plain dark background (`radarDarkBackground`).
-- **Shootdowns**: shot-down Shaheds and Orlans fall instead of exploding in the air: an engine hit makes them glide down smoking, a wing hit sends them into a spin, other kills make them tumble; a falling Shahed still explodes on impact.
-- **Air defense**: SBW and AshVehicles seekers lock Shahed and Orlan, never the Iskander; anti-air guns that
-  fire SBW shells and SBW's laser tower can't delete the Iskander, and an Orlan they hit is shot down properly.
-- **Damage**: the Shahed hits like SBW's Mk-82 and the Iskander like a heavy bomb (1600 / 40 blocks); with
-  SBW both count as aerial bombs against vehicle armour; round craters for both.
-- **UAVs**: configurable max route length (default 10,000 blocks, up to 30,000), checked by the server;
-  configurable Orlan flight time (default 30 min).
-- **With SuperbWarfare**: recipes use SBW parts, explosions play SBW's explosion sounds mixed by distance,
-  and Shahed, Orlan and Iskander show on SBW radars and the tactical map (SBW 0.8.9.1+).
-- **Sound**: the Iskander roars in flight (sound by Kalitovskiy) and can be heard from 1,500 blocks away; engine and countdown sounds come back when Minecraft drops them, only reach players in the
-  same dimension, and the siren behaves properly. Each Shahed randomly gets one of two engine sounds
-  (second one by Kalitovskiy).
-- **Language**: English, Ukrainian and Russian, following each player's Minecraft language like SuperbWarfare
-  WarZone; no hard-coded Russian text left.
-- **UI**: screens scale to fit, HUD and radar overlaps fixed.
-- **Cleanup**: broken pickaxe tag fixed, dead code, config options and assets removed, versions and
-  metadata fixed.
+**Air defense radar**
+- A real sweep: the line turns once every 4 seconds and a dot only moves when the line passes over it, then
+  fades until the next pass.
+- One set of contact types for every mod: **PLN** planes, **HEL** helicopters, **UAV** large drones (Shahed,
+  Orlan, MQ-9 Reaper, X-47B), **MSL** missiles (SuperbWarfare and AshVehicles guided missiles, the Iskander).
+  Small SBW drones and swarm drones are never shown. Teammates are drawn hollow.
+- The map shows the real terrain (top blocks with hill shading) from a one-time world scan plus live updates,
+  or a plain dark background (`radarDarkBackground`).
+- Range is a server setting (default 1,500, up to 5,000 blocks), with a minimum altitude, configurable entity
+  lists and an open-sky requirement (**WEAK SIGNAL** otherwise). Uses SuperbWarfare's FuMO 25 model when SBW
+  is installed.
+- The redstone alarm reacts to every air contact the screen shows, and ignores aircraft, drones and missiles
+  of the placer's scoreboard team.
+
+**Vehicle radars** (new in 1.3.0)
+- Fighters, attack helicopters and AA vehicles from SuperbWarfare and AshVehicles get an on-board radar in a
+  small black-and-green panel on the left edge of the screen, for everyone aboard.
+- Round scopes for AA vehicles, cones from the nose for aircraft and helicopters.
+- **MCA** (mechanical) radars sweep a beam and miss low fliers; **AESA** radars update everything in range
+  several times a second. Stealth aircraft are seen from shorter range.
+- The server does the scanning, so it works far past view distance; everything is data-driven and can be
+  changed by datapacks.
+
+**Drones**
+- Shot-down Shaheds and Orlans fall out of the sky: an engine hit makes them glide down smoking, a wing hit
+  sends them spinning (flat spin, corkscrew or steep plunge), other kills make them tumble. A falling Shahed
+  explodes on impact; an Orlan crashes with a small blast.
+- Every drone is a little different: random toughness, 2-5 hits before it can start falling, 3-8 more before a
+  falling drone gives up. A Shahed's warhead goes off at once 15% of the time.
+- SuperbWarfare anti-air shells deal 15% of a drone's health per hit instead of deleting it; direct cannon
+  hits and missiles still bring it down. A missile kill makes a loud air burst.
+- Routes up to 30,000 blocks (default 10,000), checked by the server; drones no longer loop back to waypoints
+  they've passed. Configurable Orlan flight time (default 30 min) and tablet range to the launcher (default
+  100 blocks).
+
+**Iskander-M**
+- Finds the real ground at the impact point, so it no longer bursts in mid-air over valleys, mountains or flat
+  worlds.
+- The loudest explosion in the pack, and a flight roar (by Kalitovskiy) audible from 1,500 blocks that ends
+  with the impact.
+- Can't be locked by seekers or deleted by anti-air guns and the laser tower.
+
+**Damage**
+- On the SuperbWarfare scale: the Shahed hits like SBW's Mk-82, the Iskander like a heavy bomb (1600 / 40
+  blocks); with SBW both count as aerial bombs against vehicle armour. Round craters; claim and protection
+  mods still apply.
+
+**Gear names**
+- The launch gear is generic, ready for future addons: Strike UAV Launcher / Tablet, Recon UAV Launcher /
+  Tablet, Missile Launchpad, Missile Targeting Terminal, Missile Link Cable. Old worlds are converted.
+
+**With SuperbWarfare installed**
+- Recipes use SBW parts; explosions use SBW's sounds, mixed by distance; SBW seekers and AshVehicles missiles
+  can lock Shaheds and Orlans; anti-air missiles burst next to a locked drone instead of slipping past.
+- Shahed, Orlan and Iskander are added to SBW's radar scan list automatically.
+
+**Sound, language and UI**
+- Engine and countdown sounds come back when Minecraft drops them and only reach players in the same
+  dimension; the siren behaves properly; each Shahed gets one of two engine sounds (second one by
+  Kalitovskiy).
+- English, Ukrainian and Russian, following each player's Minecraft language. No hard-coded Russian text.
+- Screens scale to fit; HUD and radar overlaps fixed.
+
+**Fixes and cleanup**
+- Broken pickaxe tag fixed, a server crash with the Orlan camera near marker entities fixed, dead code,
+  config options and assets removed, versions and metadata fixed.
 
 ## Features
 
 ### Strike
 
-- **Shahed-136** — kamikaze UAV, two attack profiles (low dive and high dive)
-- **Iskander-M** — ballistic missile, launched from the 5x5 Missile Launchpad, 7-second
-  countdown
-- chunk-aware flight: chunks along the flight path stay loaded
+- **Shahed-136**: kamikaze UAV with a planned route and two attack profiles (low and high dive)
+- **Iskander-M**: ballistic missile, launched from the 5x5 Missile Launchpad after a 7-second countdown
+- chunks along the flight path stay loaded
 
 ### Recon
 
-- **Orlan-10** — recon drone, launched from the Recon UAV Launcher and flown from the Recon UAV Tablet with an
-  FPV camera
-- night vision shader for the FPV view
-- waypoint route planning with terrain preview
+- **Orlan-10**: recon drone flown along a route, with an FPV camera and night vision
+- waypoint route planning on a terrain map
 
 ### Control and detection
 
-- **Strike UAV Launcher** and **Strike UAV Tablet** — the tablet links several launchers, plans routes on a
-  terrain map and launches (Shahed-136 today)
-- **Missile Launchpad** and **Missile Targeting Terminal** — the terminal manages several launchpads, sets
-  targets and shows countdown and status (Iskander-M today)
-- **Air Defense Radar** — tactical map with zoom, pan and typed target markers (PLN / HEL / UAV / MSL);
-  needs open sky above it
-- **Missile Link Cable** — links a launchpad to the terminal, up to 60 blocks
-- **Alert Siren** — alarm block with sound
+- **Strike UAV Launcher** and **Strike UAV Tablet**: the tablet links up to 10 launchers, plans routes and
+  launches
+- **Recon UAV Launcher** and **Recon UAV Tablet**: the same for the Orlan
+- **Missile Launchpad** and **Missile Targeting Terminal**, linked with the **Missile Link Cable** (up to 60
+  blocks): the terminal manages several launchpads, sets targets and shows countdown and status
+- **Air Defense Radar**: tactical map with zoom, pan, a sweeping beam and typed contacts; redstone alarm
+- **Vehicle radars**: on-board radar HUD for SBW and AshVehicles aircraft and AA vehicles
+- **Alert Siren**: redstone-driven alarm
 
 ### Other
 
-- **Paint Stand** and **Spray Can** — repaint your gear
-- `/ata` command for config and admin launches
+- **Paint Stand** and **Spray Can** to repaint drones
+- `/ata` command for config, terrain scans and admin launches
 - target whitelist and blacklist zones
-- GeckoLib animations and custom sounds
-- English, Ukrainian and Russian, picked from each player's Minecraft language
 
 ## Requirements
 
@@ -133,28 +180,12 @@ Full list in [CHANGELOG.md](CHANGELOG.md). Main points:
 
 ## Build
 
-Build the jar:
-
 ```bat
 .\gradlew.bat build
 ```
 
-Output: `build\libs\air-tactical-arsenal-1.2.0-warzone.jar`.
-
-Run a dev client:
-
-```bat
-.\gradlew.bat runClient
-```
-
-There is also a small helper script: `build.bat`.
-
-Other tasks:
-
-```bat
-.\gradlew.bat runServer
-.\gradlew.bat runData
-```
+Output: `build\libs\air-tactical-arsenal-1.3.0-warzone.jar`. A dev client runs with `.\gradlew.bat runClient`
+(also `runServer`, `runData`); `build.bat` is a small helper script.
 
 ## How to play
 
@@ -162,36 +193,95 @@ Other tasks:
 
 1. Place a Strike UAV Launcher and right-click it with a Shahed to mount the drone.
 2. Right-click the launcher with the Strike UAV Tablet to link it.
-3. Right-click with the tablet to open it, plan the route on the map, save it.
-4. Stand within 30 blocks of the launcher and hit LAUNCH.
+3. Open the tablet, plan the route on the map and save it.
+4. Stand within 100 blocks of the launcher (`tabletLauncherRange`) and press LAUNCH.
 
-Admin shortcut: `/ata attack shahed <start> <target> low|high`
-(and `/ata attack iskander <start> <target>`).
+Admin shortcut: `/ata attack shahed <start> <target> low|high` (and `/ata attack iskander <start> <target>`).
 
 ### Iskander-M
 
 1. Place the 5x5 Missile Launchpad on flat ground with open sky above.
 2. Load the Iskander onto the launchpad through its loading hatch.
 3. Link the launchpad to a Missile Targeting Terminal with the Missile Link Cable.
-4. Open the terminal, pick the launchpad and the target.
-5. Confirm - 7 second countdown starts.
+4. Open the terminal, pick the launchpad and the target, and confirm: the 7-second countdown starts.
 
 ### Orlan-10
 
 1. Place the Recon UAV Launcher and mount an Orlan-10 on it.
 2. Link it with the Recon UAV Tablet, open the tablet and plan the route.
-3. Switch to FPV view. Toggle NVG if you need it.
+3. Launch, then switch to the FPV view. **N** toggles night vision, **R** locks the camera on a point, **Left
+   Alt** leaves the camera.
 
 ### Air Defense Radar
 
-1. Place it with open sky above: no blocks at all over the 5x5 area around it,
-   or it only shows **WEAK SIGNAL**.
-2. Right-click it to open the map. Its redstone output grows as a Shahed or an
-   Iskander gets closer.
+1. Place it with open sky above: no blocks at all over the 5x5 area around it, or it only shows
+   **WEAK SIGNAL**.
+2. Right-click it to open the map. Its redstone output grows as an air contact gets closer; contacts from the
+   placer's scoreboard team don't count.
 
-### Terrain maps
+### Vehicle radars
 
-Run once on the server (op level 2), ideally after pregenerating the world:
+Get into a fighter, attack helicopter or AA vehicle that has a radar: the scope appears on the left edge of the
+screen. **I** hides or shows it. Filled squares are contacts, hollow squares are teammates, and the short line
+on each shows where it is heading. On an **MCA** radar a contact only updates when the beam passes it, and
+anything lower than about 30 blocks above the ground is lost in ground clutter; an **AESA** radar has no beam
+and sees low fliers.
+
+| Vehicles | Radar | Range | Cone | Refresh |
+|---|---|---|---|---|
+| F-22, J-20, Su-57, YF-23 | AESA | 2000 | ±60° | 4/s |
+| F-35A, F-35B | AESA | 1800 | ±60° | 4/s |
+| JAS 39E Gripen | AESA | 1600 | ±90° | 4/s |
+| F-2 | AESA | 1500 | ±60° | 3/s |
+| Su-34 | AESA (PESA) | 1400 | ±55° | 2/s |
+| B-2 | AESA | 800 | ±45° | 2/s |
+| F-14 | MCA | 2000 | ±65° | 3 s sweep |
+| F-15, Su-27, Su-33 | MCA | 1600 | ±60° | 2.5 s |
+| Eurofighter, F/A-18 | MCA | 1500 | ±60° | 2 s |
+| F-16, MiG-29 | MCA | 1300 | ±60° | 2 s |
+| F-4 | MCA | 900 | ±45° | 2.5 s |
+| AH-64, Ka-52, Mi-28, RAH-66 | MCA | 900 | ±90° | 2 s |
+| Pantsir | MCA, round | 1500 | | 1.5 s per turn |
+| Gepard | MCA, round | 1000 | | 2 s per turn |
+| LAV-AD | MCA, round | 700 | | 2 s per turn |
+
+Stealth aircraft are seen at a share of that range: F-117 and B-2 35%, F-22 and YF-23 40%, F-35 45%, J-20 and
+X-47B 50%, Su-57 and RAH-66 60%; Shaheds 70%, Orlans 60%.
+
+## Vehicle radar data
+
+Radars are data files in `data/ata/vehicle_radars/`, so a datapack can rebalance them or give radars to other
+addon vehicles:
+
+```json
+{
+  "vehicles": ["ashvehicle:f-16"],
+  "radar": {
+    "type": "mca",
+    "shape": "cone",
+    "range": 1300,
+    "half_angle": 60,
+    "sweep_seconds": 2.0,
+    "min_altitude": 30
+  }
+}
+```
+
+- `type`: `mca` (sweeping beam) or `aesa` (no beam)
+- `shape`: `cone` (from the nose) or `round` (all around)
+- `range`: blocks; `half_angle`: cone only, 5-90
+- `sweep_seconds` (mca): one side-to-side pass, or one full turn for a round scope
+- `refresh_per_second` (aesa): updates per second
+- `min_altitude`: contacts lower than this above the ground are hidden (default 30 for mca, 0 for aesa)
+
+`"radar": null` removes a radar. To change a built-in radar, put a file with the same name in a datapack
+(`data/ata/vehicle_radars/light_fighters.json` etc.). A file with `"signatures": {"ashvehicle:f-22": 0.4}`
+sets how far away a vehicle can be seen, as a share of the radar's range. Vehicle ids are their entity ids,
+for example `ashvehicle:f-22` or `superbwarfare:lav_ad`.
+
+## Terrain maps
+
+Run once on the server (op level 2), ideally after pregenerating the world (for example with Chunky):
 
 ```
 /ata terrain scan                      # 10000x10000 square around 0, 0
@@ -201,87 +291,85 @@ Run once on the server (op level 2), ideally after pregenerating the world:
 /ata terrain status | cancel
 ```
 
-The result is stored in `world/ata_map/`. All radar and Shahed/Orlan route maps inside that area are built
-from it, and chunks loaded around players are painted in every `mapRefreshMinutes`.
+The result is stored in `world/ata_map/`. All radar and route maps inside that area are built from it, and
+chunks loaded around players are painted in every `mapRefreshMinutes`.
 
-### Config
+## Config
 
 - `/ata config` for live tweaks
-- `config/ata-common.toml` for server settings (explosion damage, craters,
-  radar, UAV route length, Orlan flight time, whitelist/blacklist zones)
+- `config/ata-common.toml` (server): explosions and craters, drone health and shootdown behaviour, Iskander
+  flight, radar range and altitude, `vehicleRadars`, route lengths, `tabletLauncherRange`, Orlan flight time,
+  whitelist/blacklist zones
+- `config/ata-client.toml` (each player): vehicle radar panel shown or hidden, position (left centre by
+  default), size (`vehicleRadarPanelSize`, default 73) and heading-up for round scopes
 
 ## Project layout
 
 ```
 src/main/java/com/synarsis/airtacticalarsenal
 ├── ShahedMod.java              entry point, @Mod("ata")
-├── block/                      blocks: missile terminal, missile launchpad, radar, siren
-│   └── entity/                 block entities
-├── entity/                     Shahed, Iskander, Orlan, paint stand
-├── item/                       rockets, drones, tablets, cable
+├── block/                      missile terminal, missile launchpad, radar, siren (+ block entities)
+├── entity/                     Shahed, Iskander, Orlan, launchers, paint stand
+│   └── crash/                  shot-down flight and durability
+├── item/                       drones, missiles, tablets, cable
+├── radar/                      terrain scanning, shared contact rules
+│   └── vehicle/                vehicle radar profiles and server scanning
 ├── client/
-│   ├── gui/                    terminal, tablet, radar, route screens
-│   ├── radar/                  terrain map and route preview
-│   ├── shader/                 night vision shader
-│   ├── model/ renderer/ sound/ rendering and audio
+│   ├── gui/                    terminal, tablet, radar and route screens
+│   ├── radar/                  terrain maps, vehicle radar HUD
+│   ├── shader/                 night vision
+│   └── model/ renderer/ sound/ rendering and audio
 ├── command/                    /ata command
 ├── compat/                     Create / TacZ / SuperbWarfare / AshVehicles
 ├── mixins/compat/              optional AshVehicles hooks (loaded only if installed)
-├── config/                     ata-common.toml spec
+├── config/                     ata-common.toml and ata-client.toml specs
 ├── chunk/                      forced chunk loading for long flights
 └── network/                    client-server packets
 src/main/resources
 ├── assets/ata/                 textures, lang, models, shaders, sounds
+├── data/ata/vehicle_radars/    vehicle radar profiles and stealth signatures
 └── META-INF/mods.toml          mod metadata
 ```
 
 ## Mod compat
 
-- **Create** — ATA blocks are protected from Create contraption movement
-- **TacZ** — optional, TacZ bullets can shoot Shaheds down (detected at runtime)
-- **SuperbWarfare** — optional. Its aircraft, missiles and those of every addon show on the radar, SBW weapons
-  can shoot Shaheds and Orlans down, and the radar uses SBW's FuMO 25 model. With SBW installed:
-  - Shahed and Iskander count as aerial bombs against vehicle armour (`superbwarfare:aerial_bomb` tag);
-  - Shahed, Iskander and Orlan recipes use SBW parts (vanilla recipes without SBW; the Orlan has no recipe
-    without SBW, as before);
-  - explosions play SBW's huge-explosion sounds, mixed by ATA by distance (old ATA sounds if they're missing);
-  - Shahed, Orlan and Iskander show on SBW radars and the tactical map on SBW versions that have long-range
-    entity tracking (0.8.9.1+). ATA adds them to SBW's `scan_white_list` itself, nothing to set up.
+- **Create**: ATA blocks are protected from Create contraption movement.
+- **TacZ**: TacZ bullets can shoot Shaheds down (detected at runtime).
+- **SuperbWarfare**: its aircraft, missiles and those of its addons show on both radars, its weapons can shoot
+  drones down, and the radar uses SBW's FuMO 25 model. Shahed and Iskander count as aerial bombs against
+  vehicle armour, recipes use SBW parts, and explosions play SBW's sounds. ATA adds its drones and missile to
+  SBW's `scan_white_list` itself. SBW files are loaded from the SBW jar and are not included in this mod.
+- **AshVehicles**: its aircraft and missiles show on the radars, its missiles can lock Shaheds and Orlans
+  (never the Iskander), and its aircraft and AA vehicles get vehicle radars.
 
-  SBW files are loaded from the SBW jar and are not included in this mod.
-- **AshVehicles** — optional. Its aircraft can see and lock Shahed / Orlan (never the Iskander).
-  These hooks load only when AshVehicles is installed.
-
-All compat is optional. The mod runs fine on its own.
+All compat is optional; the mod runs fine on its own.
 
 ### Supported versions
 
 The compat code detects what is installed at runtime, so one jar covers all of these:
 
-| Mod | Public versions | WarZone versions (private, see [WarZone versions](#warzone-versions)) |
-|-----|-----------------|------------------|
+| Mod | Public versions | WarZone versions (private) |
+|-----|-----------------|----------------------------|
 | SuperbWarfare | 0.8.8 (incl. hotfix / final), 0.8.9 (snapshot, release, final), 0.8.9.1, 0.8.9.2 | 0.8.7.1 patched build, 0.8.9.2-warzone-1.0.1 |
 | AshVehicles | 4.3, 4.5, 4.6 | 4.2 patched build, 4.6-warzone-1.0.1 |
 | MCSP | no MCSP-specific code: its vehicles and missiles are handled as SuperbWarfare ones | 1.0.10-warzone-1.0.1 |
 
-- Radar model: uses the FuMO 25 model from whichever place the installed SBW keeps it (SBW moved it in
-  0.8.9). If a future SBW version removes or changes it, the radar switches to the original ATA block
-  instead of crashing.
-- Radar detection: older SBW builds are read through SBW's aircraft interfaces, 0.8.8+ through each vehicle's
-  type (airplane, airship, helicopter). Ground vehicles, boats and small drones are never shown. Missiles are
-  found through SBW's missile base class where it exists, and by class name (AIM, AGM, AAM, R-60/77, Kh,
-  JASSM, Tomahawk, "missile") on older SBW and on AshVehicles 4.2.
-- Locking: SBW's seekers (and AshVehicles 4.3+ missiles, which use them) can lock Shahed and Orlan through
-  the `superbwarfare:destroyable_projectile` tag; the Iskander is never lockable. On AshVehicles 4.2 the extra
-  AshVehicles hooks are used as before; on 4.3+ the HUD highlight hook still applies.
+- Radar model: uses the FuMO 25 model from wherever the installed SBW keeps it; if a future SBW version
+  removes or changes it, the radar falls back to the original ATA block instead of crashing.
+- Detection: aircraft are recognised through SBW's vehicle types (or its aircraft interfaces on older SBW);
+  missiles through SBW's missile base class, or by class name on older builds. Ground vehicles, boats and
+  small drones are never shown.
+- Locking: SBW seekers (and AshVehicles missiles, which use them) lock Shahed and Orlan through the
+  `superbwarfare:destroyable_projectile` tag; the Iskander is never lockable.
 
 ## Credits
 
-- **Synarsis** — author of Air Tactical Arsenal: the original mod, code, models, textures and sounds.
-- **lilDorito** — WarZone fork: the changes listed in [CHANGELOG.md](CHANGELOG.md).
+- **Synarsis**: author of Air Tactical Arsenal, the original mod, code, models, textures and sounds.
+- **lilDorito**: WarZone fork, the changes listed in [CHANGELOG.md](CHANGELOG.md).
+- **Kalitovskiy**: the second Shahed engine sound (`shahed_engine_2.ogg`) and the Iskander flight sound
+  (`iskander_flight.ogg`).
+- **SuperbWarfare**: FuMO 25 radar model and explosion sounds (used from the SBW jar when installed).
 - GeckoLib, Forge and other third-party material stay under their own licenses.
-- **Kalitovskiy** — author of the second Shahed engine sound (`shahed_engine_2.ogg`) and the Iskander flight
-  sound (`iskander_flight.ogg`).
 
 ## License
 

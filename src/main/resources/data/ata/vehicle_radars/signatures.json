@@ -1,0 +1,16 @@
+{
+  "signatures": {
+    "ashvehicle:f-22": 0.4,
+    "ashvehicle:yf-23": 0.4,
+    "ashvehicle:f-35a": 0.45,
+    "ashvehicle:f-35b": 0.45,
+    "ashvehicle:j-20": 0.5,
+    "ashvehicle:su-57": 0.6,
+    "ashvehicle:f-117": 0.35,
+    "ashvehicle:b-2": 0.35,
+    "ashvehicle:x-47b": 0.5,
+    "ashvehicle:rah_66": 0.6,
+    "ata:shahed": 0.7,
+    "ata:orlan": 0.6
+  }
+}

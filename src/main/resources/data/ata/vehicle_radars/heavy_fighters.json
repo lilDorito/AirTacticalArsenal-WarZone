@@ -1,0 +1,14 @@
+{
+  "vehicles": [
+    "ashvehicle:f_15",
+    "ashvehicle:su-27",
+    "ashvehicle:su-33"
+  ],
+  "radar": {
+    "type": "mca",
+    "shape": "cone",
+    "range": 1600,
+    "half_angle": 60,
+    "sweep_seconds": 2.5
+  }
+}

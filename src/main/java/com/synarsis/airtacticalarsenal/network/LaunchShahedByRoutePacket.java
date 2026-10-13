@@ -80,7 +80,7 @@ public class LaunchShahedByRoutePacket {
                 }
 
                 double playerDistance = player.position().distanceTo(launcher.position());
-                if (playerDistance > 30.0) { failed++; continue; }
+                if (playerDistance > com.synarsis.airtacticalarsenal.config.ShahedConfig.getTabletLauncherRange()) { failed++; continue; }
 
                 BlockPos firstTarget = route.get(0);
                 float launcherYaw = launcher.getYRot();

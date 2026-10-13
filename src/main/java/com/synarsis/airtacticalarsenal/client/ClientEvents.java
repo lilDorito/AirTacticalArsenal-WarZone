@@ -38,6 +38,17 @@ public class ClientEvents {
     }
 
     @SubscribeEvent
+    public static void registerOverlays(net.minecraftforge.client.event.RegisterGuiOverlaysEvent event) {
+        event.registerAbove(net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.HOTBAR.id(), "vehicle_radar",
+                com.synarsis.airtacticalarsenal.client.radar.VehicleRadarHud.OVERLAY);
+    }
+
+    @SubscribeEvent
+    public static void registerKeys(net.minecraftforge.client.event.RegisterKeyMappingsEvent event) {
+        event.register(AtaKeys.VEHICLE_RADAR);
+    }
+
+    @SubscribeEvent
     public static void registerParticles(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(ModParticles.DEBRIS.get(), DebrisParticle.Provider::new);
         System.out.println("[ATA] Debris particle registered!");

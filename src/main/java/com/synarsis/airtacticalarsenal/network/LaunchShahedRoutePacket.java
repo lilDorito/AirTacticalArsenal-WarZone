@@ -70,8 +70,8 @@ public class LaunchShahedRoutePacket {
             }
 
             double playerDistance = player.position().distanceTo(launcher.position());
-            if (playerDistance > 100.0) {
-                player.displayClientMessage(Component.translatable("message.ata.launcher.too_far"), true);
+            if (playerDistance > com.synarsis.airtacticalarsenal.config.ShahedConfig.getTabletLauncherRange()) {
+                player.displayClientMessage(Component.translatable("message.ata.launcher.too_far_max", com.synarsis.airtacticalarsenal.config.ShahedConfig.getTabletLauncherRange()), true);
                 return;
             }
 

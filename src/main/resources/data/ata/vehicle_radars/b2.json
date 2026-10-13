@@ -1,0 +1,12 @@
+{
+  "vehicles": [
+    "ashvehicle:b-2"
+  ],
+  "radar": {
+    "type": "aesa",
+    "shape": "cone",
+    "range": 800,
+    "half_angle": 45,
+    "refresh_per_second": 2
+  }
+}

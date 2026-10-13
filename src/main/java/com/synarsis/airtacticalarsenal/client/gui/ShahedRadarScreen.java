@@ -25,7 +25,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ShahedRadarScreen extends Screen {
 
     private final BlockPos radarPos;
-    private static final int UPDATE_INTERVAL = 20;
+    private static final int UPDATE_INTERVAL = 10;
+    private static final int SWEEP_TICKS = 80;
+    private static final float SWEEP_STEP = 360.0f / SWEEP_TICKS;
 
     private static final int[] ZOOM_LEVELS = {1, 2, 4, 8, 12, 16, 20};
     private int zoomIndex = 2;
@@ -69,32 +71,45 @@ public class ShahedRadarScreen extends Screen {
         Vec3 smoothPos;
         float heading;
         float speed;
+        Vec3 latest;
+        float latestHeading;
+        float latestSpeed;
+        boolean latestFriendly;
+        boolean friendly;
         int staleTicks = 0;
+        int paintAge = 0;
         final List<Vec3> trail = new ArrayList<>();
         static final int MAX_TRAIL = 4;
-        static final int STALE_REMOVE = 80;
+        static final int STALE_REMOVE = SWEEP_TICKS * 2 + 40;
 
         RadarTarget(int entityId, byte type) {
             this.entityId = entityId;
             this.type = type;
         }
 
-        void update(Vec3 pos, float heading, float speed) {
-            if (this.position != null && this.position.distanceToSqr(pos) > 1.0) {
-                trail.add(this.position);
-                if (trail.size() > MAX_TRAIL) trail.remove(0);
-            }
-            this.position = pos;
-            if (this.smoothPos == null) this.smoothPos = pos;
-            this.heading = heading;
-            this.speed = speed;
+        void update(Vec3 pos, float heading, float speed, boolean friendly) {
+            this.latest = pos;
+            this.latestFriendly = friendly;
+            this.latestHeading = heading;
+            this.latestSpeed = speed;
             this.staleTicks = 0;
         }
 
-        void interpolate(float factor) {
-            if (position != null && smoothPos != null) {
-                smoothPos = smoothPos.add(position.subtract(smoothPos).scale(factor));
+        void paint() {
+            if (latest == null) return;
+            if (this.position != null && this.position.distanceToSqr(latest) > 1.0) {
+                trail.add(this.position);
+                if (trail.size() > MAX_TRAIL) trail.remove(0);
             }
+            this.position = latest;
+            this.smoothPos = latest;
+            this.heading = latestHeading;
+            this.speed = latestSpeed;
+            this.friendly = latestFriendly;
+            this.paintAge = 0;
+        }
+
+        void interpolate(float factor) {
         }
     }
 
@@ -128,7 +143,7 @@ public class ShahedRadarScreen extends Screen {
         for (RadarUpdatePacket.TargetData td : data) {
             RadarTarget t = currentInstance.targets.computeIfAbsent(
                     td.entityId, id -> new RadarTarget(id, td.type));
-            t.update(td.pos, td.heading, td.speed);
+            t.update(td.pos, td.heading, td.speed, td.friendly);
             t.type = td.type;
         }
     }
@@ -174,11 +189,27 @@ public class ShahedRadarScreen extends Screen {
         }
 
         tickCounter++;
-        scanAngle += 1.8f;
-        if (scanAngle >= 360) scanAngle -= 360;
+        float prevAngle = scanAngle;
+        scanAngle -= SWEEP_STEP;
+        if (scanAngle < 0) scanAngle += 360;
 
-        targets.values().forEach(t -> t.staleTicks++);
-        targets.values().removeIf(t -> t.staleTicks > RadarTarget.STALE_REMOVE);
+        double rx = radarPos.getX() + 0.5;
+        double rz = radarPos.getZ() + 0.5;
+        targets.values().removeIf(t -> {
+            t.staleTicks++;
+            t.paintAge++;
+            Vec3 at = t.latest != null && t.staleTicks <= UPDATE_INTERVAL * 2 ? t.latest : t.position;
+            if (at == null) return t.staleTicks > RadarTarget.STALE_REMOVE;
+            float bearing = (float) Math.toDegrees(Math.atan2(-(at.z - rz), at.x - rx));
+            if (bearing < 0) bearing += 360;
+            float behind = prevAngle - bearing;
+            if (behind < 0) behind += 360;
+            if (behind < SWEEP_STEP) {
+                if (t.staleTicks > UPDATE_INTERVAL * 2) return true;
+                t.paint();
+            }
+            return t.staleTicks > RadarTarget.STALE_REMOVE;
+        });
         if (selectedTargetId >= 0 && !targets.containsKey(selectedTargetId)) {
             selectedTargetId = -1;
         }
@@ -197,6 +228,8 @@ public class ShahedRadarScreen extends Screen {
     }
 
     private static final int RIGHT_PANEL_W = 185;
+    private static final int SWEEP_GLOW_LINES = 14;
+    private static final float SWEEP_GLOW_STEP = 2.0f;
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float pt) {
@@ -336,10 +369,13 @@ public class ShahedRadarScreen extends Screen {
         int detectPx = (int) (detectRadius() * scale);
         int sweepLen = Math.min(detectPx, half + 50);
 
-        double rad = Math.toRadians(scanAngle);
-        int ex = rp[0] + (int)(Math.cos(rad) * sweepLen);
-        int ey = rp[1] - (int)(Math.sin(rad) * sweepLen);
-        drawLine(g, rp[0], rp[1], ex, ey, COL_SWEEP);
+        for (int i = SWEEP_GLOW_LINES; i >= 0; i--) {
+            double rad = Math.toRadians(scanAngle + i * SWEEP_GLOW_STEP);
+            int ex = rp[0] + (int)(Math.cos(rad) * sweepLen);
+            int ey = rp[1] - (int)(Math.sin(rad) * sweepLen);
+            int a = i == 0 ? (COL_SWEEP >>> 24) : (int) (0x50 * (1.0f - (float) i / (SWEEP_GLOW_LINES + 1)));
+            drawLine(g, rp[0], rp[1], ex, ey, (a << 24) | (COL_SWEEP & 0xFFFFFF));
+        }
     }
 
     private void renderTargets(GuiGraphics g, int cx, int cy, int half, int mx, int my) {
@@ -359,7 +395,7 @@ public class ShahedRadarScreen extends Screen {
             int sx = cx + (int) relX;
             int sy = cy + (int) relZ;
 
-            int alpha = target.staleTicks < 40 ? 255 : Math.max(40, 255 - (target.staleTicks - 40) * 5);
+            int alpha = 255 - (int) (175 * Math.min(1.0f, target.paintAge / (float) SWEEP_TICKS));
             int baseCol = getTargetColor(target.type);
             int symCol = (alpha << 24) | (baseCol & 0xFFFFFF);
 
@@ -376,7 +412,11 @@ public class ShahedRadarScreen extends Screen {
                 prevTx = tx; prevTy = ty;
             }
 
-            drawFilledCircle(g, sx, sy, 2, symCol);
+            if (target.friendly) {
+                drawCircle(g, sx, sy, 3, symCol, 12);
+            } else {
+                drawFilledCircle(g, sx, sy, 2, symCol);
+            }
 
             if (target.entityId == selectedTargetId) {
                 drawCircle(g, sx, sy, 4, COL_SELECTED, 16);
@@ -480,7 +520,7 @@ public class ShahedRadarScreen extends Screen {
         g.fill(barX, barY, barX + barW, barY + barH, COL_STATUS_BG);
         g.hLine(barX, barX + barW - 1, barY, 0xFF1a3028);
 
-        long activeCount = targets.values().stream().filter(t -> t.staleTicks < RadarTarget.STALE_REMOVE).count();
+        long activeCount = targets.values().stream().filter(t -> t.position != null).count();
         String countStr = weakSignal ? Tr.s("gui.ata.radar.weak_signal")
                 : activeCount > 0
                 ? Tr.s("gui.ata.radar.targets_count", activeCount)

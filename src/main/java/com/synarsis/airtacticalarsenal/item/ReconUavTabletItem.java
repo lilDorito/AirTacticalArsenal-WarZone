@@ -31,7 +31,6 @@ public class ReconUavTabletItem extends Item {
     private static final String TAG_LINKED_ORLAN = "LinkedOrlanId";
     private static final String TAG_CAMERA_MODE = "CameraMode";
 
-    public static final double MAX_CONTROL_RANGE = 30.0;
     public static final int MAX_LAUNCHERS = 10;
 
     public ReconUavTabletItem(Properties properties) {

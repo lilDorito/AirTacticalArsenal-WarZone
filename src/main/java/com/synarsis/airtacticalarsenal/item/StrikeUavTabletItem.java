@@ -30,7 +30,6 @@ public class StrikeUavTabletItem extends Item {
     private static final String TAG_LAUNCHERS = "LinkedLaunchers";
     private static final String TAG_SAVED_COORDS = "SavedCoords";
 
-    public static final double MAX_CONTROL_RANGE = 30.0;
 
     public static final int MAX_LAUNCHERS = 10;
 

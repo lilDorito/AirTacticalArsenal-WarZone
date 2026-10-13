@@ -9,6 +9,85 @@ patched SBW 0.8.7.1 / AshVehicles 4.2 builds) are the author's private forks. Th
 named here only because this fork is tested against them, and anything said about them applies only with
 those builds. See the README's "WarZone versions" section.
 
+## 1.3.0-warzone
+
+### Vehicle radars
+- Fighters, attack helicopters and AA vehicles from SuperbWarfare and AshVehicles get an on-board radar, shown in
+  a small black-and-green panel on the left edge of the screen to everyone aboard. Everything is in ATA; the
+  vehicle mods are unchanged, and it works with the public builds too.
+- Two shapes: AA vehicles get a **round** scope around the vehicle (north up; heading up in the client config),
+  aircraft and helicopters a **cone** spreading out from the nose.
+- Two radar types:
+  - **MCA** (mechanical): a beam sweeps the scope (it turns round on AA vehicles, swings side to side like a
+    windscreen wiper on aircraft). A contact is only updated when the beam passes over it, then fades until the
+    next pass. Ground clutter hides anything flying lower than 30 blocks above the ground (10 for helicopter
+    radars, 20 for AA radars).
+  - **AESA**: no beam; every contact in range updates several times a second, low fliers included.
+- Contacts use the ground radar's classes and colours (PLN, HEL, UAV, MSL), with a short line showing where each
+  is heading. Teammates (same scoreboard team) are hollow squares, others filled squares of the same size. A legend next to the scope shows the radar
+  type and range. Aircraft sitting on the ground aren't shown.
+- Stealth aircraft are seen from shorter range: F-117 and B-2 at 35%, F-22 and YF-23 at 40%, F-35 at 45%, J-20
+  and X-47B at 50%, Su-57 and RAH-66 at 60%. Shaheds are seen at 70% and Orlans at 60%.
+- The server does the scanning, so the radar sees well past view distance, and a modified client can't see more
+  than its radar shows.
+- Starting balance (range in blocks, half-width of the cone, refresh):
+
+  | Vehicles | Radar | Range | Cone | Refresh |
+  |---|---|---|---|---|
+  | F-22, J-20, Su-57, YF-23 | AESA | 2000 | ±60° | 4/s |
+  | F-35A, F-35B | AESA | 1800 | ±60° | 4/s |
+  | JAS 39E Gripen | AESA | 1600 | ±90° | 4/s |
+  | F-2 | AESA | 1500 | ±60° | 3/s |
+  | Su-34 | AESA (PESA) | 1400 | ±55° | 2/s |
+  | B-2 | AESA | 800 | ±45° | 2/s |
+  | F-14 | MCA | 2000 | ±65° | 3 s sweep |
+  | F-15, Su-27, Su-33 | MCA | 1600 | ±60° | 2.5 s |
+  | Eurofighter, F/A-18 | MCA | 1500 | ±60° | 2 s |
+  | F-16, MiG-29 | MCA | 1300 | ±60° | 2 s |
+  | F-4 | MCA | 900 | ±45° | 2.5 s |
+  | AH-64, Ka-52, Mi-28, RAH-66 | MCA | 900 | ±90° | 2 s |
+  | Pantsir | MCA, round | 1500 | | 1.5 s per turn |
+  | Gepard | MCA, round | 1000 | | 2 s per turn |
+  | LAV-AD | MCA, round | 700 | | 2 s per turn |
+
+  No radar: Su-25, A-10, MiG-15, F-117, B-52, C-130, AC-130H/U, V-22, UH-60, MH-60M, AH-6, Reaper, X-47B, Ju-87
+  and the small SBW aircraft.
+- All of it is data in `data/ata/vehicle_radars/`, so a datapack can rebalance it or give radars to other addon
+  vehicles (see the README). `vehicleRadars = false` in `ata-common.toml` turns vehicle radars off.
+- Client settings in `ata-client.toml`: show or hide (also the **I** key, rebindable), position (left centre by
+  default), size (`vehicleRadarPanelSize`, default 73), and heading-up for round scopes.
+
+### Ground radar sweep
+- The Air Defense Radar's sweep line is real now: it turns clockwise once every 4 seconds, and a contact's dot
+  only moves when the line passes over it, then fades until the next pass. A contact that has left is dropped
+  when the line next passes where it was. The target list shows the same, last-swept positions.
+- Teammates of the player looking at the radar (same scoreboard team) show as hollow circles.
+
+### Radar alarm (redstone)
+- The redstone signal now reacts to everything the radar screen shows: SuperbWarfare and AshVehicles aircraft,
+  helicopters and guided missiles (AGMs included) as well as Shaheds, Orlans and the Iskander. It used to react
+  only to Shaheds and the Iskander.
+- It follows the radar's own rules: contacts below `radarMinAltitude` don't count, and the distance is measured
+  across the ground like on the screen.
+- It ignores the team of whoever placed the radar: their teammates' aircraft and the missiles and drones they
+  launched don't set it off. A radar placed before this update (or by a player without a team) still reacts to
+  everything.
+
+### Tablet range
+- How close you must be to a Strike or Recon UAV launcher to save a route or launch is now one setting,
+  `tabletLauncherRange` (default 100 blocks, 30-250), sent to players when they join. The tablet screens, route
+  saving and launching used different, hard-coded limits (30 in some places, 100 in others), so a launch could be
+  refused while the tablet said you were in range, and the other way round. Messages show the real limit.
+
+### Long-range locking
+- ATA kept registering Shaheds, Orlans and Iskanders with SuperbWarfare's long-range tracking only until the
+  first error; one failed call switched it off for the rest of the session, so with SuperbWarfare WarZone the
+  drones could drop off the tactical map and out of long-range locks. A single failed call is now skipped; it
+  only switches off after 50 failures in a row.
+
+### Upgrade notes
+- Network protocol 15 -> 16: server and all clients must update to 1.3.0-warzone together.
+
 ## 1.2.0-warzone
 
 ### Shot-down drones fall out of the sky
