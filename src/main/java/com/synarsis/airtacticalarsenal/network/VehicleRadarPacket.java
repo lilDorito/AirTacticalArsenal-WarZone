@@ -46,7 +46,7 @@ public class VehicleRadarPacket {
     public final List<Contact> contacts;
 
     public static VehicleRadarPacket off() {
-        return new VehicleRadarPacket(false, VehicleRadarProfile.Kind.MCA, VehicleRadarProfile.Shape.ROUND, 0, 0, 1, 1,
+        return new VehicleRadarPacket(false, VehicleRadarProfile.Kind.MSA, VehicleRadarProfile.Shape.ROUND, 0, 0, 1, 1,
                 0, 1, true, List.of());
     }
 
@@ -69,7 +69,7 @@ public class VehicleRadarPacket {
     public VehicleRadarPacket(FriendlyByteBuf buf) {
         this.active = buf.readBoolean();
         if (!this.active) {
-            this.kind = VehicleRadarProfile.Kind.MCA;
+            this.kind = VehicleRadarProfile.Kind.MSA;
             this.shape = VehicleRadarProfile.Shape.ROUND;
             this.range = 0;
             this.halfAngle = 0;
@@ -81,7 +81,7 @@ public class VehicleRadarPacket {
             this.contacts = List.of();
             return;
         }
-        this.kind = buf.readBoolean() ? VehicleRadarProfile.Kind.AESA : VehicleRadarProfile.Kind.MCA;
+        this.kind = buf.readBoolean() ? VehicleRadarProfile.Kind.AESA : VehicleRadarProfile.Kind.MSA;
         this.shape = buf.readBoolean() ? VehicleRadarProfile.Shape.CONE : VehicleRadarProfile.Shape.ROUND;
         this.range = buf.readVarInt();
         this.halfAngle = buf.readVarInt();

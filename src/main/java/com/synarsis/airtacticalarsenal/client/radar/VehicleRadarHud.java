@@ -87,7 +87,7 @@ public final class VehicleRadarHud {
         double fz = Mth.cos(yaw * Mth.DEG_TO_RAD);
         float nose = (float) Math.toDegrees(Math.atan2(fx, -fz));
         double scale = (double) r / Math.max(1, VehicleRadarClient.range);
-        boolean mca = VehicleRadarClient.kind == VehicleRadarProfile.Kind.MCA;
+        boolean msa = VehicleRadarClient.kind == VehicleRadarProfile.Kind.MSA;
 
         if (cone) {
             int ax = scopeX + w / 2;
@@ -104,7 +104,7 @@ public final class VehicleRadarHud {
             RadarDraw.ray(g, ax, ay, half, r, EDGE);
             RadarDraw.arc(g, ax, ay, r, -half, half, EDGE);
 
-            if (mca) {
+            if (msa) {
                 float b = VehicleRadarClient.beamAt(pt);
                 int dir = VehicleRadarClient.beamDir;
                 for (int i = GLOW_LINES; i >= 1; i--) {
@@ -129,7 +129,7 @@ public final class VehicleRadarHud {
                 if (Math.abs(ang) > half) continue;
                 int sx = ax + (int) Math.round(side * scale);
                 int sy = ay - (int) Math.round(fwd * scale);
-                drawBlip(g, blip, sx, sy, headingBearing(blip.heading) - nose, mca);
+                drawBlip(g, blip, sx, sy, headingBearing(blip.heading) - nose, msa);
             }
             RadarDraw.dot(g, ax, ay - 1, OWN);
         } else {
@@ -144,7 +144,7 @@ public final class VehicleRadarHud {
             }
             RadarDraw.arc(g, cx, cy, r, 0, 360, EDGE);
 
-            if (mca) {
+            if (msa) {
                 float b = VehicleRadarClient.beamAt(pt) - rotation;
                 for (int i = GLOW_LINES; i >= 1; i--) {
                     int alpha = (int) (0x60 * (1.0f - (float) i / (GLOW_LINES + 1)));
@@ -161,7 +161,7 @@ public final class VehicleRadarHud {
                 double ang = Math.toRadians(Math.toDegrees(Math.atan2(dx, -dz)) - rotation);
                 int sx = cx + (int) Math.round(Math.sin(ang) * dist * scale);
                 int sy = cy - (int) Math.round(Math.cos(ang) * dist * scale);
-                drawBlip(g, blip, sx, sy, headingBearing(blip.heading) - rotation, mca);
+                drawBlip(g, blip, sx, sy, headingBearing(blip.heading) - rotation, msa);
             }
 
             RadarDraw.ray(g, cx, cy, nose - rotation, 5, OWN);
@@ -171,7 +171,7 @@ public final class VehicleRadarHud {
                     cy - (int) Math.round(Math.cos(Math.toRadians(-rotation)) * (r - 5)) - 2, TEXT_DIM);
         }
 
-        renderLegend(g, mc.font, legendX, y0, mca);
+        renderLegend(g, mc.font, legendX, y0, msa);
     }
 
     private static float headingBearing(float targetYaw) {
@@ -180,9 +180,9 @@ public final class VehicleRadarHud {
         return (float) Math.toDegrees(Math.atan2(vx, -vz));
     }
 
-    private static void drawBlip(GuiGraphics g, VehicleRadarClient.Blip blip, int x, int y, float headingScreen, boolean mca) {
+    private static void drawBlip(GuiGraphics g, VehicleRadarClient.Blip blip, int x, int y, float headingScreen, boolean msa) {
         int alpha = 255;
-        if (mca) {
+        if (msa) {
             float fade = Math.min(1.0f, blip.age / (float) Math.max(1, VehicleRadarClient.paintPeriod()));
             alpha = 255 - (int) (170 * fade);
         }
@@ -191,9 +191,9 @@ public final class VehicleRadarHud {
         RadarDraw.blip(g, x, y, color, blip.friendly);
     }
 
-    private static void renderLegend(GuiGraphics g, Font font, int x, int y, boolean mca) {
+    private static void renderLegend(GuiGraphics g, Font font, int x, int y, boolean msa) {
         int line = Math.round(10 * TEXT_SCALE) + 1;
-        text(g, font, mca ? "MCA" : "AESA", x, y, TEXT);
+        text(g, font, msa ? "MSA" : "AESA", x, y, TEXT);
         text(g, font, Tr.s("gui.ata.radar.meters", VehicleRadarClient.range), x, y + line, TEXT_DIM);
         int ly = y + line * 2 + 3;
         for (int i = 0; i < TYPES.length; i++) {

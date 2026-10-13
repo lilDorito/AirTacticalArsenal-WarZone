@@ -26,7 +26,7 @@ import java.util.UUID;
 @Mod.EventBusSubscriber(modid = "ata")
 public final class VehicleRadarService {
 
-    private static final int MCA_SEND_INTERVAL = 2;
+    private static final int MSA_SEND_INTERVAL = 2;
 
     private static final Map<UUID, Beam> BEAMS = new HashMap<>();
     private static Set<UUID> activePlayers = new HashSet<>();
@@ -113,7 +113,7 @@ public final class VehicleRadarService {
 
     private static VehicleRadarPacket scan(ServerLevel level, Entity vehicle, VehicleRadarProfile p, Beam beam,
                                            List<Air> air, ServerPlayer viewer) {
-        boolean mca = p.kind == VehicleRadarProfile.Kind.MCA;
+        boolean msa = p.kind == VehicleRadarProfile.Kind.MSA;
         boolean cone = p.shape == VehicleRadarProfile.Shape.CONE;
 
         float yaw = vehicle.getYRot();
@@ -124,7 +124,7 @@ public final class VehicleRadarService {
         float prev = beam.angle;
         float sweptLo = 0;
         float sweptHi = 0;
-        if (mca) {
+        if (msa) {
             if (cone) {
                 float step = 2.0f * p.halfAngle / p.sweepTicks;
                 float raw = prev + beam.dir * step;
@@ -152,10 +152,10 @@ public final class VehicleRadarService {
         }
         beam.ticks++;
 
-        boolean sendNow = mca ? beam.ticks % MCA_SEND_INTERVAL == 0 : beam.ticks % p.refreshTicks == 0;
-        if (!mca && !sendNow) return null;
+        boolean sendNow = msa ? beam.ticks % MSA_SEND_INTERVAL == 0 : beam.ticks % p.refreshTicks == 0;
+        if (!msa && !sendNow) return null;
 
-        List<VehicleRadarPacket.Contact> out = mca ? beam.pending : new ArrayList<>();
+        List<VehicleRadarPacket.Contact> out = msa ? beam.pending : new ArrayList<>();
         double ox = vehicle.getX();
         double oy = vehicle.getY();
         double oz = vehicle.getZ();
@@ -174,7 +174,7 @@ public final class VehicleRadarService {
             float rel = Mth.wrapDegrees(bearing - nose);
             if (cone && Math.abs(rel) > p.halfAngle) continue;
 
-            if (mca) {
+            if (msa) {
                 if (cone) {
                     if (rel < sweptLo || rel > sweptHi) continue;
                 } else {
@@ -194,8 +194,8 @@ public final class VehicleRadarService {
 
         if (!sendNow) return null;
         List<VehicleRadarPacket.Contact> contacts = new ArrayList<>(out);
-        if (mca) beam.pending.clear();
+        if (msa) beam.pending.clear();
         return new VehicleRadarPacket(true, p.kind, p.shape, p.range, p.halfAngle, p.sweepTicks, p.refreshTicks,
-                beam.angle, beam.dir, !mca, contacts);
+                beam.angle, beam.dir, !msa, contacts);
     }
 }

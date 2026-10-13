@@ -18,7 +18,7 @@ those builds. See the README's "WarZone versions" section.
 - Two shapes: AA vehicles get a **round** scope around the vehicle (north up; heading up in the client config),
   aircraft and helicopters a **cone** spreading out from the nose.
 - Two radar types:
-  - **MCA** (mechanical): a beam sweeps the scope (it turns round on AA vehicles, swings side to side like a
+  - **MSA** (mechanical): a beam sweeps the scope (it turns round on AA vehicles, swings side to side like a
     windscreen wiper on aircraft). A contact is only updated when the beam passes over it, then fades until the
     next pass. Ground clutter hides anything flying lower than 30 blocks above the ground (10 for helicopter
     radars, 20 for AA radars).
@@ -40,15 +40,15 @@ those builds. See the README's "WarZone versions" section.
   | F-2 | AESA | 1500 | ±60° | 3/s |
   | Su-34 | AESA (PESA) | 1400 | ±55° | 2/s |
   | B-2 | AESA | 800 | ±45° | 2/s |
-  | F-14 | MCA | 2000 | ±65° | 3 s sweep |
-  | F-15, Su-27, Su-33 | MCA | 1600 | ±60° | 2.5 s |
-  | Eurofighter, F/A-18 | MCA | 1500 | ±60° | 2 s |
-  | F-16, MiG-29 | MCA | 1300 | ±60° | 2 s |
-  | F-4 | MCA | 900 | ±45° | 2.5 s |
-  | AH-64, Ka-52, Mi-28, RAH-66 | MCA | 900 | ±90° | 2 s |
-  | Pantsir | MCA, round | 1500 | | 1.5 s per turn |
-  | Gepard | MCA, round | 1000 | | 2 s per turn |
-  | LAV-AD | MCA, round | 700 | | 2 s per turn |
+  | F-14 | MSA | 2000 | ±65° | 3 s sweep |
+  | F-15, Su-27, Su-33 | MSA | 1600 | ±60° | 2.5 s |
+  | Eurofighter, F/A-18 | MSA | 1500 | ±60° | 2 s |
+  | F-16, MiG-29 | MSA | 1300 | ±60° | 2 s |
+  | F-4 | MSA | 900 | ±45° | 2.5 s |
+  | AH-64, Ka-52, Mi-28, RAH-66 | MSA | 900 | ±90° | 2 s |
+  | Pantsir | MSA, round | 1500 | | 1.5 s per turn |
+  | Gepard | MSA, round | 1000 | | 2 s per turn |
+  | LAV-AD | MSA, round | 700 | | 2 s per turn |
 
   No radar: Su-25, A-10, MiG-15, F-117, B-52, C-130, AC-130H/U, V-22, UH-60, MH-60M, AH-6, Reaper, X-47B, Ju-87
   and the small SBW aircraft.

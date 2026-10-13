@@ -3,7 +3,7 @@
     "ashvehicle:pa_pantsir"
   ],
   "radar": {
-    "type": "mca",
+    "type": "msa",
     "shape": "round",
     "range": 1500,
     "sweep_seconds": 1.5,

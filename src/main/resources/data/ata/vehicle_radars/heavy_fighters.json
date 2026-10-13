@@ -5,7 +5,7 @@
     "ashvehicle:su-33"
   ],
   "radar": {
-    "type": "mca",
+    "type": "msa",
     "shape": "cone",
     "range": 1600,
     "half_angle": 60,

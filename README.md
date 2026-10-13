@@ -92,7 +92,7 @@ The full history is in [CHANGELOG.md](CHANGELOG.md). In short:
 - Fighters, attack helicopters and AA vehicles from SuperbWarfare and AshVehicles get an on-board radar in a
   small black-and-green panel on the left edge of the screen, for everyone aboard.
 - Round scopes for AA vehicles, cones from the nose for aircraft and helicopters.
-- **MCA** (mechanical) radars sweep a beam and miss low fliers; **AESA** radars update everything in range
+- **MSA** (mechanical) radars sweep a beam and miss low fliers; **AESA** radars update everything in range
   several times a second. Stealth aircraft are seen from shorter range.
 - The server does the scanning, so it works far past view distance; everything is data-driven and can be
   changed by datapacks.
@@ -223,7 +223,7 @@ Admin shortcut: `/ata attack shahed <start> <target> low|high` (and `/ata attack
 
 Get into a fighter, attack helicopter or AA vehicle that has a radar: the scope appears on the left edge of the
 screen. **I** hides or shows it. Filled squares are contacts, hollow squares are teammates, and the short line
-on each shows where it is heading. On an **MCA** radar a contact only updates when the beam passes it, and
+on each shows where it is heading. On an **MSA** radar a contact only updates when the beam passes it, and
 anything lower than about 30 blocks above the ground is lost in ground clutter; an **AESA** radar has no beam
 and sees low fliers.
 
@@ -235,15 +235,15 @@ and sees low fliers.
 | F-2 | AESA | 1500 | ±60° | 3/s |
 | Su-34 | AESA (PESA) | 1400 | ±55° | 2/s |
 | B-2 | AESA | 800 | ±45° | 2/s |
-| F-14 | MCA | 2000 | ±65° | 3 s sweep |
-| F-15, Su-27, Su-33 | MCA | 1600 | ±60° | 2.5 s |
-| Eurofighter, F/A-18 | MCA | 1500 | ±60° | 2 s |
-| F-16, MiG-29 | MCA | 1300 | ±60° | 2 s |
-| F-4 | MCA | 900 | ±45° | 2.5 s |
-| AH-64, Ka-52, Mi-28, RAH-66 | MCA | 900 | ±90° | 2 s |
-| Pantsir | MCA, round | 1500 | | 1.5 s per turn |
-| Gepard | MCA, round | 1000 | | 2 s per turn |
-| LAV-AD | MCA, round | 700 | | 2 s per turn |
+| F-14 | MSA | 2000 | ±65° | 3 s sweep |
+| F-15, Su-27, Su-33 | MSA | 1600 | ±60° | 2.5 s |
+| Eurofighter, F/A-18 | MSA | 1500 | ±60° | 2 s |
+| F-16, MiG-29 | MSA | 1300 | ±60° | 2 s |
+| F-4 | MSA | 900 | ±45° | 2.5 s |
+| AH-64, Ka-52, Mi-28, RAH-66 | MSA | 900 | ±90° | 2 s |
+| Pantsir | MSA, round | 1500 | | 1.5 s per turn |
+| Gepard | MSA, round | 1000 | | 2 s per turn |
+| LAV-AD | MSA, round | 700 | | 2 s per turn |
 
 Stealth aircraft are seen at a share of that range: F-117 and B-2 35%, F-22 and YF-23 40%, F-35 45%, J-20 and
 X-47B 50%, Su-57 and RAH-66 60%; Shaheds 70%, Orlans 60%.
@@ -257,7 +257,7 @@ addon vehicles:
 {
   "vehicles": ["ashvehicle:f-16"],
   "radar": {
-    "type": "mca",
+    "type": "msa",
     "shape": "cone",
     "range": 1300,
     "half_angle": 60,
@@ -267,12 +267,12 @@ addon vehicles:
 }
 ```
 
-- `type`: `mca` (sweeping beam) or `aesa` (no beam)
+- `type`: `msa` (sweeping beam) or `aesa` (no beam)
 - `shape`: `cone` (from the nose) or `round` (all around)
 - `range`: blocks; `half_angle`: cone only, 5-90
-- `sweep_seconds` (mca): one side-to-side pass, or one full turn for a round scope
+- `sweep_seconds` (msa): one side-to-side pass, or one full turn for a round scope
 - `refresh_per_second` (aesa): updates per second
-- `min_altitude`: contacts lower than this above the ground are hidden (default 30 for mca, 0 for aesa)
+- `min_altitude`: contacts lower than this above the ground are hidden (default 30 for msa, 0 for aesa)
 
 `"radar": null` removes a radar. To change a built-in radar, put a file with the same name in a datapack
 (`data/ata/vehicle_radars/light_fighters.json` etc.). A file with `"signatures": {"ashvehicle:f-22": 0.4}`

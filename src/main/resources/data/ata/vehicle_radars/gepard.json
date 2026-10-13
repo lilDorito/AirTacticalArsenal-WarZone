@@ -3,7 +3,7 @@
     "ashvehicle:gepard-1a2"
   ],
   "radar": {
-    "type": "mca",
+    "type": "msa",
     "shape": "round",
     "range": 1000,
     "sweep_seconds": 2.0,

@@ -27,7 +27,7 @@ public final class VehicleRadarClient {
     }
 
     static boolean active;
-    static VehicleRadarProfile.Kind kind = VehicleRadarProfile.Kind.MCA;
+    static VehicleRadarProfile.Kind kind = VehicleRadarProfile.Kind.MSA;
     static VehicleRadarProfile.Shape shape = VehicleRadarProfile.Shape.CONE;
     static int range = 1000;
     static int halfAngle = 60;
@@ -62,7 +62,7 @@ public final class VehicleRadarClient {
             beam = packet.beam;
         }
 
-        if (kind == VehicleRadarProfile.Kind.MCA) {
+        if (kind == VehicleRadarProfile.Kind.MSA) {
             beamDir = packet.beamDir;
             beam = packet.beam;
         }
@@ -91,7 +91,7 @@ public final class VehicleRadarClient {
             return;
         }
         beamPrev = beam;
-        if (kind == VehicleRadarProfile.Kind.MCA) {
+        if (kind == VehicleRadarProfile.Kind.MSA) {
             if (shape == VehicleRadarProfile.Shape.CONE) {
                 float step = 2.0f * halfAngle / sweepTicks;
                 beam += beamDir * step;

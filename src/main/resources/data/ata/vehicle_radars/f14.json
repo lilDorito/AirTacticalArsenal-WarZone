@@ -3,7 +3,7 @@
     "ashvehicle:f14"
   ],
   "radar": {
-    "type": "mca",
+    "type": "msa",
     "shape": "cone",
     "range": 2000,
     "half_angle": 65,

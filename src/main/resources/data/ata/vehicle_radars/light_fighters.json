@@ -4,7 +4,7 @@
     "ashvehicle:mig_29"
   ],
   "radar": {
-    "type": "mca",
+    "type": "msa",
     "shape": "cone",
     "range": 1300,
     "half_angle": 60,
