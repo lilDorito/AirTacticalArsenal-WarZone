@@ -200,6 +200,8 @@
   "gui.ata.radar.queued_big": "○ У ЧЕРЗІ: #%s",
   "gui.ata.radar.targets_count": "⚠ ЦІЛІ: %s",
   "gui.ata.radar.clear": "✔ ЧИСТО",
+  "gui.ata.radar.alarm_on": "ТРИВОГА: УВІМК",
+  "gui.ata.radar.alarm_off": "ТРИВОГА: ВИМК",
   "gui.ata.radar.weak_signal": "⚠ СЛАБКИЙ СИГНАЛ",
   "gui.ata.radar.weak_signal_hint": "Радару потрібне відкрите небо: жодних блоків над майданчиком 5x5 навколо нього",
   "gui.ata.radar.targets": "ЦІЛІ",

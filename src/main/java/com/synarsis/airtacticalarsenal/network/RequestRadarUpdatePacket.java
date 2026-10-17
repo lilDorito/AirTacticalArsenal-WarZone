@@ -5,8 +5,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -38,40 +36,32 @@ public class RequestRadarUpdatePacket {
             ServerLevel level = player.serverLevel();
             Vec3 radarCenter = Vec3.atCenterOf(radarPos);
 
-            double top = Math.max(level.getMaxBuildHeight(), ShahedConfig.getIskanderMaxFlightHeight()) + 64;
-            AABB searchBox = new AABB(
-                radarCenter.x - ShahedConfig.getRadarRange(), level.getMinBuildHeight(), radarCenter.z - ShahedConfig.getRadarRange(),
-                radarCenter.x + ShahedConfig.getRadarRange(), top, radarCenter.z + ShahedConfig.getRadarRange()
-            );
+            boolean alarm = true;
+            boolean canToggle = false;
+            if (level.getBlockEntity(radarPos) instanceof com.synarsis.airtacticalarsenal.block.entity.ShahedRadarBlockEntity radar) {
+                alarm = radar.isAlarmOutput();
+                canToggle = radar.canControl(player);
+            }
 
             List<RadarUpdatePacket.TargetData> targets = new ArrayList<>();
-            int minAltitudeCfg = ShahedConfig.getRadarMinAltitude();
+            int minAltitude = ShahedConfig.getRadarMinAltitude();
             if (!com.synarsis.airtacticalarsenal.block.ShahedRadarBlock.hasOpenSky(level, radarPos)) {
-                NetworkHandler.sendToPlayer(player, new RadarUpdatePacket(radarPos, targets, minAltitudeCfg, false));
+                NetworkHandler.sendToPlayer(player, new RadarUpdatePacket(radarPos, targets, minAltitude, false, alarm, canToggle));
                 return;
             }
-            double rangeSquared = (double) ShahedConfig.getRadarRange() * ShahedConfig.getRadarRange();
-            int minAltitude = ShahedConfig.getRadarMinAltitude();
-
-            for (Entity entity : level.getEntities(null, searchBox)) {
+            String viewer = player.getScoreboardName();
+            com.synarsis.airtacticalarsenal.radar.RadarContacts.forEachInRange(level, radarCenter, ShahedConfig.getRadarRange(), minAltitude, entity -> {
                 byte type = com.synarsis.airtacticalarsenal.radar.RadarContacts.classify(entity);
-                if (type < 0) continue;
-
-                double dx = entity.getX() - radarCenter.x;
-                double dz = entity.getZ() - radarCenter.z;
-                if (dx * dx + dz * dz > rangeSquared) continue;
-
-                if (entity.getY() < minAltitude) continue;
-
+                if (type < 0) return;
                 Vec3 delta = entity.getDeltaMovement();
                 float speed = (float) Math.sqrt(delta.x * delta.x + delta.z * delta.z);
                 targets.add(new RadarUpdatePacket.TargetData(
                         entity.getId(), type, entity.position(), entity.getYRot(), speed,
-                        com.synarsis.airtacticalarsenal.radar.RadarContacts.isFriendly(player.getTeam(), player, entity)
+                        com.synarsis.airtacticalarsenal.radar.RadarContacts.isFriendlyToOwner(level, viewer, entity)
                 ));
-            }
+            });
 
-            NetworkHandler.sendToPlayer(player, new RadarUpdatePacket(radarPos, targets, minAltitude, true));
+            NetworkHandler.sendToPlayer(player, new RadarUpdatePacket(radarPos, targets, minAltitude, true, alarm, canToggle));
         });
         return true;
     }

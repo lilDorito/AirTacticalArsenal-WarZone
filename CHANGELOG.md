@@ -9,6 +9,27 @@ patched SBW 0.8.7.1 / AshVehicles 4.2 builds) are the author's private forks. Th
 named here only because this fork is tested against them, and anything said about them applies only with
 those builds. See the README's "WarZone versions" section.
 
+## 1.3.1-warzone
+
+### Air Defense Radar alarm
+- The alarm ignores everything belonging to the radar's placer or the placer's scoreboard team: their planes,
+  helicopters and vehicles (anyone aboard), drones, missiles, rockets and shells, also when the shooter is in a
+  vehicle, logged out or in another dimension. Before, a placer without a team counted nothing as friendly, so
+  every friendly missile and plane set the siren off.
+- The alarm stays on until the sky has been clear for 5 seconds. A contact that blinks out for a moment (crossing
+  the minimum altitude, or several contacts coming and going) no longer restarts the siren; once the sky has
+  been clear for 5 seconds, the next contact sets it off again.
+- New **ALARM OUTPUT: ON/OFF** button at the top of the radar's target list turns the redstone output off and on.
+  The placer, their teammates and operators can use it; it is saved with the radar.
+- The siren starts at once when powered again shortly after it stopped. Before, it could stay silent for up to
+  28 seconds, until its previous loop would have ended.
+
+### Radar contacts
+- The radar screen, its target count and the alarm see missiles, drones and aircraft over chunks that aren't
+  loaded (for example a long-range AGM still on its way). Before, only contacts over loaded chunks showed, so two
+  missiles fired a second apart could show as one, or not at all until they were close. Friendly marks on the
+  screen use the same rules as the alarm, for the player looking at it.
+
 ## 1.3.0-warzone
 
 ### Vehicle radars

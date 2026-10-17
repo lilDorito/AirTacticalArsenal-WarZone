@@ -200,6 +200,8 @@
   "gui.ata.radar.queued_big": "○ IN QUEUE: #%s",
   "gui.ata.radar.targets_count": "⚠ TARGETS: %s",
   "gui.ata.radar.clear": "✔ CLEAR",
+  "gui.ata.radar.alarm_on": "ALARM OUTPUT: ON",
+  "gui.ata.radar.alarm_off": "ALARM OUTPUT: OFF",
   "gui.ata.radar.weak_signal": "⚠ WEAK SIGNAL",
   "gui.ata.radar.weak_signal_hint": "Radar needs open sky: no blocks above the 5x5 area around it",
   "gui.ata.radar.targets": "TARGETS",

@@ -267,6 +267,11 @@ public class NetworkHandler {
                 .decoder(VehicleRadarPacket::new)
                 .consumerMainThread(VehicleRadarPacket::handle)
                 .add();
+        INSTANCE.messageBuilder(ToggleRadarAlarmPacket.class, id++)
+                .encoder(ToggleRadarAlarmPacket::toBytes)
+                .decoder(ToggleRadarAlarmPacket::new)
+                .consumerMainThread(ToggleRadarAlarmPacket::handle)
+                .add();
     }
 
     public static <MSG> void sendToServer(MSG message) {

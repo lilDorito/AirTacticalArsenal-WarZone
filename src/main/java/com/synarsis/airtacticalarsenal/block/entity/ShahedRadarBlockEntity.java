@@ -6,10 +6,12 @@ import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.scores.Team;
 import software.bernie.geckolib.animatable.GeoBlockEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
@@ -34,16 +36,52 @@ public class ShahedRadarBlockEntity extends BlockEntity implements GeoBlockEntit
         setChanged();
     }
 
+    private boolean alarmOutput = true;
+    private long lastContactTime = Long.MIN_VALUE;
+    private int heldPower = 0;
+
+    public boolean isAlarmOutput() {
+        return alarmOutput;
+    }
+
+    public void setAlarmOutput(boolean on) {
+        this.alarmOutput = on;
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+        }
+    }
+
+    public boolean canControl(Player player) {
+        if (ownerName.isEmpty() || player.getScoreboardName().equals(ownerName)) return true;
+        if (player.hasPermissions(2)) return true;
+        Team team = player.getScoreboard().getPlayersTeam(ownerName);
+        return team != null && player.getTeam() != null && player.getTeam().isAlliedTo(team);
+    }
+
+    public int holdPower(long now, int power, int holdTicks) {
+        if (power > 0) {
+            lastContactTime = now;
+            heldPower = power;
+            return power;
+        }
+        if (heldPower > 0 && now - lastContactTime < holdTicks) return heldPower;
+        heldPower = 0;
+        return 0;
+    }
+
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
         this.ownerName = tag.getString("OwnerName");
+        this.alarmOutput = !tag.contains("AlarmOutput") || tag.getBoolean("AlarmOutput");
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         if (!ownerName.isEmpty()) tag.putString("OwnerName", ownerName);
+        tag.putBoolean("AlarmOutput", alarmOutput);
     }
 
     @Override

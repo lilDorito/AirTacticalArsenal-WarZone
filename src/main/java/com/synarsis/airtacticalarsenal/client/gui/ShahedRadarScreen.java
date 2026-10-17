@@ -7,6 +7,7 @@ import com.synarsis.airtacticalarsenal.network.NetworkHandler;
 import com.synarsis.airtacticalarsenal.network.RadarUpdatePacket;
 import com.synarsis.airtacticalarsenal.network.RequestRadarMapPacket;
 import com.synarsis.airtacticalarsenal.network.RequestRadarUpdatePacket;
+import com.synarsis.airtacticalarsenal.network.ToggleRadarAlarmPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -113,6 +114,9 @@ public class ShahedRadarScreen extends Screen {
         }
     }
 
+    private boolean alarmOutput = true;
+    private boolean canToggleAlarm = false;
+    private int alarmX1, alarmY1, alarmX2, alarmY2;
     private int serverMinAltitude = 90;
     private boolean weakSignal = false;
     private final boolean darkBackground;
@@ -132,8 +136,11 @@ public class ShahedRadarScreen extends Screen {
         Minecraft.getInstance().setScreen(screen);
     }
 
-    public static void updateTargets(BlockPos radarPos, List<RadarUpdatePacket.TargetData> data, int minAltitude, boolean openSky) {
+    public static void updateTargets(BlockPos radarPos, List<RadarUpdatePacket.TargetData> data, int minAltitude, boolean openSky,
+                                     boolean alarmOutput, boolean canToggleAlarm) {
         if (currentInstance == null || !currentInstance.radarPos.equals(radarPos)) return;
+        currentInstance.alarmOutput = alarmOutput;
+        currentInstance.canToggleAlarm = canToggleAlarm;
         currentInstance.serverMinAltitude = minAltitude;
         currentInstance.weakSignal = !openSky;
         if (!openSky) {
@@ -545,6 +552,22 @@ public class ShahedRadarScreen extends Screen {
         }
     }
 
+    private void renderAlarmToggle(GuiGraphics g, int px, int py, int pw, int mx, int my) {
+        String label = Tr.s(alarmOutput ? "gui.ata.radar.alarm_on" : "gui.ata.radar.alarm_off");
+        int w = font.width(label) + 8;
+        alarmX1 = px + pw - 4 - w;
+        alarmY1 = py + 1;
+        alarmX2 = px + pw - 4;
+        alarmY2 = py + 12;
+        boolean hover = canToggleAlarm && mx >= alarmX1 && mx < alarmX2 && my >= alarmY1 && my < alarmY2;
+        int bg = alarmOutput ? 0x60c02020 : 0x40303830;
+        if (hover) bg = alarmOutput ? 0x90e03030 : 0x70506050;
+        int fg = !canToggleAlarm ? 0xFF506050 : (alarmOutput ? 0xFFff6060 : 0xFF90a090);
+        g.fill(alarmX1, alarmY1, alarmX2, alarmY2, bg);
+        g.renderOutline(alarmX1, alarmY1, w, alarmY2 - alarmY1, alarmOutput ? 0xFFb03030 : 0xFF405040);
+        g.drawString(font, label, alarmX1 + 4, alarmY1 + 2, fg, false);
+    }
+
     private List<RadarTarget> getSortedTargets() {
         List<RadarTarget> sorted = new ArrayList<>();
         for (RadarTarget t : targets.values()) {
@@ -570,6 +593,7 @@ public class ShahedRadarScreen extends Screen {
         g.vLine(px, py, py + ph, 0xFF1a3028);
 
         g.drawString(font, Tr.s("gui.ata.radar.targets"), px + 4, py + 3, COL_TITLE, false);
+        renderAlarmToggle(g, px, py, pw, mx, my);
         g.hLine(px + 2, px + pw - 2, py + 13, 0xFF1a3028);
 
         int listTop = py + 16;
@@ -742,6 +766,14 @@ public class ShahedRadarScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
+        if (btn == 0 && canToggleAlarm && mx >= alarmX1 && mx < alarmX2 && my >= alarmY1 && my < alarmY2) {
+            alarmOutput = !alarmOutput;
+            NetworkHandler.sendToServer(new ToggleRadarAlarmPacket(radarPos));
+            Minecraft.getInstance().getSoundManager().play(
+                    net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                            net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
+            return true;
+        }
         if (btn == 0) {
 
             int panelSpace = RIGHT_PANEL_W + 6;

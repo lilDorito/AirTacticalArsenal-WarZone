@@ -17,6 +17,8 @@ public class RadarUpdatePacket {
     private final List<TargetData> targets;
     private final int minAltitude;
     private final boolean openSky;
+    private final boolean alarmOutput;
+    private final boolean canToggleAlarm;
 
     public static class TargetData {
         public final int entityId;
@@ -36,17 +38,22 @@ public class RadarUpdatePacket {
         }
     }
 
-    public RadarUpdatePacket(BlockPos radarPos, List<TargetData> targets, int minAltitude, boolean openSky) {
+    public RadarUpdatePacket(BlockPos radarPos, List<TargetData> targets, int minAltitude, boolean openSky,
+                             boolean alarmOutput, boolean canToggleAlarm) {
         this.radarPos = radarPos;
         this.targets = targets;
         this.minAltitude = minAltitude;
         this.openSky = openSky;
+        this.alarmOutput = alarmOutput;
+        this.canToggleAlarm = canToggleAlarm;
     }
 
     public RadarUpdatePacket(FriendlyByteBuf buf) {
         this.radarPos = buf.readBlockPos();
         this.minAltitude = buf.readInt();
         this.openSky = buf.readBoolean();
+        this.alarmOutput = buf.readBoolean();
+        this.canToggleAlarm = buf.readBoolean();
         int count = buf.readInt();
         this.targets = new ArrayList<>();
         for (int i = 0; i < count; i++) {
@@ -65,6 +72,8 @@ public class RadarUpdatePacket {
         buf.writeBlockPos(this.radarPos);
         buf.writeInt(this.minAltitude);
         buf.writeBoolean(this.openSky);
+        buf.writeBoolean(this.alarmOutput);
+        buf.writeBoolean(this.canToggleAlarm);
         buf.writeInt(this.targets.size());
         for (TargetData t : targets) {
             buf.writeInt(t.entityId);
@@ -81,13 +90,15 @@ public class RadarUpdatePacket {
     public boolean handle(Supplier<NetworkEvent.Context> supplier) {
         NetworkEvent.Context ctx = supplier.get();
         ctx.enqueueWork(() -> {
-            DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () -> handleClient(radarPos, targets, minAltitude, openSky));
+            DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () -> handleClient(radarPos, targets, minAltitude, openSky, alarmOutput, canToggleAlarm));
         });
         return true;
     }
 
     @OnlyIn(Dist.CLIENT)
-    private static void handleClient(BlockPos radarPos, List<TargetData> targets, int minAltitude, boolean openSky) {
-        com.synarsis.airtacticalarsenal.client.gui.ShahedRadarScreen.updateTargets(radarPos, targets, minAltitude, openSky);
+    private static void handleClient(BlockPos radarPos, List<TargetData> targets, int minAltitude, boolean openSky,
+                                     boolean alarmOutput, boolean canToggleAlarm) {
+        com.synarsis.airtacticalarsenal.client.gui.ShahedRadarScreen.updateTargets(radarPos, targets, minAltitude, openSky,
+                alarmOutput, canToggleAlarm);
     }
 }

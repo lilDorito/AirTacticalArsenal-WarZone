@@ -19,7 +19,7 @@ Forge 1.20.1 mod that adds strike and recon drones (**Shahed-136**, **Orlan-10**
 ballistic missile, an **air defense radar**, **on-board radars** for SuperbWarfare and AshVehicles aircraft
 and AA vehicles, and **alert sirens**.
 
-modId: `ata` (same as upstream) · version: `1.3.0-warzone`
+modId: `ata` (same as upstream) · version: `1.3.1-warzone`
 
 ## Contents
 
@@ -85,8 +85,10 @@ The full history is in [CHANGELOG.md](CHANGELOG.md). In short:
 - Range is a server setting (default 1,500, up to 5,000 blocks), with a minimum altitude, configurable entity
   lists and an open-sky requirement (**WEAK SIGNAL** otherwise). Uses SuperbWarfare's FuMO 25 model when SBW
   is installed.
-- The redstone alarm reacts to every air contact the screen shows, and ignores aircraft, drones and missiles
-  of the placer's scoreboard team.
+- The redstone alarm reacts to every air contact the screen shows. It ignores everything belonging to the
+  placer or the placer's scoreboard team: their aircraft, helicopters, drones, missiles and shells. It stays on
+  until the sky has been clear for 5 seconds, then the next contact sets it off again. **ALARM OUTPUT: ON/OFF**
+  at the top of the screen's target list turns it off and on (placer, teammates and operators).
 
 **Vehicle radars** (new in 1.3.0)
 - Fighters, attack helicopters and AA vehicles from SuperbWarfare and AshVehicles get an on-board radar in a
@@ -184,7 +186,7 @@ The full history is in [CHANGELOG.md](CHANGELOG.md). In short:
 .\gradlew.bat build
 ```
 
-Output: `build\libs\air-tactical-arsenal-1.3.0-warzone.jar`. A dev client runs with `.\gradlew.bat runClient`
+Output: `build\libs\air-tactical-arsenal-1.3.1-warzone.jar`. A dev client runs with `.\gradlew.bat runClient`
 (also `runServer`, `runData`); `build.bat` is a small helper script.
 
 ## How to play
@@ -216,8 +218,9 @@ Admin shortcut: `/ata attack shahed <start> <target> low|high` (and `/ata attack
 
 1. Place it with open sky above: no blocks at all over the 5x5 area around it, or it only shows
    **WEAK SIGNAL**.
-2. Right-click it to open the map. Its redstone output grows as an air contact gets closer; contacts from the
-   placer's scoreboard team don't count.
+2. Right-click it to open the map. Its redstone output grows as an air contact gets closer; the placer's and
+   their team's own aircraft, drones and missiles don't count. Wire it to an **Alert Siren**; the
+   **ALARM OUTPUT** button in the target list switches the output off and on.
 
 ### Vehicle radars
 

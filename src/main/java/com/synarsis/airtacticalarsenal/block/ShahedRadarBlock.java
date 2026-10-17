@@ -117,16 +117,7 @@ public class ShahedRadarBlock extends Block implements EntityBlock {
 
     @Override
     public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        int newPower = calculateSignalStrength(level, pos);
-        int oldPower = state.getValue(POWER);
-
-        if (newPower != oldPower) {
-            level.setBlock(pos, state.setValue(POWER, newPower), 3);
-            level.updateNeighborsAt(pos, this);
-            for (Direction dir : Direction.values()) {
-                level.updateNeighborsAt(pos.relative(dir), this);
-            }
-        }
+        refreshSignal(level, pos);
 
         if (com.synarsis.airtacticalarsenal.config.ShahedConfig.isRadarDarkBackground()) {
             ServerTerrainScanner.remove(pos);
@@ -140,6 +131,19 @@ public class ShahedRadarBlock extends Block implements EntityBlock {
         }
 
         level.scheduleTick(pos, this, 20);
+    }
+
+    public void refreshSignal(ServerLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (!state.is(this)) return;
+        int newPower = calculateSignalStrength(level, pos);
+        if (newPower != state.getValue(POWER)) {
+            level.setBlock(pos, state.setValue(POWER, newPower), 3);
+            level.updateNeighborsAt(pos, this);
+            for (Direction dir : Direction.values()) {
+                level.updateNeighborsAt(pos.relative(dir), this);
+            }
+        }
     }
 
     public static boolean hasOpenSky(Level level, BlockPos pos) {
@@ -162,41 +166,32 @@ public class ShahedRadarBlock extends Block implements EntityBlock {
         }
     }
 
-    private static net.minecraft.world.scores.Team ownerTeam(ServerLevel level, BlockPos pos) {
-        if (level.getBlockEntity(pos) instanceof com.synarsis.airtacticalarsenal.block.entity.ShahedRadarBlockEntity radar
-                && !radar.getOwnerName().isEmpty()) {
-            return level.getScoreboard().getPlayersTeam(radar.getOwnerName());
-        }
-        return null;
-    }
+    private static final int ALARM_HOLD_TICKS = 100;
 
     private int calculateSignalStrength(ServerLevel level, BlockPos pos) {
-        if (!hasOpenSky(level, pos)) return 0;
+        if (!(level.getBlockEntity(pos) instanceof com.synarsis.airtacticalarsenal.block.entity.ShahedRadarBlockEntity radar)) {
+            return 0;
+        }
+        int power = hasOpenSky(level, pos) ? rawSignalStrength(level, pos, radar.getOwnerName()) : 0;
+        power = radar.holdPower(level.getGameTime(), power, ALARM_HOLD_TICKS);
+        return radar.isAlarmOutput() ? power : 0;
+    }
+
+    private int rawSignalStrength(ServerLevel level, BlockPos pos, String ownerName) {
         Vec3 radarCenter = Vec3.atCenterOf(pos);
         int range = com.synarsis.airtacticalarsenal.config.ShahedConfig.getRadarRange();
         int minAltitude = com.synarsis.airtacticalarsenal.config.ShahedConfig.getRadarMinAltitude();
-        double top = Math.max(level.getMaxBuildHeight(),
-                com.synarsis.airtacticalarsenal.config.ShahedConfig.getIskanderMaxFlightHeight()) + 64;
-        AABB searchBox = new AABB(
-            radarCenter.x - range, level.getMinBuildHeight(), radarCenter.z - range,
-            radarCenter.x + range, top, radarCenter.z + range
-        );
-        net.minecraft.world.scores.Team team = ownerTeam(level, pos);
-
-        double closestDistance = Double.MAX_VALUE;
-        double rangeSq = (double) range * range;
-
-        for (Entity entity : level.getEntities(null, searchBox)) {
-            if (com.synarsis.airtacticalarsenal.radar.RadarContacts.classify(entity) < 0) continue;
-            if (entity.getY() < minAltitude) continue;
+        double[] closest = {Double.MAX_VALUE};
+        com.synarsis.airtacticalarsenal.radar.RadarContacts.forEachInRange(level, radarCenter, range, minAltitude, entity -> {
+            if (com.synarsis.airtacticalarsenal.radar.RadarContacts.classify(entity) < 0) return;
             double dx = entity.getX() - radarCenter.x;
             double dz = entity.getZ() - radarCenter.z;
-            double horizontalSq = dx * dx + dz * dz;
-            if (horizontalSq > rangeSq) continue;
-            if (com.synarsis.airtacticalarsenal.radar.RadarContacts.isFriendly(team, null, entity)) continue;
-            double dist = Math.sqrt(horizontalSq);
-            if (dist < closestDistance) closestDistance = dist;
-        }
+            double dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist >= closest[0]) return;
+            if (com.synarsis.airtacticalarsenal.radar.RadarContacts.isFriendlyToOwner(level, ownerName, entity)) return;
+            closest[0] = dist;
+        });
+        double closestDistance = closest[0];
 
         if (closestDistance == Double.MAX_VALUE) {
             return 0;

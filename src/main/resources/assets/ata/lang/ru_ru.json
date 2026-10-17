@@ -200,6 +200,8 @@
   "gui.ata.radar.queued_big": "○ В ОЧЕРЕДИ: #%s",
   "gui.ata.radar.targets_count": "⚠ ЦЕЛИ: %s",
   "gui.ata.radar.clear": "✔ ЧИСТО",
+  "gui.ata.radar.alarm_on": "ТРЕВОГА: ВКЛ",
+  "gui.ata.radar.alarm_off": "ТРЕВОГА: ВЫКЛ",
   "gui.ata.radar.weak_signal": "⚠ СЛАБЫЙ СИГНАЛ",
   "gui.ata.radar.weak_signal_hint": "Радару нужно открытое небо: никаких блоков над площадкой 5x5 вокруг него",
   "gui.ata.radar.targets": "ЦЕЛИ",
