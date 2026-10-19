@@ -24,6 +24,12 @@ public class ReconUavLauncherRenderer extends GeoEntityRenderer<ReconUavLauncher
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - entityYaw));
         poseStack.scale(LAUNCHER_SCALE, LAUNCHER_SCALE, LAUNCHER_SCALE);
         super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+        if (entity.hasDrone()) {
+            com.synarsis.airtacticalarsenal.api.DroneVariantsClient.LauncherDisplay display = com.synarsis.airtacticalarsenal.api.DroneVariantsClient.display(entity.getDroneKind());
+            if (display != null) {
+                display.render(entity, partialTick, poseStack, bufferSource, packedLight);
+            }
+        }
         poseStack.popPose();
     }
 }

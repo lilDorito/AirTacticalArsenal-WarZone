@@ -52,7 +52,7 @@ public class OrlanReturnPacket {
             }
 
             orlan.forceReturn();
-            player.displayClientMessage(Component.translatable("message.ata.orlan.returning"), true);
+            player.displayClientMessage(Component.translatable("message.ata.orlan.returning", orlan.getDroneName()), true);
         });
         ctx.get().setPacketHandled(true);
     }

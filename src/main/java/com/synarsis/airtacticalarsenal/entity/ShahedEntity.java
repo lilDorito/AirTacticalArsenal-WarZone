@@ -137,6 +137,46 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         return ShahedConfig.getShahedDiveSpeed();
     }
 
+    protected double cruiseSpeed() {
+        return getCruiseSpeed();
+    }
+
+    protected double diveSpeed() {
+        return getDiveSpeed();
+    }
+
+    protected double turnRateDeg() {
+        return TURN_RATE_DEG;
+    }
+
+    protected float explosionPower() {
+        return EXPLOSION_POWER;
+    }
+
+    protected double warheadDamageScale() {
+        return 1.0;
+    }
+
+    protected double warheadRadiusScale() {
+        return 1.0;
+    }
+
+    public double maxHealthValue() {
+        return ShahedConfig.getShahedMaxHealth();
+    }
+
+    public ItemStack createDroneItem() {
+        return new ItemStack(com.synarsis.airtacticalarsenal.item.ModItems.SHAHED.get());
+    }
+
+    public String getDroneNameKey() {
+        return "drone.ata.shahed";
+    }
+
+    public net.minecraft.network.chat.Component getDroneName() {
+        return net.minecraft.network.chat.Component.translatable(this.getDroneNameKey());
+    }
+
     private FlightPhase flightPhase = FlightPhase.WARMUP;
     private int phaseTicks = 0; 
     private double currentSpeed = 0; 
@@ -183,7 +223,11 @@ public class ShahedEntity extends Projectile implements GeoEntity {
     }
 
     public ShahedEntity(Level level, Vec3 startPos, BlockPos targetPos, String diveMode, float launcherYaw) {
-        this(ModEntities.SHAHED.get(), level);
+        this(ModEntities.SHAHED.get(), level, startPos, targetPos, diveMode, launcherYaw);
+    }
+
+    protected ShahedEntity(EntityType<? extends ShahedEntity> type, Level level, Vec3 startPos, BlockPos targetPos, String diveMode, float launcherYaw) {
+        this(type, level);
         this.setPos(startPos);
         this.entityData.set(TARGET_POS, targetPos);
         this.entityData.set(DIVE_MODE, diveMode);
@@ -266,7 +310,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         this.entityData.define(SYNC_X_ROT, 0.0f);
         this.entityData.define(SYNC_Y_ROT, 0.0f);
 
-        this.entityData.define(HEALTH, (float) ShahedConfig.getShahedMaxHealth());
+        this.entityData.define(HEALTH, (float) this.maxHealthValue());
         this.entityData.define(IS_DAMAGED, false);
         this.entityData.define(IS_CRITICALLY_DAMAGED, false);
 
@@ -374,7 +418,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
                 motion = tickDivingPhase(diveTarget, currentPos);
                 break;
             default:
-                motion = this.lastDirection.scale(getCruiseSpeed());
+                motion = this.lastDirection.scale(this.cruiseSpeed());
         }
 
         this.phaseTicks++;
@@ -506,7 +550,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
     private Vec3 tickClimbingPhase(Vec3 targetVec, Vec3 currentPos) {
 
-        this.currentSpeed = Math.min(this.currentSpeed + CLIMB_ACCELERATION, getCruiseSpeed());
+        this.currentSpeed = Math.min(this.currentSpeed + CLIMB_ACCELERATION, this.cruiseSpeed());
 
         double distanceFromLaunch = Math.sqrt(
                 Math.pow(currentPos.x - this.launchStartPos.x, 2) +
@@ -545,7 +589,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
     private Vec3 tickCruisingPhase(Vec3 targetVec, Vec3 currentPos, double horizontalDist) {
 
-        this.currentSpeed = getCruiseSpeed();
+        this.currentSpeed = this.cruiseSpeed();
 
         Vec3 navTarget;
         boolean onFinalLeg;
@@ -598,7 +642,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             desiredDir = this.lastDirection;
         }
 
-        Vec3 smoothDir = smoothTurn(this.lastDirection, desiredDir, TURN_RATE_DEG);
+        Vec3 smoothDir = smoothTurn(this.lastDirection, desiredDir, this.turnRateDeg());
 
         double heightDiff = this.targetAltitude - this.getY();
         double verticalCorrection = heightDiff * HEIGHT_CORRECTION_FACTOR;
@@ -620,7 +664,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
                     dot = Math.max(-1.0, Math.min(1.0, dot));
                     double angleDeg = Math.toDegrees(Math.acos(dot));
                     if (angleDeg < 15.0
-                            || RouteNav.insideTurn(currentPos, this.lastDirection, targetVec, this.currentSpeed, TURN_RATE_DEG)) {
+                            || RouteNav.insideTurn(currentPos, this.lastDirection, targetVec, this.currentSpeed, this.turnRateDeg())) {
                         transitionToPhase(FlightPhase.DIVING);
                     }
                 } else {
@@ -648,12 +692,12 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         this.diveProgress = Math.min(1.0f, this.diveProgress + 0.05f);
 
         if (distanceToTarget < 30.0) {
-            this.currentSpeed = Math.min(this.currentSpeed + DIVE_ACCELERATION, getDiveSpeed());
+            this.currentSpeed = Math.min(this.currentSpeed + DIVE_ACCELERATION, this.diveSpeed());
 
             return directionToTarget.scale(this.currentSpeed);
         }
 
-        this.currentSpeed = Math.min(this.currentSpeed + DIVE_ACCELERATION, getDiveSpeed());
+        this.currentSpeed = Math.min(this.currentSpeed + DIVE_ACCELERATION, this.diveSpeed());
 
         Vec3 desiredHoriz = new Vec3(directionToTarget.x, 0, directionToTarget.z);
         if (desiredHoriz.lengthSqr() > 1.0E-4) {
@@ -823,9 +867,9 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
             Entity owner = this.getOwner();
 
-            double coreDamage   = ShahedConfig.getShahedCoreDamage();
-            double coreRadius   = ShahedConfig.getShahedCoreRadius();
-            double damageRadius = ShahedConfig.getShahedDamageRadius();
+            double coreDamage   = ShahedConfig.getShahedCoreDamage() * this.warheadDamageScale();
+            double coreRadius   = ShahedConfig.getShahedCoreRadius() * this.warheadRadiusScale();
+            double damageRadius = ShahedConfig.getShahedDamageRadius() * this.warheadRadiusScale();
 
             AABB explosionBox = new AABB(pos.x - damageRadius, pos.y - damageRadius, pos.z - damageRadius,
                     pos.x + damageRadius, pos.y + damageRadius, pos.z + damageRadius);
@@ -859,11 +903,11 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             com.synarsis.airtacticalarsenal.event.ExplosionGuard.begin();
             try {
                 this.level().explode(this, this.damageSources().explosion(this, explosionOwner), null,
-                        pos.x, pos.y, pos.z, EXPLOSION_POWER, false, Level.ExplosionInteraction.NONE);
+                        pos.x, pos.y, pos.z, this.explosionPower(), false, Level.ExplosionInteraction.NONE);
                 if (ShahedConfig.doExplosionsBreakBlocks() && this.level() instanceof ServerLevel craterLevel) {
                     com.synarsis.airtacticalarsenal.util.RoundCrater.carve(craterLevel, this,
                             this.damageSources().explosion(this, explosionOwner), pos,
-                            ShahedConfig.getShahedCraterRadius(), this.random);
+                            ShahedConfig.getShahedCraterRadius() * this.warheadRadiusScale(), this.random);
                 }
             } finally {
                 com.synarsis.airtacticalarsenal.event.ExplosionGuard.end();
@@ -887,7 +931,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
     private void absorbFlakHit() {
         if (this.tickCount == this.lastFlakTick) return;
         this.lastFlakTick = this.tickCount;
-        float damage = (float) (ShahedConfig.getShahedMaxHealth() * ShahedConfig.getFlakHitDamagePercent() / 100.0);
+        float damage = (float) (this.maxHealthValue() * ShahedConfig.getFlakHitDamagePercent() / 100.0);
         Vec3 hit = this.position().add((this.random.nextDouble() - 0.5) * 2.4, this.random.nextDouble() * 0.8,
                 (this.random.nextDouble() - 0.5) * 2.4);
         takeDamage(damage, null, hit, "flak");
@@ -1125,7 +1169,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
     }
 
     public void setHealth(float health) {
-        this.maxHealth = (float) ShahedConfig.getShahedMaxHealth();
+        this.maxHealth = (float) this.maxHealthValue();
         float clampedHealth = Math.max(0, Math.min(health, this.maxHealth));
         this.entityData.set(HEALTH, clampedHealth);
 
@@ -1144,7 +1188,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
     }
 
     public float getHealthPercent() {
-        this.maxHealth = (float) ShahedConfig.getShahedMaxHealth();
+        this.maxHealth = (float) this.maxHealthValue();
         return this.getHealth() / this.maxHealth;
     }
 
@@ -1200,7 +1244,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
         damage *= ShahedConfig.getShahedDamageMultiplier();
 
-        float maxHp = (float) ShahedConfig.getShahedMaxHealth();
+        float maxHp = (float) this.maxHealthValue();
         boolean airburst = damage >= maxHp * ShahedConfig.getAirburstDamageMultiplier();
         boolean heavy = "heavy".equals(source);
         this.durability.ensure(maxHp, this.random);
@@ -1330,7 +1374,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
     private void startCrash(CrashDynamics.Mode mode, int side) {
         if (this.exploding || this.crash.active() || this.level().isClientSide) return;
         Vec3 motion = this.getDeltaMovement();
-        if (motion.lengthSqr() < 0.01) motion = this.lastDirection.normalize().scale(getCruiseSpeed());
+        if (motion.lengthSqr() < 0.01) motion = this.lastDirection.normalize().scale(this.cruiseSpeed());
         this.crash.start(mode, motion, this.getYRot(), this.getXRot(), side, this.random);
         this.isDiving = false;
         this.entityData.set(IS_DIVING, false);
@@ -1726,7 +1770,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             }
             boolean heavy = isHeavyShell(directEntity) && !source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION);
             if (heavy) {
-                amount = Math.max(amount, (float) ShahedConfig.getShahedMaxHealth() * 1.5f);
+                amount = Math.max(amount, (float) this.maxHealthValue() * 1.5f);
             }
             takeDamage(amount, source.getEntity(), directEntity.position(), heavy ? "heavy" : "projectile");
             return true;
@@ -1822,7 +1866,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         } else {
 
             if (!level().isClientSide) {
-                ItemStack stack = new ItemStack(com.synarsis.airtacticalarsenal.item.ModItems.SHAHED.get());
+                ItemStack stack = this.createDroneItem();
                 CompoundTag tag = stack.getOrCreateTag();
                 tag.putString("ShahedColor", getShahedColor());
                 spawnAtLocation(stack);

@@ -9,6 +9,26 @@ patched SBW 0.8.7.1 / AshVehicles 4.2 builds) are the author's private forks. Th
 named here only because this fork is tested against them, and anything said about them applies only with
 those builds. See the README's "WarZone versions" section.
 
+## 1.3.2-warzone
+
+### Drone variants for add-ons
+- New API (`api/DroneVariants`, `api/DroneVariantsClient`) lets another mod add its own strike and recon drones
+  built on the Shahed and Orlan. SBW Electronic Warfare WarZone 1.2.0 uses it for KUB-BLA and Bayraktar TB2.
+- The strike and recon launchers remember which drone item was loaded, launch the matching drone, and give the
+  same item back when it's taken off, dropped or the launcher is broken. The recon launcher keeps the item's
+  data (for example missiles loaded on a TB2).
+- An add-on can draw its own drone on a loaded launcher.
+- Shahed and Orlan speeds, turn rate, health, blast size and the item returned on pickup can be changed by
+  subclasses. The Shahed and Orlan themselves are unchanged.
+- Every message, tablet line, camera header and route label names the drone that is actually flying: "Bayraktar
+  TB2 launched", "ZALA KUB-BLA mounted on launcher", "BAYRAKTAR TB2 // RECON" in the camera. Shahed and Orlan read as
+  before.
+- Generic wording where no drone is named: route screens read STRIKE UAV ROUTE / RECON UAV ROUTE, the launcher
+  tooltips no longer list one model, "No drone on the launcher!".
+- API additions for add-ons: a drone name per variant, a hook when a loaded launcher is right clicked (the TB2 uses
+  it for its missile loadout), and a panel slot in the recon camera overlay under the flight timer, drawn as part of
+  ATA's own overlay so nothing covers it.
+
 ## 1.3.1-warzone
 
 ### Air Defense Radar alarm

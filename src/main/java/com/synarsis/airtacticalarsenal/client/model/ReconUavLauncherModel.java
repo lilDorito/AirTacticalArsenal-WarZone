@@ -16,12 +16,12 @@ public class ReconUavLauncherModel extends GeoModel<ReconUavLauncherEntity> {
 
     @Override
     public ResourceLocation getModelResource(ReconUavLauncherEntity animatable) {
-        return animatable.hasDrone() ? MODEL_LOADED : MODEL_EMPTY;
+        return animatable.hasDrone() && animatable.getDroneKind().isEmpty() ? MODEL_LOADED : MODEL_EMPTY;
     }
 
     @Override
     public ResourceLocation getTextureResource(ReconUavLauncherEntity animatable) {
-        return animatable.hasDrone() ? TEXTURE_LOADED : TEXTURE_EMPTY;
+        return animatable.hasDrone() && animatable.getDroneKind().isEmpty() ? TEXTURE_LOADED : TEXTURE_EMPTY;
     }
 
     @Override

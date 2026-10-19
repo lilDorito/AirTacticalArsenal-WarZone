@@ -105,7 +105,7 @@ public class OrlanCameraOverlay {
         int warnColor = 0xFF5555;
         int panelBg = 0x88000000;
 
-        String header = Tr.s("hud.ata.orlan.header");
+        String header = Tr.s("hud.ata.orlan.header", orlan.getDroneName().getString().toUpperCase(java.util.Locale.ROOT));
         int headerW = mc.font.width(header) + 8;
         guiGraphics.fill(iL, iT, iL + headerW, iT + 12, panelBg);
         guiGraphics.drawString(mc.font, header, iL + 4, iT + 2, textColor, true);
@@ -239,6 +239,11 @@ public class OrlanCameraOverlay {
         int timerY = phaseY + 14;
         guiGraphics.fill(rightPanelLeft, timerY - 2, iR, timerY + 12, panelBg);
         guiGraphics.drawString(mc.font, String.format("TIME %02d:%02d", mins, secs), rightX, timerY, timerColor, true);
+
+        com.synarsis.airtacticalarsenal.api.DroneVariantsClient.CameraPanel panel = com.synarsis.airtacticalarsenal.api.DroneVariantsClient.cameraPanel(orlan.getType());
+        if (panel != null) {
+            panel.render(guiGraphics, orlan, rightPanelLeft, iR, timerY + 14);
+        }
 
         int bottomY = iB - 10;
 

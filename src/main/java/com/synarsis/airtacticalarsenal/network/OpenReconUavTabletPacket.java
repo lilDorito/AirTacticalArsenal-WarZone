@@ -23,6 +23,8 @@ public class OpenReconUavTabletPacket {
 
     private final List<List<BlockPos>> savedRoutes;
 
+    private final Map<Integer, String> droneNames;
+
     public OpenReconUavTabletPacket(List<BlockPos> launcherPositions,
                                   List<Boolean> hasDroneList,
                                   List<Float> launcherYawList,
@@ -35,6 +37,14 @@ public class OpenReconUavTabletPacket {
         this.savedCoords = savedCoords != null ? savedCoords : new HashMap<>();
         this.activeOrlans = activeOrlans != null ? activeOrlans : new ArrayList<>();
         this.savedRoutes = savedRoutes != null ? savedRoutes : new ArrayList<>();
+        this.droneNames = new HashMap<>();
+    }
+
+    public OpenReconUavTabletPacket withDroneNames(Map<Integer, String> names) {
+        if (names != null) {
+            this.droneNames.putAll(names);
+        }
+        return this;
     }
 
     public OpenReconUavTabletPacket(FriendlyByteBuf buf) {
@@ -73,6 +83,14 @@ public class OpenReconUavTabletPacket {
             }
             this.savedRoutes.add(route);
         }
+
+        this.droneNames = new HashMap<>();
+        if (buf.isReadable()) {
+            int nameCount = buf.readVarInt();
+            for (int i = 0; i < nameCount; i++) {
+                this.droneNames.put(buf.readInt(), buf.readUtf(128));
+            }
+        }
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -105,11 +123,17 @@ public class OpenReconUavTabletPacket {
                 buf.writeBlockPos(wp);
             }
         }
+
+        buf.writeVarInt(droneNames.size());
+        for (Map.Entry<Integer, String> entry : droneNames.entrySet()) {
+            buf.writeInt(entry.getKey());
+            buf.writeUtf(entry.getValue(), 128);
+        }
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () -> handleClient(launcherPositions, hasDroneList, launcherYawList, savedCoords, activeOrlans, savedRoutes));
+            DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () -> handleClient(launcherPositions, hasDroneList, launcherYawList, savedCoords, activeOrlans, savedRoutes, droneNames));
         });
         ctx.get().setPacketHandled(true);
     }
@@ -117,7 +141,8 @@ public class OpenReconUavTabletPacket {
     @OnlyIn(Dist.CLIENT)
     private static void handleClient(List<BlockPos> positions, List<Boolean> drones,
                                       List<Float> yawList, Map<Integer, int[]> coords,
-                                      List<int[]> activeOrlans, List<List<BlockPos>> savedRoutes) {
+                                      List<int[]> activeOrlans, List<List<BlockPos>> savedRoutes, Map<Integer, String> droneNames) {
+        com.synarsis.airtacticalarsenal.client.ClientDroneNames.putAll(droneNames);
         com.synarsis.airtacticalarsenal.client.ClientPacketHandler.openReconUavTabletScreen(positions, drones, yawList, coords, activeOrlans, savedRoutes);
     }
 }

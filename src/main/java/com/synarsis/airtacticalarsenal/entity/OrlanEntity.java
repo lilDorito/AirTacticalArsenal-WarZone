@@ -160,7 +160,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     private double launchStartY = 0;
     private Vec3 launchStartPos = Vec3.ZERO;
     private Vec3 launchDirection = Vec3.ZERO;
-    private double targetAltitude = PATROL_ALTITUDE;
+    private double targetAltitude = this.patrolAltitude();
     private Vec3 lastDirection = new Vec3(0, 0, 1);
 
     private double patrolAngle = 0;
@@ -180,7 +180,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
 
     private int localFlightTimer = getMaxFlightTicks();
 
-    private float maxHealth = DEFAULT_MAX_HEALTH;
+    private float maxHealth = this.maxHealthValue();
 
     private double lerpX, lerpY, lerpZ;
     private float lerpYRot, lerpXRot;
@@ -206,8 +206,48 @@ public class OrlanEntity extends Projectile implements GeoEntity {
 
     public boolean isLegitSpawn = false;
 
+    protected double cruiseSpeed() {
+        return CRUISE_SPEED;
+    }
+
+    protected double patrolSpeed() {
+        return PATROL_SPEED;
+    }
+
+    protected double patrolAltitude() {
+        return PATROL_ALTITUDE;
+    }
+
+    protected double returnSpeed() {
+        return RETURN_SPEED;
+    }
+
+    protected double turnRate() {
+        return TURN_RATE;
+    }
+
+    public float maxHealthValue() {
+        return DEFAULT_MAX_HEALTH;
+    }
+
+    public ItemStack createDroneItem() {
+        return new ItemStack(com.synarsis.airtacticalarsenal.item.ModItems.ORLAN.get());
+    }
+
+    public String getDroneNameKey() {
+        return "drone.ata.orlan";
+    }
+
+    public Component getDroneName() {
+        return Component.translatable(this.getDroneNameKey());
+    }
+
     public OrlanEntity(Level level, Vec3 startPos, BlockPos targetPos, float launcherYaw, BlockPos launcherPos) {
-        this(ModEntities.ORLAN.get(), level);
+        this(ModEntities.ORLAN.get(), level, startPos, targetPos, launcherYaw, launcherPos);
+    }
+
+    protected OrlanEntity(EntityType<? extends OrlanEntity> type, Level level, Vec3 startPos, BlockPos targetPos, float launcherYaw, BlockPos launcherPos) {
+        this(type, level);
         this.setPos(startPos);
         this.launcherPos = launcherPos != null ? launcherPos
                 : new BlockPos((int) startPos.x, (int) startPos.y, (int) startPos.z);
@@ -219,7 +259,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         this.currentSpeed = LAUNCH_INITIAL_SPEED;
         this.launchStartY = startPos.y;
         this.launchStartPos = startPos;
-        this.targetAltitude = PATROL_ALTITUDE;
+        this.targetAltitude = this.patrolAltitude();
 
         if (!Float.isNaN(launcherYaw)) {
             Vec3 dir = Vec3.directionFromRotation(0, launcherYaw).normalize();
@@ -285,13 +325,13 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         this.entityData.define(SYNC_Y_ROT, 0.0f);
         this.entityData.define(CRASH_MODE, 0);
         this.entityData.define(SYNC_ROLL, 0.0f);
-        this.entityData.define(HEALTH, DEFAULT_MAX_HEALTH);
+        this.entityData.define(HEALTH, this.maxHealthValue());
         this.entityData.define(IS_DAMAGED, false);
         this.entityData.define(LINKED_PLAYER, "");
         this.entityData.define(OWNER_UUID_DATA, "");
         this.entityData.define(FLIGHT_TIMER, getMaxFlightTicks());
         this.entityData.define(LAUNCHER_POS_DATA, BlockPos.ZERO);
-        this.entityData.define(TARGET_ALTITUDE_DATA, (float) PATROL_ALTITUDE);
+        this.entityData.define(TARGET_ALTITUDE_DATA, (float) this.patrolAltitude());
     }
 
     @Override
@@ -399,7 +439,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
                 motion = Vec3.ZERO;
                 break;
             default:
-                motion = this.lastDirection.scale(CRUISE_SPEED);
+                motion = this.lastDirection.scale(this.cruiseSpeed());
         }
 
         this.phaseTicks++;
@@ -592,7 +632,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     }
 
     private Vec3 tickClimbingPhase(Vec3 targetVec, Vec3 currentPos) {
-        this.currentSpeed = Math.min(this.currentSpeed + CLIMB_ACCELERATION, CRUISE_SPEED);
+        this.currentSpeed = Math.min(this.currentSpeed + CLIMB_ACCELERATION, this.cruiseSpeed());
 
         double distanceFromLaunch = Math.sqrt(
                 Math.pow(currentPos.x - this.launchStartPos.x, 2) +
@@ -618,7 +658,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
                 verticalSpeed,
                 horizontalDir.z * horizontalSpeed);
 
-        boolean reachedAltitude = this.getY() >= PATROL_ALTITUDE - 10.0;
+        boolean reachedAltitude = this.getY() >= this.patrolAltitude() - 10.0;
         boolean reachedDistance = distanceFromLaunch >= CLIMB_DISTANCE;
 
         if (reachedAltitude && reachedDistance) {
@@ -629,7 +669,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     }
 
     private Vec3 tickCruisingPhase(Vec3 targetVec, Vec3 currentPos, double horizontalDist) {
-        this.currentSpeed = CRUISE_SPEED;
+        this.currentSpeed = this.cruiseSpeed();
 
         Vec3 navTarget;
         boolean isFinalLeg;
@@ -653,7 +693,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         Vec3 smoothedDir;
         if (desiredDir.lengthSqr() > 1.0E-4) {
             desiredDir = desiredDir.normalize();
-            smoothedDir = smoothTurn(this.lastDirection, desiredDir, TURN_RATE);
+            smoothedDir = smoothTurn(this.lastDirection, desiredDir, this.turnRate());
         } else {
             smoothedDir = this.lastDirection;
         }
@@ -735,7 +775,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
 
         this.patrolAngle = currentAngle;
 
-        return new Vec3(moveX * PATROL_SPEED, verticalCorrection, moveZ * PATROL_SPEED);
+        return new Vec3(moveX * this.patrolSpeed(), verticalCorrection, moveZ * this.patrolSpeed());
     }
 
     private Vec3 tickReturningPhase(Vec3 currentPos) {
@@ -755,7 +795,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         double verticalCorrection = heightDiff * HEIGHT_CORRECTION_FACTOR;
         verticalCorrection = Math.max(-0.3, Math.min(0.3, verticalCorrection));
 
-        return new Vec3(dir.x * RETURN_SPEED, verticalCorrection, dir.z * RETURN_SPEED);
+        return new Vec3(dir.x * this.returnSpeed(), verticalCorrection, dir.z * this.returnSpeed());
     }
 
     private Vec3 tickLandingPhase(Vec3 currentPos) {
@@ -797,7 +837,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         double descentAngleRad = Math.max(Math.toRadians(5.0), Math.min(Math.toRadians(40.0), requiredAngleRad));
 
         double minLandingSpeed = LAUNCH_INITIAL_SPEED;
-        double maxLandingSpeed = RETURN_SPEED;
+        double maxLandingSpeed = this.returnSpeed();
         double speedFactor;
         if (horizontalDist > 100) {
             speedFactor = 1.0;
@@ -874,11 +914,11 @@ public class OrlanEntity extends Projectile implements GeoEntity {
             return InteractionResult.PASS;
         }
 
-        ItemStack orlanItem = new ItemStack(com.synarsis.airtacticalarsenal.item.ModItems.ORLAN.get());
+        ItemStack orlanItem = this.createDroneItem();
         if (!player.getInventory().add(orlanItem)) {
             player.drop(orlanItem, false);
         }
-        player.displayClientMessage(Component.translatable("message.ata.orlan.picked_up"), true);
+        player.displayClientMessage(Component.translatable("message.ata.orlan.picked_up", this.getDroneName()), true);
         this.removeSelf();
         return InteractionResult.SUCCESS;
     }
@@ -1010,7 +1050,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     private void startCrash(CrashDynamics.Mode mode, int side) {
         if (this.destroyed || this.crash.active() || this.level().isClientSide) return;
         Vec3 motion = this.getDeltaMovement();
-        if (motion.lengthSqr() < 0.01) motion = this.lastDirection.normalize().scale(CRUISE_SPEED);
+        if (motion.lengthSqr() < 0.01) motion = this.lastDirection.normalize().scale(this.cruiseSpeed());
         this.crash.start(mode, motion, this.getYRot(), this.getXRot(), side, this.random);
         this.entityData.set(CRASH_MODE, mode.ordinal());
     }

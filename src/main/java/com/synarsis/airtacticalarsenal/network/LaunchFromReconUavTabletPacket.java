@@ -113,7 +113,10 @@ public class LaunchFromReconUavTabletPacket {
             }
 
             Vec3 launchPos = launcher.position().add(0, 1.5, 0);
-            OrlanEntity orlan = new OrlanEntity(level, launchPos, targetPos, launcherYaw, launcher.blockPosition());
+            com.synarsis.airtacticalarsenal.api.DroneVariants.ReconFactory factory = com.synarsis.airtacticalarsenal.api.DroneVariants.recon(launcher.getDroneKind());
+            OrlanEntity orlan = factory != null
+                    ? factory.create(level, launchPos, targetPos, launcherYaw, launcher.blockPosition(), launcher.getStoredDroneStack())
+                    : new OrlanEntity(level, launchPos, targetPos, launcherYaw, launcher.blockPosition());
             orlan.setOwner(player);
             orlan.setOwnerUUID(player.getUUID().toString());
             if (waypoints != null && !waypoints.isEmpty()) {
@@ -125,7 +128,7 @@ public class LaunchFromReconUavTabletPacket {
             launcher.removeDrone();
 
             player.displayClientMessage(
-                    Component.translatable("message.ata.orlan.launched", targetPos.getX(), targetPos.getZ()),
+                    Component.translatable("message.ata.orlan.launched", orlan.getDroneName(), targetPos.getX(), targetPos.getZ()),
                     true);
         });
         ctx.get().setPacketHandled(true);

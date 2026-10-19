@@ -1,5 +1,6 @@
 package com.synarsis.airtacticalarsenal.entity;
 
+import com.synarsis.airtacticalarsenal.api.DroneVariants;
 import com.synarsis.airtacticalarsenal.compat.CreateCompat;
 import com.synarsis.airtacticalarsenal.item.ModItems;
 import com.synarsis.airtacticalarsenal.item.OrlanItem;
@@ -38,7 +39,11 @@ public class ReconUavLauncherEntity extends Entity implements GeoEntity {
     private static final EntityDataAccessor<Boolean> DATA_HAS_DRONE = SynchedEntityData
             .defineId(ReconUavLauncherEntity.class, EntityDataSerializers.BOOLEAN);
 
+    private static final EntityDataAccessor<String> DATA_DRONE_KIND = SynchedEntityData
+            .defineId(ReconUavLauncherEntity.class, EntityDataSerializers.STRING);
+
     private UUID storedDroneUuid;
+    private CompoundTag storedVariant = null;
     private List<BlockPos> savedRoute = null;
 
     public boolean isLegitSpawn = false;
@@ -51,6 +56,32 @@ public class ReconUavLauncherEntity extends Entity implements GeoEntity {
     @Override
     protected void defineSynchedData() {
         this.entityData.define(DATA_HAS_DRONE, false);
+        this.entityData.define(DATA_DRONE_KIND, "");
+    }
+
+    public String getDroneKind() {
+        return this.entityData.get(DATA_DRONE_KIND);
+    }
+
+    public Component storedDroneName() {
+        return Component.translatable(DroneVariants.nameKey(getDroneKind(), "drone.ata.orlan"));
+    }
+
+    public void setStoredDroneStack(ItemStack stack) {
+        if (hasDrone() && !getDroneKind().isEmpty() && !stack.isEmpty()) {
+            storedVariant = stack.copyWithCount(1).save(new CompoundTag());
+        }
+    }
+
+    public ItemStack getStoredDroneStack() {
+        if (!getDroneKind().isEmpty() && storedVariant != null) {
+            ItemStack stack = ItemStack.of(storedVariant);
+            if (!stack.isEmpty()) {
+                return stack;
+            }
+        }
+        ItemStack variant = DroneVariants.stackOf(getDroneKind());
+        return variant.isEmpty() ? new ItemStack(ModItems.ORLAN.get()) : variant;
     }
 
     @Override
@@ -62,6 +93,8 @@ public class ReconUavLauncherEntity extends Entity implements GeoEntity {
             storedDroneUuid = tag.getUUID("StoredDrone");
             this.entityData.set(DATA_HAS_DRONE, true);
         }
+        this.entityData.set(DATA_DRONE_KIND, tag.getString("DroneKind"));
+        storedVariant = tag.contains("DroneStack") ? tag.getCompound("DroneStack") : null;
         if (tag.contains("SavedRoute")) {
             net.minecraft.nbt.ListTag routeTag = tag.getList("SavedRoute", 10);
             savedRoute = new ArrayList<>();
@@ -79,6 +112,10 @@ public class ReconUavLauncherEntity extends Entity implements GeoEntity {
         tag.putBoolean("LegitSpawn", this.isLegitSpawn);
         if (storedDroneUuid != null) {
             tag.putUUID("StoredDrone", storedDroneUuid);
+        }
+        tag.putString("DroneKind", getDroneKind());
+        if (storedVariant != null) {
+            tag.put("DroneStack", storedVariant.copy());
         }
         if (savedRoute != null && !savedRoute.isEmpty()) {
             net.minecraft.nbt.ListTag routeTag = new net.minecraft.nbt.ListTag();
@@ -144,20 +181,33 @@ public class ReconUavLauncherEntity extends Entity implements GeoEntity {
             return InteractionResult.PASS;
         }
 
-        if (held.getItem() instanceof OrlanItem) {
+        if (hasDrone() && !(player.isShiftKeyDown() && held.isEmpty())) {
+            DroneVariants.LauncherInteraction interaction = DroneVariants.interaction(getDroneKind());
+            if (interaction != null) {
+                InteractionResult result = interaction.interact(this, player, hand);
+                if (result != InteractionResult.PASS) {
+                    return result;
+                }
+            }
+        }
+
+        boolean variant = DroneVariants.isReconVariant(held);
+        if (held.getItem() instanceof OrlanItem || variant) {
             if (hasDrone()) {
                 player.displayClientMessage(Component.translatable("message.ata.launcher.drone_already_mounted"), true);
                 return InteractionResult.FAIL;
             }
 
             storedDroneUuid = UUID.randomUUID();
+            this.entityData.set(DATA_DRONE_KIND, variant ? DroneVariants.key(held.getItem()) : "");
+            storedVariant = variant ? held.copyWithCount(1).save(new CompoundTag()) : null;
             setHasDrone(true);
 
             if (!player.getAbilities().instabuild) {
                 held.shrink(1);
             }
 
-            player.displayClientMessage(Component.translatable("message.ata.recon_uav_launcher.mounted"), true);
+            player.displayClientMessage(Component.translatable("message.ata.recon_uav_launcher.mounted", storedDroneName()), true);
             return InteractionResult.sidedSuccess(level().isClientSide);
         }
 
@@ -179,6 +229,8 @@ public class ReconUavLauncherEntity extends Entity implements GeoEntity {
 
     public void removeDrone() {
         storedDroneUuid = null;
+        storedVariant = null;
+        this.entityData.set(DATA_DRONE_KIND, "");
         setHasDrone(false);
     }
 
@@ -186,18 +238,19 @@ public class ReconUavLauncherEntity extends Entity implements GeoEntity {
         if (!hasDrone())
             return;
 
-        ItemStack stack = new ItemStack(ModItems.ORLAN.get());
+        ItemStack stack = getStoredDroneStack();
+        Component name = storedDroneName();
         if (!player.addItem(stack)) {
             spawnAtLocation(stack);
         }
         removeDrone();
-        player.displayClientMessage(Component.translatable("message.ata.recon_uav_launcher.dismounted"), true);
+        player.displayClientMessage(Component.translatable("message.ata.recon_uav_launcher.dismounted", name), true);
     }
 
     private void dropStoredDroneAsItem() {
         if (!hasDrone())
             return;
-        spawnAtLocation(new ItemStack(ModItems.ORLAN.get()));
+        spawnAtLocation(getStoredDroneStack());
         removeDrone();
     }
 

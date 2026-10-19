@@ -22,13 +22,13 @@ public class StrikeUavLauncherModel extends GeoModel<StrikeUavLauncherEntity> {
 
     @Override
     public ResourceLocation getModelResource(StrikeUavLauncherEntity animatable) {
-        if (!animatable.hasDrone()) return MODEL_EMPTY;
+        if (!animatable.hasDrone() || !animatable.getDroneKind().isEmpty()) return MODEL_EMPTY;
         return "black".equals(animatable.getShahedColor()) ? MODEL_LOADED_BLACK : MODEL_LOADED;
     }
 
     @Override
     public ResourceLocation getTextureResource(StrikeUavLauncherEntity animatable) {
-        if (!animatable.hasDrone()) return TEXTURE_EMPTY;
+        if (!animatable.hasDrone() || !animatable.getDroneKind().isEmpty()) return TEXTURE_EMPTY;
         return "black".equals(animatable.getShahedColor()) ? TEXTURE_LOADED_BLACK : TEXTURE_LOADED;
     }
 

@@ -1,5 +1,6 @@
 package com.synarsis.airtacticalarsenal.entity;
 
+import com.synarsis.airtacticalarsenal.api.DroneVariants;
 import com.synarsis.airtacticalarsenal.compat.CreateCompat;
 import com.synarsis.airtacticalarsenal.item.StrikeUavTabletItem;
 import com.synarsis.airtacticalarsenal.item.ModItems;
@@ -48,6 +49,9 @@ public class StrikeUavLauncherEntity extends Entity implements GeoEntity {
     private static final EntityDataAccessor<Integer> DATA_ENGINE_SOUND = SynchedEntityData
             .defineId(StrikeUavLauncherEntity.class, EntityDataSerializers.INT);
 
+    private static final EntityDataAccessor<String> DATA_DRONE_KIND = SynchedEntityData
+            .defineId(StrikeUavLauncherEntity.class, EntityDataSerializers.STRING);
+
     private int storedDroneId = -1;
     private UUID storedDroneUuid;
 
@@ -76,6 +80,20 @@ public class StrikeUavLauncherEntity extends Entity implements GeoEntity {
         this.entityData.define(DATA_IS_LAUNCHING, false);
         this.entityData.define(DATA_SHAHED_COLOR, "white");
         this.entityData.define(DATA_ENGINE_SOUND, 0);
+        this.entityData.define(DATA_DRONE_KIND, "");
+    }
+
+    public String getDroneKind() {
+        return this.entityData.get(DATA_DRONE_KIND);
+    }
+
+    private void setDroneKind(String kind) {
+        this.entityData.set(DATA_DRONE_KIND, kind == null ? "" : kind);
+    }
+
+    private ItemStack storedDroneStack() {
+        ItemStack variant = DroneVariants.stackOf(getDroneKind());
+        return variant.isEmpty() ? new ItemStack(ModItems.SHAHED.get()) : variant;
     }
 
     public int getEngineSound() {
@@ -101,6 +119,7 @@ public class StrikeUavLauncherEntity extends Entity implements GeoEntity {
             shahedColor = tag.getString("ShahedColor");
             this.entityData.set(DATA_SHAHED_COLOR, shahedColor);
         }
+        setDroneKind(tag.getString("DroneKind"));
 
         if (tag.contains("SavedRoute")) {
             net.minecraft.nbt.ListTag routeTag = tag.getList("SavedRoute", 10);
@@ -127,6 +146,7 @@ public class StrikeUavLauncherEntity extends Entity implements GeoEntity {
         }
         tag.putString("DiveMode", diveMode);
         tag.putString("ShahedColor", shahedColor);
+        tag.putString("DroneKind", getDroneKind());
 
         if (savedRoute != null && !savedRoute.isEmpty()) {
             net.minecraft.nbt.ListTag routeTag = new net.minecraft.nbt.ListTag();
@@ -208,7 +228,8 @@ public class StrikeUavLauncherEntity extends Entity implements GeoEntity {
             return InteractionResult.PASS;
         }
 
-        if (held.getItem() instanceof ShahedItem) {
+        boolean variant = DroneVariants.isStrikeVariant(held);
+        if (held.getItem() instanceof ShahedItem || variant) {
             if (hasDrone()) {
                 player.displayClientMessage(Component.translatable("message.ata.launcher.drone_already_mounted"), true);
                 return InteractionResult.FAIL;
@@ -236,6 +257,7 @@ public class StrikeUavLauncherEntity extends Entity implements GeoEntity {
 
             storedDroneUuid = UUID.randomUUID();
             storedDroneId = -1;
+            setDroneKind(variant ? DroneVariants.key(held.getItem()) : "");
             setHasDrone(true); 
             this.entityData.set(DATA_SHAHED_COLOR, this.shahedColor);
 
@@ -304,7 +326,10 @@ public class StrikeUavLauncherEntity extends Entity implements GeoEntity {
 
         Vec3 launchPos = this.position().add(0, 1.5, 0).add(launchDirection.scale(1.0));
 
-        ShahedEntity drone = new ShahedEntity(serverLevel, launchPos, targetPos, diveMode, launcherYaw);
+        DroneVariants.StrikeFactory factory = DroneVariants.strike(getDroneKind());
+        ShahedEntity drone = factory != null
+                ? factory.create(serverLevel, launchPos, targetPos, diveMode, launcherYaw)
+                : new ShahedEntity(serverLevel, launchPos, targetPos, diveMode, launcherYaw);
         if (launchingPlayer != null) {
             drone.setOwner(launchingPlayer);
         }
@@ -383,6 +408,7 @@ public class StrikeUavLauncherEntity extends Entity implements GeoEntity {
         storedDroneUuid = null;
         this.shahedColor = "white";
         this.entityData.set(DATA_SHAHED_COLOR, "white");
+        setDroneKind("");
         setHasDrone(false); 
     }
 
@@ -395,7 +421,7 @@ public class StrikeUavLauncherEntity extends Entity implements GeoEntity {
         if (!hasDrone())
             return;
 
-        ItemStack stack = new ItemStack(ModItems.SHAHED.get());
+        ItemStack stack = storedDroneStack();
         CompoundTag tag = stack.getOrCreateTag();
         if (targetPos != null) {
             tag.putInt("TargetX", targetPos.getX());
@@ -418,7 +444,7 @@ public class StrikeUavLauncherEntity extends Entity implements GeoEntity {
         if (!hasDrone())
             return;
 
-        ItemStack stack = new ItemStack(ModItems.SHAHED.get());
+        ItemStack stack = storedDroneStack();
         CompoundTag tag = stack.getOrCreateTag();
         if (targetPos != null) {
             tag.putInt("TargetX", targetPos.getX());

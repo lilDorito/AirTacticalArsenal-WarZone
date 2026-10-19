@@ -258,7 +258,7 @@ public class ReconUavTabletScreen extends AtaScaledScreen {
             String timerStr = String.format("%02d:%02d", totalSec / 60, totalSec % 60);
             String phaseStr = getLivePhase(entityId);
 
-            String text = Tr.s("gui.ata.recon_uav_tablet.drone_entry", droneNum, orlanData[1], orlanData[2], phaseStr, timerStr);
+            String text = Tr.s("gui.ata.recon_uav_tablet.drone_entry", com.synarsis.airtacticalarsenal.client.ClientDroneNames.name(entityId, "drone.ata.orlan"), droneNum, orlanData[1], orlanData[2], phaseStr, timerStr);
 
             Button camBtn = Button.builder(
                     Component.literal(text),

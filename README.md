@@ -15,11 +15,16 @@
 >
 > This is not an official release. It is not affiliated with or endorsed by Synarsis.
 
-Forge 1.20.1 mod that adds strike and recon drones (**Shahed-136**, **Orlan-10**), the **Iskander-M**
+Forge 1.20.1 mod that adds strike and recon drones (**Shahed-136**, **Orlan-10**), the **Add-on drones** (new in 1.3.2)
+- Other mods can add strike and recon drones built on the Shahed and Orlan (SBW Electronic Warfare WarZone adds
+  ZALA KUB-BLA and the Bayraktar TB2). They load on the same launchers, fly from the same tablets with the same routes,
+  camera, radar and crash physics, and are named by their own name in every message and screen.
+
+**Iskander-M**
 ballistic missile, an **air defense radar**, **on-board radars** for SuperbWarfare and AshVehicles aircraft
 and AA vehicles, and **alert sirens**.
 
-modId: `ata` (same as upstream) · version: `1.3.1-warzone`
+modId: `ata` (same as upstream) · version: `1.3.2-warzone`
 
 ## Contents
 
@@ -186,7 +191,7 @@ The full history is in [CHANGELOG.md](CHANGELOG.md). In short:
 .\gradlew.bat build
 ```
 
-Output: `build\libs\air-tactical-arsenal-1.3.1-warzone.jar`. A dev client runs with `.\gradlew.bat runClient`
+Output: `build\libs\air-tactical-arsenal-1.3.2-warzone.jar`. A dev client runs with `.\gradlew.bat runClient`
 (also `runServer`, `runData`); `build.bat` is a small helper script.
 
 ## How to play

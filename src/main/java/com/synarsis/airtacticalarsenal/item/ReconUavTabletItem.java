@@ -78,11 +78,13 @@ public class ReconUavTabletItem extends Item {
             }
 
             List<int[]> activeOrlans = new ArrayList<>();
+            Map<Integer, String> droneNames = new java.util.HashMap<>();
             List<OrlanEntity> orlans = OrlanEntity.getActiveOrlansByOwner(player.getUUID());
             for (OrlanEntity orlan : orlans) {
                 BlockPos tp = orlan.getTargetPos();
                 int remainingTicks = orlan.getRemainingFlightTicks();
                 activeOrlans.add(new int[]{orlan.getId(), tp.getX(), tp.getZ(), remainingTicks});
+                droneNames.put(orlan.getId(), orlan.getDroneNameKey());
             }
 
             Map<Integer, int[]> savedCoords = getSavedCoords(stack);
@@ -99,7 +101,7 @@ public class ReconUavTabletItem extends Item {
 
             NetworkHandler.sendToPlayer(serverPlayer, new OpenReconUavTabletPacket(
                     validLaunchers, hasDroneList, launcherYawList, savedCoords, activeOrlans, savedRoutes
-            ));
+            ).withDroneNames(droneNames));
 
             return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
         }

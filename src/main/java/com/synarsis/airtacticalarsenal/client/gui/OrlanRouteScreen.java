@@ -813,7 +813,8 @@ public class OrlanRouteScreen extends AtaScaledScreen {
                 int dz = worldToMapZ(dpos.z);
                 if (isInsideMap(dx, dz)) {
                     drawMarker(g, dx, dz, DRONE_COLOR, 4);
-                    g.drawString(this.font, Tr.s("gui.ata.route.orlan"), dx + 5, dz - 4, DRONE_COLOR, false);
+                    String droneLabel = droneEnt instanceof com.synarsis.airtacticalarsenal.entity.OrlanEntity od ? od.getDroneName().getString() : Tr.s("gui.ata.route.orlan");
+                    g.drawString(this.font, droneLabel, dx + 5, dz - 4, DRONE_COLOR, false);
                     g.drawString(this.font, "Y:" + (int) dpos.y, dx + 5, dz + 6, 0xAABBBBBB, false);
                 }
             }
