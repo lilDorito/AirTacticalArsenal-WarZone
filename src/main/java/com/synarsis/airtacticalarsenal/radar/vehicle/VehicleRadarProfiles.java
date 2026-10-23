@@ -75,6 +75,31 @@ public final class VehicleRadarProfiles extends SimpleJsonResourceReloadListener
         return s == null ? 1.0f : s;
     }
 
+    public Map<ResourceLocation, VehicleRadarProfile> radars() {
+        return radars;
+    }
+
+    public Map<ResourceLocation, Float> signatures() {
+        return signatures;
+    }
+
+    private static volatile Map<ResourceLocation, VehicleRadarProfile> clientRadars = Map.of();
+    private static volatile Map<ResourceLocation, Float> clientSignatures = Map.of();
+
+    public static void setClientData(Map<ResourceLocation, VehicleRadarProfile> radars, Map<ResourceLocation, Float> signatures) {
+        clientRadars = Map.copyOf(radars);
+        clientSignatures = Map.copyOf(signatures);
+    }
+
+    public static VehicleRadarProfile clientRadarFor(ResourceLocation id) {
+        return id == null ? null : clientRadars.get(id);
+    }
+
+    public static float clientSignatureFor(ResourceLocation id) {
+        Float s = id == null ? null : clientSignatures.get(id);
+        return s == null ? 1.0f : s;
+    }
+
     public boolean hasAnyRadar() {
         return !radars.isEmpty();
     }

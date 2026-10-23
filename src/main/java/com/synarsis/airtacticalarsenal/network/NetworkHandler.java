@@ -7,7 +7,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    private static final String PROTOCOL_VERSION = "16";
+    private static final String PROTOCOL_VERSION = "20";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(com.synarsis.airtacticalarsenal.ShahedMod.MOD_ID, "main"),
             () -> PROTOCOL_VERSION,
@@ -122,11 +122,6 @@ public class NetworkHandler {
                 .decoder(LaunchFromStrikeUavTabletPacket::new)
                 .consumerMainThread(LaunchFromStrikeUavTabletPacket::handle)
                 .add();
-        INSTANCE.messageBuilder(OpenStrikeUavTabletPacket.class, id++)
-                .encoder(OpenStrikeUavTabletPacket::encode)
-                .decoder(OpenStrikeUavTabletPacket::new)
-                .consumerMainThread(OpenStrikeUavTabletPacket::handle)
-                .add();
         INSTANCE.messageBuilder(RemoveLauncherFromTabletPacket.class, id++)
                 .encoder(RemoveLauncherFromTabletPacket::encode)
                 .decoder(RemoveLauncherFromTabletPacket::new)
@@ -147,10 +142,10 @@ public class NetworkHandler {
                 .decoder(OrlanRemovePacket::new)
                 .consumerMainThread(OrlanRemovePacket::handle)
                 .add();
-        INSTANCE.messageBuilder(OpenReconUavTabletPacket.class, id++)
-                .encoder(OpenReconUavTabletPacket::encode)
-                .decoder(OpenReconUavTabletPacket::new)
-                .consumerMainThread(OpenReconUavTabletPacket::handle)
+        INSTANCE.messageBuilder(OpenUavTabletPacket.class, id++)
+                .encoder(OpenUavTabletPacket::encode)
+                .decoder(OpenUavTabletPacket::new)
+                .consumerMainThread(OpenUavTabletPacket::handle)
                 .add();
         INSTANCE.messageBuilder(LaunchFromReconUavTabletPacket.class, id++)
                 .encoder(LaunchFromReconUavTabletPacket::encode)
@@ -271,6 +266,21 @@ public class NetworkHandler {
                 .encoder(ToggleRadarAlarmPacket::toBytes)
                 .decoder(ToggleRadarAlarmPacket::new)
                 .consumerMainThread(ToggleRadarAlarmPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(RefreshUavTabletPacket.class, id++)
+                .encoder(RefreshUavTabletPacket::encode)
+                .decoder(RefreshUavTabletPacket::new)
+                .consumerMainThread(RefreshUavTabletPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(StrikeRetargetPacket.class, id++)
+                .encoder(StrikeRetargetPacket::encode)
+                .decoder(StrikeRetargetPacket::new)
+                .consumerMainThread(StrikeRetargetPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(VehicleRadarSyncPacket.class, id++)
+                .encoder(VehicleRadarSyncPacket::encode)
+                .decoder(VehicleRadarSyncPacket::new)
+                .consumerMainThread(VehicleRadarSyncPacket::handle)
                 .add();
     }
 

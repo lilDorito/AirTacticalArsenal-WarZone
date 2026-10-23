@@ -27,12 +27,12 @@ public class ModEntities {
                     .setShouldReceiveVelocityUpdates(true)
                     .build("iskander"));
 
-    public static final RegistryObject<EntityType<StrikeUavLauncherEntity>> STRIKE_UAV_LAUNCHER = ENTITY_TYPES.register("strike_uav_launcher",
-            () -> EntityType.Builder.<StrikeUavLauncherEntity>of(StrikeUavLauncherEntity::new, MobCategory.MISC)
+    public static final RegistryObject<EntityType<HeavyUavLauncherEntity>> HEAVY_UAV_LAUNCHER = ENTITY_TYPES.register("heavy_uav_launcher",
+            () -> EntityType.Builder.<HeavyUavLauncherEntity>of(HeavyUavLauncherEntity::new, MobCategory.MISC)
                     .sized(2.0f, 1.5f)
                     .clientTrackingRange(64)
                     .updateInterval(10)
-                    .build("strike_uav_launcher"));
+                    .build("heavy_uav_launcher"));
 
     public static final RegistryObject<EntityType<PaintStandEntity>> PAINT_STAND = ENTITY_TYPES.register("paint_stand",
             () -> EntityType.Builder.<PaintStandEntity>of(PaintStandEntity::new, MobCategory.MISC)
@@ -41,12 +41,12 @@ public class ModEntities {
                     .updateInterval(3)
                     .build("paint_stand"));
 
-    public static final RegistryObject<EntityType<ReconUavLauncherEntity>> RECON_UAV_LAUNCHER = ENTITY_TYPES.register("recon_uav_launcher",
-            () -> EntityType.Builder.<ReconUavLauncherEntity>of(ReconUavLauncherEntity::new, MobCategory.MISC)
+    public static final RegistryObject<EntityType<LightUavLauncherEntity>> LIGHT_UAV_LAUNCHER = ENTITY_TYPES.register("light_uav_launcher",
+            () -> EntityType.Builder.<LightUavLauncherEntity>of(LightUavLauncherEntity::new, MobCategory.MISC)
                     .sized(1.5f, 1.2f)
                     .clientTrackingRange(64)
                     .updateInterval(10)
-                    .build("recon_uav_launcher"));
+                    .build("light_uav_launcher"));
 
     public static final RegistryObject<EntityType<OrlanEntity>> ORLAN = ENTITY_TYPES.register("orlan",
             () -> EntityType.Builder.<OrlanEntity>of(OrlanEntity::new, MobCategory.MISC)

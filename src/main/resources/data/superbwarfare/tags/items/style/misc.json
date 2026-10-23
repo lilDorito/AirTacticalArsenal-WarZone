@@ -1,0 +1,17 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "ata:loading_hatch",
+      "required": false
+    },
+    {
+      "id": "ata:paint_stand",
+      "required": false
+    },
+    {
+      "id": "ata:spray_can",
+      "required": false
+    }
+  ]
+}

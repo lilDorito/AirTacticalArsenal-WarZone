@@ -1,9 +1,12 @@
 package com.synarsis.airtacticalarsenal.client.sound;
 
-import com.synarsis.airtacticalarsenal.entity.StrikeUavLauncherEntity;
+import com.synarsis.airtacticalarsenal.api.DroneVariants;
+import com.synarsis.airtacticalarsenal.api.DroneVariantsClient;
+import com.synarsis.airtacticalarsenal.entity.UavLauncherEntity;
 import com.synarsis.airtacticalarsenal.sound.ModSounds;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.sounds.SoundSource;
 import net.minecraftforge.api.distmarker.Dist;
@@ -18,21 +21,35 @@ public class LauncherSpinUpSound extends AbstractTickableSoundInstance {
     private static final int RAMP_TICKS = 100;
     private static final int FADE_TICKS = 6;
 
-    private final StrikeUavLauncherEntity launcher;
+    private final UavLauncherEntity launcher;
     private int age;
     private int fade = -1;
 
-    public static void ensure(StrikeUavLauncherEntity launcher) {
+    public static void ensure(UavLauncherEntity launcher) {
         LauncherSpinUpSound current = ACTIVE.get(launcher.getId());
         if (current != null && !current.isStopped()) return;
-        LauncherSpinUpSound sound = new LauncherSpinUpSound(launcher);
+        String typeKey = DroneVariants.entityTypeKey(launcher.getDroneKind());
+        DroneVariantsClient.EngineSound custom = DroneVariantsClient.engineSound(typeKey);
+        LauncherSpinUpSound sound = new LauncherSpinUpSound(launcher, custom);
         ACTIVE.put(launcher.getId(), sound);
         Minecraft.getInstance().getSoundManager().play(sound);
+        java.util.function.Supplier<net.minecraft.sounds.SoundEvent> start = DroneVariantsClient.startSound(typeKey);
+        if (start != null) {
+            Minecraft.getInstance().getSoundManager().play(new SimpleSoundInstance(start.get(), SoundSource.HOSTILE,
+                    custom != null ? custom.volume() : 1.0f, 1.0f, SoundInstance.createUnseededRandom(),
+                    launcher.getX(), launcher.getY() + 1.5, launcher.getZ()));
+        }
     }
 
-    private LauncherSpinUpSound(StrikeUavLauncherEntity launcher) {
-        super(launcher.getEngineSound() == 1 ? ModSounds.SHAHED_ENGINE_2.get() : ModSounds.SHAHED_ENGINE.get(),
+    private final float volumeScale;
+    private final float pitchScale;
+
+    private LauncherSpinUpSound(UavLauncherEntity launcher, DroneVariantsClient.EngineSound custom) {
+        super(custom != null ? custom.loop().get()
+                        : launcher.getEngineSound() == 1 ? ModSounds.SHAHED_ENGINE_2.get() : ModSounds.SHAHED_ENGINE.get(),
                 SoundSource.HOSTILE, SoundInstance.createUnseededRandom());
+        this.volumeScale = custom != null ? custom.volume() : 1.0f;
+        this.pitchScale = custom != null ? custom.pitch() : 1.0f;
         this.launcher = launcher;
         this.looping = true;
         this.delay = 0;
@@ -55,7 +72,7 @@ public class LauncherSpinUpSound extends AbstractTickableSoundInstance {
         if (fade < 0 && (launcher.isRemoved() || !launcher.isLaunching())) fade = 0;
         float t = Math.min(1f, age / (float) RAMP_TICKS);
         float gain = 0.1f + 0.9f * t;
-        this.pitch = 0.5f + 0.5f * t;
+        this.pitch = (0.5f + 0.5f * t) * this.pitchScale;
         if (fade >= 0) {
             fade++;
             gain *= Math.max(0f, 1f - fade / (float) FADE_TICKS);
@@ -66,7 +83,7 @@ public class LauncherSpinUpSound extends AbstractTickableSoundInstance {
                 return;
             }
         }
-        this.volume = gain;
+        this.volume = gain * this.volumeScale;
         this.x = launcher.getX();
         this.y = launcher.getY() + 1.5;
         this.z = launcher.getZ();

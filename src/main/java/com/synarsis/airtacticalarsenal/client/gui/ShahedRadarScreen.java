@@ -114,9 +114,13 @@ public class ShahedRadarScreen extends Screen {
         }
     }
 
-    private boolean alarmOutput = true;
+    private boolean manualMode = false;
+    private boolean alertDeclared = false;
+    private boolean alertRelayed = false;
     private boolean canToggleAlarm = false;
     private int alarmX1, alarmY1, alarmX2, alarmY2;
+    private int alertX1, alertY1, alertX2, alertY2;
+    private int lastListTop = -1;
     private int serverMinAltitude = 90;
     private boolean weakSignal = false;
     private final boolean darkBackground;
@@ -137,9 +141,11 @@ public class ShahedRadarScreen extends Screen {
     }
 
     public static void updateTargets(BlockPos radarPos, List<RadarUpdatePacket.TargetData> data, int minAltitude, boolean openSky,
-                                     boolean alarmOutput, boolean canToggleAlarm) {
+                                     int alarmState, boolean canToggleAlarm) {
         if (currentInstance == null || !currentInstance.radarPos.equals(radarPos)) return;
-        currentInstance.alarmOutput = alarmOutput;
+        currentInstance.manualMode = (alarmState & RadarUpdatePacket.ALARM_MANUAL) != 0;
+        currentInstance.alertDeclared = (alarmState & RadarUpdatePacket.ALARM_DECLARED) != 0;
+        currentInstance.alertRelayed = (alarmState & RadarUpdatePacket.ALARM_RELAYED) != 0;
         currentInstance.canToggleAlarm = canToggleAlarm;
         currentInstance.serverMinAltitude = minAltitude;
         currentInstance.weakSignal = !openSky;
@@ -553,19 +559,46 @@ public class ShahedRadarScreen extends Screen {
     }
 
     private void renderAlarmToggle(GuiGraphics g, int px, int py, int pw, int mx, int my) {
-        String label = Tr.s(alarmOutput ? "gui.ata.radar.alarm_on" : "gui.ata.radar.alarm_off");
+        String label = Tr.s(manualMode ? "gui.ata.radar.alarm_mode_manual" : "gui.ata.radar.alarm_mode_auto");
         int w = font.width(label) + 8;
         alarmX1 = px + pw - 4 - w;
         alarmY1 = py + 1;
         alarmX2 = px + pw - 4;
         alarmY2 = py + 12;
         boolean hover = canToggleAlarm && mx >= alarmX1 && mx < alarmX2 && my >= alarmY1 && my < alarmY2;
-        int bg = alarmOutput ? 0x60c02020 : 0x40303830;
-        if (hover) bg = alarmOutput ? 0x90e03030 : 0x70506050;
-        int fg = !canToggleAlarm ? 0xFF506050 : (alarmOutput ? 0xFFff6060 : 0xFF90a090);
+        int bg = manualMode ? 0x40303830 : 0x40206030;
+        if (hover) bg = manualMode ? 0x70506050 : 0x70308040;
+        int fg = !canToggleAlarm ? 0xFF506050 : (manualMode ? 0xFFe0c060 : 0xFF80e090);
         g.fill(alarmX1, alarmY1, alarmX2, alarmY2, bg);
-        g.renderOutline(alarmX1, alarmY1, w, alarmY2 - alarmY1, alarmOutput ? 0xFFb03030 : 0xFF405040);
+        g.renderOutline(alarmX1, alarmY1, w, alarmY2 - alarmY1, manualMode ? 0xFF806830 : 0xFF305040);
         g.drawString(font, label, alarmX1 + 4, alarmY1 + 2, fg, false);
+    }
+
+    private int renderAlertRow(GuiGraphics g, int px, int py, int pw, int mx, int my) {
+        alertX1 = alertY1 = alertX2 = alertY2 = 0;
+        if (!manualMode && !alertRelayed) {
+            return py;
+        }
+        int top = py + 2;
+        if (manualMode) {
+            String label = Tr.s(alertDeclared ? "gui.ata.radar.alert_cancel" : "gui.ata.radar.alert_declare");
+            alertX1 = px + 4;
+            alertY1 = top;
+            alertX2 = px + pw - 4;
+            alertY2 = top + 12;
+            boolean hover = canToggleAlarm && mx >= alertX1 && mx < alertX2 && my >= alertY1 && my < alertY2;
+            int bg = alertDeclared ? (hover ? 0x90e03030 : 0x70c02020) : (hover ? 0x70603030 : 0x40402828);
+            int fg = !canToggleAlarm ? 0xFF506050 : (alertDeclared ? 0xFFffd0d0 : 0xFFff8080);
+            g.fill(alertX1, alertY1, alertX2, alertY2, bg);
+            g.renderOutline(alertX1, alertY1, alertX2 - alertX1, 12, 0xFFb03030);
+            g.drawCenteredString(font, label, (alertX1 + alertX2) / 2, alertY1 + 2, fg);
+            top += 14;
+        }
+        if (alertRelayed && !alertDeclared) {
+            g.drawString(font, Tr.s("gui.ata.radar.alert_relayed"), px + 4, top + 1, 0xFFffa040, false);
+            top += 11;
+        }
+        return top;
     }
 
     private List<RadarTarget> getSortedTargets() {
@@ -595,8 +628,13 @@ public class ShahedRadarScreen extends Screen {
         g.drawString(font, Tr.s("gui.ata.radar.targets"), px + 4, py + 3, COL_TITLE, false);
         renderAlarmToggle(g, px, py, pw, mx, my);
         g.hLine(px + 2, px + pw - 2, py + 13, 0xFF1a3028);
+        int headerBottom = renderAlertRow(g, px, py + 14, pw, mx, my);
+        if (headerBottom > py + 14) {
+            g.hLine(px + 2, px + pw - 2, headerBottom + 1, 0xFF1a3028);
+        }
 
-        int listTop = py + 16;
+        int listTop = Math.max(py + 16, headerBottom + 4);
+        lastListTop = listTop;
         int bottomReserve = 72; 
         boolean swOn = com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.isLoaded();
         boolean vvpOn = com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.isVvpLoaded();
@@ -766,9 +804,20 @@ public class ShahedRadarScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
+        if (btn == 0 && canToggleAlarm && manualMode && alertX2 > alertX1 && mx >= alertX1 && mx < alertX2 && my >= alertY1 && my < alertY2) {
+            alertDeclared = !alertDeclared;
+            NetworkHandler.sendToServer(new ToggleRadarAlarmPacket(radarPos, ToggleRadarAlarmPacket.TOGGLE_ALERT));
+            Minecraft.getInstance().getSoundManager().play(
+                    net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
+                            net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
+            return true;
+        }
         if (btn == 0 && canToggleAlarm && mx >= alarmX1 && mx < alarmX2 && my >= alarmY1 && my < alarmY2) {
-            alarmOutput = !alarmOutput;
-            NetworkHandler.sendToServer(new ToggleRadarAlarmPacket(radarPos));
+            manualMode = !manualMode;
+            if (!manualMode) {
+                alertDeclared = false;
+            }
+            NetworkHandler.sendToServer(new ToggleRadarAlarmPacket(radarPos, ToggleRadarAlarmPacket.TOGGLE_MODE));
             Minecraft.getInstance().getSoundManager().play(
                     net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
                             net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK, 1.0f));
@@ -785,7 +834,7 @@ public class ShahedRadarScreen extends Screen {
             int pw = RIGHT_PANEL_W;
             if (mx >= px && mx <= px + pw) {
                 List<RadarTarget> sorted = getSortedTargets();
-                int row = py + 16;
+                int row = lastListTop > 0 ? lastListTop : py + 16;
                 int listBottom = py + (Math.min(this.width - panelSpace, this.height) - 50) - 132;
                 for (int idx = targetScrollOffset; idx < sorted.size(); idx++) {
                     if (row >= listBottom) break;

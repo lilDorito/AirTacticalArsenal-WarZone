@@ -1,7 +1,6 @@
 package com.synarsis.airtacticalarsenal.network;
 
-import com.synarsis.airtacticalarsenal.item.StrikeUavTabletItem;
-import com.synarsis.airtacticalarsenal.item.ReconUavTabletItem;
+import com.synarsis.airtacticalarsenal.item.UavTabletItem;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -45,29 +44,9 @@ public class SaveTabletCoordsPacket {
             ServerPlayer player = ctx.get().getSender();
             if (player == null) return;
 
-            ItemStack mainHand = player.getItemInHand(InteractionHand.MAIN_HAND);
-            ItemStack offHand = player.getItemInHand(InteractionHand.OFF_HAND);
-
-            ItemStack tablet = null;
-            boolean isOrlan = false;
-            if (mainHand.getItem() instanceof ReconUavTabletItem) {
-                tablet = mainHand;
-                isOrlan = true;
-            } else if (offHand.getItem() instanceof ReconUavTabletItem) {
-                tablet = offHand;
-                isOrlan = true;
-            } else if (mainHand.getItem() instanceof StrikeUavTabletItem) {
-                tablet = mainHand;
-            } else if (offHand.getItem() instanceof StrikeUavTabletItem) {
-                tablet = offHand;
-            }
-
+            ItemStack tablet = UavTabletItem.heldTablet(player);
             if (tablet != null) {
-                if (isOrlan) {
-                    ReconUavTabletItem.setSavedCoords(tablet, coords);
-                } else {
-                    StrikeUavTabletItem.setSavedCoords(tablet, coords);
-                }
+                UavTabletItem.saveStrikeCoords(player, tablet, coords);
             }
         });
         ctx.get().setPacketHandled(true);

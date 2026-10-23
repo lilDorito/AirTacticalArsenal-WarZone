@@ -43,6 +43,18 @@ public final class VehicleRadarService {
     private record Air(Entity entity, byte type) {}
 
     @SubscribeEvent
+    public static void onDatapackSync(net.minecraftforge.event.OnDatapackSyncEvent event) {
+        com.synarsis.airtacticalarsenal.network.VehicleRadarSyncPacket packet =
+                new com.synarsis.airtacticalarsenal.network.VehicleRadarSyncPacket(
+                        VehicleRadarProfiles.INSTANCE.radars(), VehicleRadarProfiles.INSTANCE.signatures());
+        if (event.getPlayer() != null) {
+            com.synarsis.airtacticalarsenal.network.NetworkHandler.sendToPlayer(event.getPlayer(), packet);
+        } else {
+            com.synarsis.airtacticalarsenal.network.NetworkHandler.sendToAllPlayers(packet);
+        }
+    }
+
+    @SubscribeEvent
     public static void onAddReloadListeners(AddReloadListenerEvent event) {
         event.addListener(VehicleRadarProfiles.INSTANCE);
     }

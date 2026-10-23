@@ -8,7 +8,8 @@
     "ashvehicle.AshAircraftLockMixin"
   ],
   "client": [
-    "ashvehicle.AshTargetHighlighterMixin"
+    "ashvehicle.AshTargetHighlighterMixin",
+    "sbw.SbwThermalMixin"
   ],
   "injectors": {
     "defaultRequire": 0

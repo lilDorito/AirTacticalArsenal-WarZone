@@ -34,6 +34,10 @@ public class ClientPacketHandler {
     private static final Map<Integer, int[]> orlanDataCache = new HashMap<>();
 
     public static void handleShahedSpawn(int entityId, Vec3 currentPos, BlockPos targetPos, String diveMode, int engineSound) {
+        handleShahedSpawn(entityId, currentPos, targetPos, diveMode, engineSound, "");
+    }
+
+    public static void handleShahedSpawn(int entityId, Vec3 currentPos, BlockPos targetPos, String diveMode, int engineSound, String typeKey) {
         cleanupStoppedSounds();
 
         Minecraft mc = Minecraft.getInstance();
@@ -56,12 +60,23 @@ public class ClientPacketHandler {
             }
         }
 
-        ShahedEngineSoundClient sound = new ShahedEngineSoundClient(entityId, currentPos, targetPos, diveMode, engineSound);
+        ShahedEngineSoundClient sound = new ShahedEngineSoundClient(entityId, currentPos, targetPos, diveMode, engineSound,
+                com.synarsis.airtacticalarsenal.api.DroneVariantsClient.engineSound(typeKey));
         activeSounds.put(entityId, sound);
-        mc.execute(sound::start);
+        mc.execute(() -> {
+            sound.start();
+            com.synarsis.airtacticalarsenal.client.sound.DroneFarFieldSound.attach(sound, typeKey);
+        });
     }
 
     public static void handleShahedRemove(int entityId) {
+        Minecraft removeMc = Minecraft.getInstance();
+        if (removeMc.level != null) {
+            Entity removed = removeMc.level.getEntity(entityId);
+            if (removed != null) {
+                removed.discard();
+            }
+        }
         ShahedEngineSoundClient sound = activeSounds.get(entityId);
         if (sound != null) {
             if (sound.isExploded()) {
@@ -79,6 +94,7 @@ public class ClientPacketHandler {
         if (mc.player == null) {
             return;
         }
+        com.synarsis.airtacticalarsenal.client.OrlanCameraHandler.cutFeedIfDestroyedNear(explosionPos);
 
         ShahedEngineSoundClient closestSound = null;
         double closestDistance = Double.MAX_VALUE;
@@ -256,6 +272,11 @@ public class ClientPacketHandler {
 
     public static void handleOrlanSpawn(int entityId, double x, double y, double z, double motionX, double motionY,
             double motionZ, int phaseOrdinal, int remainingTicks) {
+        handleOrlanSpawn(entityId, x, y, z, motionX, motionY, motionZ, phaseOrdinal, remainingTicks, "");
+    }
+
+    public static void handleOrlanSpawn(int entityId, double x, double y, double z, double motionX, double motionY,
+            double motionZ, int phaseOrdinal, int remainingTicks, String typeKey) {
 
         orlanDataCache.put(entityId, new int[] { phaseOrdinal, remainingTicks });
 
@@ -275,9 +296,13 @@ public class ClientPacketHandler {
             if (existingSound == null || existingSound.isStopped()
                     || !mc.getSoundManager().isActive(existingSound)) {
                 if (existingSound != null) existingSound.forceStop();
-                OrlanEngineSoundClient sound = new OrlanEngineSoundClient(entityId, x, y, z);
+                OrlanEngineSoundClient sound = new OrlanEngineSoundClient(entityId, x, y, z,
+                        com.synarsis.airtacticalarsenal.api.DroneVariantsClient.engineSound(typeKey));
                 activeOrlanSounds.put(entityId, sound);
-                mc.execute(sound::start);
+                mc.execute(() -> {
+                    sound.start();
+                    com.synarsis.airtacticalarsenal.client.sound.DroneFarFieldSound.attach(sound, typeKey);
+                });
             } else {
                 existingSound.updateFromPacket(x, y, z);
             }

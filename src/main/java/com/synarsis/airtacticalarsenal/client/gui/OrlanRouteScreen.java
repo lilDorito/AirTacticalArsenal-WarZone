@@ -825,7 +825,9 @@ public class OrlanRouteScreen extends AtaScaledScreen {
         g.fill(mapX - 1, mapY, mapX, mapY + MAP_SIZE, 0xFF333333);
         g.fill(mapX + MAP_SIZE, mapY, mapX + MAP_SIZE + 1, mapY + MAP_SIZE, 0xFF333333);
 
-        g.drawString(this.font, Tr.s("gui.ata.route.scale", scale), mapX + 2, mapY + MAP_SIZE + 3, 0x888888, false);
+        String scaleText = Tr.s("gui.ata.route.scale", Math.round(scale));
+        g.fill(mapX + 1, mapY + MAP_SIZE - 11, mapX + 4 + this.font.width(scaleText), mapY + MAP_SIZE - 1, 0xAA000000);
+        g.drawString(this.font, scaleText, mapX + 3, mapY + MAP_SIZE - 10, 0xAAAAAA, false);
     }
 
     private void renderTerrainTexture(GuiGraphics g, int mapX, int mapY) {
@@ -959,7 +961,7 @@ public class OrlanRouteScreen extends AtaScaledScreen {
             y += 6;
 
             double totalDist = calculateTotalDistance();
-            g.drawString(this.font, Tr.s("gui.ata.route.total_dist", totalDist), x, y, 0xAAAAAA, false);
+            g.drawString(this.font, Tr.s("gui.ata.route.total_dist", Math.round(totalDist)), x, y, 0xAAAAAA, false);
             y += 13;
             g.drawString(this.font, Tr.s("gui.ata.route.max", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan()),
                     x, y, 0x666666, false);

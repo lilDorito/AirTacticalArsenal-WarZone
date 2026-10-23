@@ -1,0 +1,72 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "superbwarfare"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          "CCC",
+          "SOS",
+          "SRS"
+        ],
+        "key": {
+          "C": {
+            "item": "minecraft:copper_ingot"
+          },
+          "S": {
+            "item": "superbwarfare:steel_ingot"
+          },
+          "O": {
+            "item": "minecraft:observer"
+          },
+          "R": {
+            "item": "minecraft:redstone_block"
+          }
+        },
+        "result": {
+          "item": "ata:shahed_radar",
+          "count": 1
+        }
+      }
+    },
+    {
+      "conditions": [
+        {
+          "type": "forge:true"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          "CCC",
+          "SOS",
+          "SRS"
+        ],
+        "key": {
+          "C": {
+            "item": "minecraft:copper_ingot"
+          },
+          "S": {
+            "item": "minecraft:iron_ingot"
+          },
+          "O": {
+            "item": "minecraft:observer"
+          },
+          "R": {
+            "item": "minecraft:redstone_block"
+          }
+        },
+        "result": {
+          "item": "ata:shahed_radar",
+          "count": 1
+        }
+      }
+    }
+  ]
+}

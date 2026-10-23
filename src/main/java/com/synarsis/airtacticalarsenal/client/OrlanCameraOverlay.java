@@ -21,7 +21,12 @@ public class OrlanCameraOverlay {
         if (!OrlanCameraHandler.isCameraActive()) return;
 
         OrlanEntity orlan = OrlanCameraHandler.getLinkedOrlan();
-        if (orlan == null) return;
+        if (orlan == null) {
+            if (OrlanCameraHandler.getLinkedDrone() instanceof com.synarsis.airtacticalarsenal.entity.ShahedEntity strike) {
+                StrikeCameraOverlay.render(guiGraphics, screenWidth, screenHeight, strike);
+            }
+            return;
+        }
 
         Minecraft mc = Minecraft.getInstance();
         float zoom = OrlanCameraHandler.getZoomLevel();
@@ -119,7 +124,7 @@ public class OrlanCameraOverlay {
         guiGraphics.drawString(mc.font, timeStr, iR - timeW + 4, iT + 2, dimColor, true);
 
         if (OrlanCameraHandler.isNvgActive()) {
-            String nvgStr = Tr.s("hud.ata.orlan.nvg");
+            String nvgStr = OrlanCameraHandler.visionName();
             int nvgW = mc.font.width(nvgStr) + 8;
             guiGraphics.fill(iR - timeW - nvgW - 2, iT, iR - timeW - 2, iT + 12, 0x88003300);
             guiGraphics.drawString(mc.font, nvgStr, iR - timeW - nvgW + 2, iT + 2, 0xFF00FF00, true);
@@ -253,7 +258,7 @@ public class OrlanCameraOverlay {
                 ? Tr.s("hud.ata.orlan.dist", mc.player.position().distanceTo(dronePos)) : "";
         double speed = orlan.getDeltaMovement().length() * 20.0;
         String spdStr = String.format("SPD: %.0f b/s", speed);
-        String exitHint = Tr.s("hud.ata.orlan.controls");
+        String exitHint = Tr.s("hud.ata.orlan.controls", OrlanCameraHandler.visionName());
 
         int gap = 12;
         int left = iL + 4;
@@ -290,12 +295,15 @@ public class OrlanCameraOverlay {
         RenderSystem.disableBlend();
     }
 
-    private static void renderNightVision(GuiGraphics guiGraphics, Minecraft mc, int w, int h) {
+    static void renderNightVision(GuiGraphics guiGraphics, Minecraft mc, int w, int h) {
         if (mc.level == null) return;
         long dayTime = mc.level.getDayTime() % 24000;
         boolean isNight = dayTime >= 13000 && dayTime < 23000;
         boolean isDusk = (dayTime >= 11500 && dayTime < 13000) || dayTime >= 23000 || dayTime < 500;
 
+        if (OrlanCameraHandler.isThermalActive()) {
+            return;
+        }
         if (OrlanCameraHandler.isNvgActive()) {
 
             if (!isNight && !isDusk) {
@@ -317,7 +325,7 @@ public class OrlanCameraOverlay {
         }
     }
 
-    private static void renderCompass(GuiGraphics guiGraphics, Minecraft mc, int centerX, int y, float yaw) {
+    static void renderCompass(GuiGraphics guiGraphics, Minecraft mc, int centerX, int y, float yaw) {
         int compassWidth = 220;
         int halfWidth = compassWidth / 2;
 
@@ -348,7 +356,7 @@ public class OrlanCameraOverlay {
         guiGraphics.fill(centerX - 1, y - 3, centerX + 2, y - 1, 0xFF00FF00);
     }
 
-    private static void renderLockOnUI(GuiGraphics guiGraphics, Minecraft mc, int cx, int cy, Vec3 dronePos, int screenWidth) {
+    static void renderLockOnUI(GuiGraphics guiGraphics, Minecraft mc, int cx, int cy, Vec3 dronePos, int screenWidth) {
         int crossSize = 18; 
 
         if (OrlanCameraHandler.isLocking()) {
@@ -367,7 +375,7 @@ public class OrlanCameraOverlay {
                     cx - mc.font.width(lockingText) / 2, barY + barH + 3, 0xDDFF3333, true);
         } else if (OrlanCameraHandler.isLocked()) {
 
-            String lockLabel = "[ TGT LOCK ]";
+            String lockLabel = Tr.s("hud.ata.orlan.locked");
             guiGraphics.drawString(mc.font, lockLabel,
                     cx - mc.font.width(lockLabel) / 2, cy + crossSize + 6, 0xDDFF2222, true);
 

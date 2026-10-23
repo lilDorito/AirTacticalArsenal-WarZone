@@ -232,7 +232,9 @@ public class SuperbWarfareCompat {
             Object current = sbwScanList.get();
             if (!(current instanceof java.util.List<?> list) || list.contains("ata:*")) return;
             java.util.List<Object> next = null;
-            for (String id : SBW_SCAN_IDS) {
+            java.util.Set<String> wanted = new java.util.LinkedHashSet<>(java.util.Arrays.asList(SBW_SCAN_IDS));
+            wanted.addAll(com.synarsis.airtacticalarsenal.api.DroneVariants.registeredEntityTypeKeys());
+            for (String id : wanted) {
                 if (list.contains(id)) continue;
                 if (next == null) next = new java.util.ArrayList<>(list);
                 next.add(id);

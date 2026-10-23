@@ -1,7 +1,6 @@
 package com.synarsis.airtacticalarsenal.network;
 
-import com.synarsis.airtacticalarsenal.item.StrikeUavTabletItem;
-import com.synarsis.airtacticalarsenal.item.ReconUavTabletItem;
+import com.synarsis.airtacticalarsenal.item.UavTabletItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -33,46 +32,17 @@ public class RemoveLauncherFromTabletPacket {
             ServerPlayer player = ctx.get().getSender();
             if (player == null) return;
 
-            ItemStack mainHand = player.getItemInHand(InteractionHand.MAIN_HAND);
-            ItemStack offHand = player.getItemInHand(InteractionHand.OFF_HAND);
-
-            ItemStack tablet = null;
-            boolean isOrlan = false;
-            if (mainHand.getItem() instanceof ReconUavTabletItem) {
-                tablet = mainHand;
-                isOrlan = true;
-            } else if (offHand.getItem() instanceof ReconUavTabletItem) {
-                tablet = offHand;
-                isOrlan = true;
-            } else if (mainHand.getItem() instanceof StrikeUavTabletItem) {
-                tablet = mainHand;
-            } else if (offHand.getItem() instanceof StrikeUavTabletItem) {
-                tablet = offHand;
-            }
-
+            ItemStack tablet = UavTabletItem.heldTablet(player);
             if (tablet == null) {
                 for (ItemStack stack : player.getInventory().items) {
-                    if (stack.getItem() instanceof ReconUavTabletItem) {
-                        tablet = stack;
-                        isOrlan = true;
-                        break;
-                    } else if (stack.getItem() instanceof StrikeUavTabletItem) {
+                    if (stack.getItem() instanceof UavTabletItem) {
                         tablet = stack;
                         break;
                     }
                 }
             }
-
-            if (tablet != null) {
-                boolean removed;
-                if (isOrlan) {
-                    removed = ReconUavTabletItem.removeLinkedLauncher(tablet, launcherPos);
-                } else {
-                    removed = StrikeUavTabletItem.removeLinkedLauncher(tablet, launcherPos);
-                }
-                if (removed) {
-                    player.displayClientMessage(Component.translatable("message.ata.tablet.launcher_unlinked"), true);
-                }
+            if (tablet != null && UavTabletItem.removeLinkedLauncher(tablet, launcherPos)) {
+                player.displayClientMessage(Component.translatable("message.ata.tablet.launcher_unlinked"), true);
             }
         });
         ctx.get().setPacketHandled(true);

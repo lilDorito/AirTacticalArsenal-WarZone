@@ -1,6 +1,6 @@
 package com.synarsis.airtacticalarsenal.network;
 
-import com.synarsis.airtacticalarsenal.entity.StrikeUavLauncherEntity;
+import com.synarsis.airtacticalarsenal.entity.UavLauncherEntity;
 import com.synarsis.airtacticalarsenal.util.LauncherZoneValidator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -65,9 +65,9 @@ public class LaunchShahedByRoutePacket {
             int failed = 0;
 
             for (BlockPos pos : launcherPositions) {
-                StrikeUavLauncherEntity launcher = findLauncher(level, pos);
+                UavLauncherEntity launcher = findLauncher(level, pos);
                 if (launcher == null) { failed++; continue; }
-                if (!launcher.hasDrone()) { failed++; continue; }
+                if (!launcher.hasStrikeDrone()) { failed++; continue; }
                 if (!launcher.hasSavedRoute()) { failed++; continue; }
 
                 List<BlockPos> route = launcher.getSavedRoute();
@@ -112,10 +112,10 @@ public class LaunchShahedByRoutePacket {
         ctx.get().setPacketHandled(true);
     }
 
-    private StrikeUavLauncherEntity findLauncher(ServerLevel level, BlockPos pos) {
+    private UavLauncherEntity findLauncher(ServerLevel level, BlockPos pos) {
         AABB searchBox = new AABB(pos).inflate(2.0);
-        List<StrikeUavLauncherEntity> launchers = level.getEntitiesOfClass(
-                StrikeUavLauncherEntity.class, searchBox);
+        List<UavLauncherEntity> launchers = level.getEntitiesOfClass(
+                UavLauncherEntity.class, searchBox);
         return launchers.isEmpty() ? null : launchers.get(0);
     }
 }

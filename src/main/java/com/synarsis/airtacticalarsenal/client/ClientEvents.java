@@ -2,12 +2,12 @@ package com.synarsis.airtacticalarsenal.client;
 
 import com.synarsis.airtacticalarsenal.block.entity.ModBlockEntities;
 import com.synarsis.airtacticalarsenal.client.renderer.ShahedRenderer;
-import com.synarsis.airtacticalarsenal.client.renderer.StrikeUavLauncherRenderer;
+import com.synarsis.airtacticalarsenal.client.renderer.HeavyUavLauncherRenderer;
 import com.synarsis.airtacticalarsenal.client.renderer.IskanderRenderer;
 import com.synarsis.airtacticalarsenal.client.renderer.IskanderRocketBlockRenderer;
 import com.synarsis.airtacticalarsenal.client.renderer.PaintStandRenderer;
 import com.synarsis.airtacticalarsenal.client.renderer.OrlanRenderer;
-import com.synarsis.airtacticalarsenal.client.renderer.ReconUavLauncherRenderer;
+import com.synarsis.airtacticalarsenal.client.renderer.LightUavLauncherRenderer;
 import com.synarsis.airtacticalarsenal.entity.ModEntities;
 import com.synarsis.airtacticalarsenal.particle.DebrisParticle;
 import com.synarsis.airtacticalarsenal.particle.ModParticles;
@@ -25,16 +25,16 @@ public class ClientEvents {
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.SHAHED.get(), ShahedRenderer::new);
         event.registerEntityRenderer(ModEntities.ISKANDER.get(), IskanderRenderer::new);
-        event.registerEntityRenderer(ModEntities.STRIKE_UAV_LAUNCHER.get(), StrikeUavLauncherRenderer::new);
+        event.registerEntityRenderer(ModEntities.HEAVY_UAV_LAUNCHER.get(), HeavyUavLauncherRenderer::new);
         event.registerEntityRenderer(ModEntities.PAINT_STAND.get(), PaintStandRenderer::new);
         event.registerEntityRenderer(ModEntities.ORLAN.get(), OrlanRenderer::new);
-        event.registerEntityRenderer(ModEntities.RECON_UAV_LAUNCHER.get(), ReconUavLauncherRenderer::new);
+        event.registerEntityRenderer(ModEntities.LIGHT_UAV_LAUNCHER.get(), LightUavLauncherRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.ISKANDER_ROCKET.get(), IskanderRocketBlockRenderer::new);
         if (com.synarsis.airtacticalarsenal.block.ShahedRadarBlock.SBW_LOOK) {
             event.registerBlockEntityRenderer(ModBlockEntities.SHAHED_RADAR.get(),
                     com.synarsis.airtacticalarsenal.client.renderer.ShahedRadarRenderer::new);
         }
-        System.out.println("[ATA] Renderers registered for ShahedEntity, IskanderEntity, StrikeUavLauncher, ReconUavLauncher, PaintStand, Orlan and IskanderRocketBlock!");
+        System.out.println("[ATA] Renderers registered for ShahedEntity, IskanderEntity, HeavyUavLauncher, LightUavLauncher, PaintStand, Orlan and IskanderRocketBlock!");
     }
 
     @SubscribeEvent
@@ -46,6 +46,7 @@ public class ClientEvents {
     @SubscribeEvent
     public static void registerKeys(net.minecraftforge.client.event.RegisterKeyMappingsEvent event) {
         event.register(AtaKeys.VEHICLE_RADAR);
+        event.register(AtaKeys.STRIKE_LOCK);
     }
 
     @SubscribeEvent

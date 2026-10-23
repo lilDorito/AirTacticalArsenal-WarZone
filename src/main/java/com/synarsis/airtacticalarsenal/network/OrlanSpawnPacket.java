@@ -17,8 +17,14 @@ public class OrlanSpawnPacket {
     private final BlockPos target;
     private final int phaseOrdinal;
     private final int remainingTicks;
+    private final String typeKey;
 
     public OrlanSpawnPacket(int entityId, Vec3 pos, Vec3 motion, BlockPos target, int phaseOrdinal, int remainingTicks) {
+        this(entityId, pos, motion, target, phaseOrdinal, remainingTicks, "");
+    }
+
+    public OrlanSpawnPacket(int entityId, Vec3 pos, Vec3 motion, BlockPos target, int phaseOrdinal, int remainingTicks, String typeKey) {
+        this.typeKey = typeKey == null ? "" : typeKey;
         this.entityId = entityId;
         this.x = pos.x;
         this.y = pos.y;
@@ -42,6 +48,7 @@ public class OrlanSpawnPacket {
         this.target = buf.readBlockPos();
         this.phaseOrdinal = buf.readInt();
         this.remainingTicks = buf.readInt();
+        this.typeKey = buf.readUtf(256);
     }
 
     public void toBytes(FriendlyByteBuf buf) {
@@ -55,17 +62,18 @@ public class OrlanSpawnPacket {
         buf.writeBlockPos(target);
         buf.writeInt(phaseOrdinal);
         buf.writeInt(remainingTicks);
+        buf.writeUtf(typeKey, 256);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () -> handleClient(entityId, x, y, z, motionX, motionY, motionZ, phaseOrdinal, remainingTicks));
+            DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () -> handleClient(entityId, x, y, z, motionX, motionY, motionZ, phaseOrdinal, remainingTicks, typeKey));
         });
         ctx.get().setPacketHandled(true);
     }
 
     @OnlyIn(Dist.CLIENT)
-    private static void handleClient(int entityId, double x, double y, double z, double motionX, double motionY, double motionZ, int phaseOrdinal, int remainingTicks) {
-        com.synarsis.airtacticalarsenal.network.ClientPacketHandler.handleOrlanSpawn(entityId, x, y, z, motionX, motionY, motionZ, phaseOrdinal, remainingTicks);
+    private static void handleClient(int entityId, double x, double y, double z, double motionX, double motionY, double motionZ, int phaseOrdinal, int remainingTicks, String typeKey) {
+        com.synarsis.airtacticalarsenal.network.ClientPacketHandler.handleOrlanSpawn(entityId, x, y, z, motionX, motionY, motionZ, phaseOrdinal, remainingTicks, typeKey);
     }
 }

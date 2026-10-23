@@ -11,11 +11,13 @@ import java.util.Set;
 public class AtaCompatMixinPlugin implements IMixinConfigPlugin {
 
     private boolean ashVehiclePresent;
+    private boolean sbwPresent;
 
     @Override
     public void onLoad(String mixinPackage) {
         LoadingModList mods = LoadingModList.get();
         ashVehiclePresent = mods != null && mods.getModFileById("ashvehicle") != null;
+        sbwPresent = mods != null && mods.getModFileById("superbwarfare") != null;
     }
 
     @Override
@@ -27,6 +29,9 @@ public class AtaCompatMixinPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (mixinClassName.contains(".ashvehicle.")) {
             return ashVehiclePresent;
+        }
+        if (mixinClassName.contains(".sbw.")) {
+            return sbwPresent;
         }
         return true;
     }

@@ -47,6 +47,7 @@ class ClientForgeEvents {
         OrlanCameraHandler.tick();
         OrlanCameraHandler.tickLockOn();
         OrlanCameraHandler.tickAltitude();
+        OrlanCameraHandler.tickVision();
         com.synarsis.airtacticalarsenal.client.radar.VehicleRadarClient.tick();
         while (AtaKeys.VEHICLE_RADAR.consumeClick()) {
             boolean show = !com.synarsis.airtacticalarsenal.config.AtaClientConfig.VEHICLE_RADAR_HUD.get();

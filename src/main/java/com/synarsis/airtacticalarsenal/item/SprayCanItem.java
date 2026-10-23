@@ -298,15 +298,6 @@ public class SprayCanItem extends Item implements GeoItem {
             tooltip.add(Component.translatable("tooltip.ata.spray.needs_water"));
         }
 
-        tooltip.add(Component.literal(""));
-        tooltip.add(Component.translatable("tooltip.ata.spray.use"));
-        tooltip.add(Component.translatable("tooltip.ata.spray.paint"));
-        tooltip.add(Component.literal(""));
-        tooltip.add(Component.translatable("tooltip.ata.spray.refill"));
-        tooltip.add(Component.translatable("tooltip.ata.spray.refill1"));
-        tooltip.add(Component.translatable("tooltip.ata.spray.refill2"));
-        tooltip.add(Component.translatable("tooltip.ata.spray.refill3"));
-
         super.appendHoverText(stack, level, tooltip, flag);
     }
 

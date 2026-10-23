@@ -15,14 +15,20 @@ import java.util.Map;
 @Mod.EventBusSubscriber(modid = "ata", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class LegacyIdRemap {
 
-    private static final Map<String, String> RENAMED = Map.of(
-            "shahed_launcher", "strike_uav_launcher",
-            "control_tablet", "strike_uav_tablet",
-            "orlan_launcher", "recon_uav_launcher",
-            "orlan_tablet", "recon_uav_tablet",
-            "launcher", "missile_launchpad",
-            "unified_terminal", "missile_terminal",
-            "launch_interface_cable", "missile_link_cable");
+    private static final Map<String, String> RENAMED = Map.ofEntries(
+            Map.entry("shahed_launcher", "heavy_uav_launcher"),
+            Map.entry("strike_uav_launcher", "heavy_uav_launcher"),
+            Map.entry("control_tablet", "uav_tablet"),
+            Map.entry("strike_uav_tablet", "uav_tablet"),
+            Map.entry("orlan_launcher", "light_uav_launcher"),
+            Map.entry("recon_uav_launcher", "light_uav_launcher"),
+            Map.entry("orlan_tablet", "uav_tablet"),
+            Map.entry("recon_uav_tablet", "uav_tablet"),
+            Map.entry("heavy_uav_tablet", "uav_tablet"),
+            Map.entry("light_uav_tablet", "uav_tablet"),
+            Map.entry("launcher", "missile_launchpad"),
+            Map.entry("unified_terminal", "missile_terminal"),
+            Map.entry("launch_interface_cable", "missile_link_cable"));
 
     private LegacyIdRemap() {}
 

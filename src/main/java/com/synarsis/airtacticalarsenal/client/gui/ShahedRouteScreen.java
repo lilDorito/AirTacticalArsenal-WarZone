@@ -1020,7 +1020,9 @@ public class ShahedRouteScreen extends AtaScaledScreen {
         g.fill(mapX - 1, mapY, mapX, mapY + MAP_SIZE, 0xFF333333);
         g.fill(mapX + MAP_SIZE, mapY, mapX + MAP_SIZE + 1, mapY + MAP_SIZE, 0xFF333333);
 
-        g.drawString(this.font, Tr.s("gui.ata.route.scale", scale), mapX + 2, mapY + MAP_SIZE + 3, 0x888888, false);
+        String scaleText = Tr.s("gui.ata.route.scale", Math.round(scale));
+        g.fill(mapX + 1, mapY + MAP_SIZE - 11, mapX + 4 + this.font.width(scaleText), mapY + MAP_SIZE - 1, 0xAA000000);
+        g.drawString(this.font, scaleText, mapX + 3, mapY + MAP_SIZE - 10, 0xAAAAAA, false);
     }
 
     private void renderTerrainTexture(GuiGraphics g, int mapX, int mapY) {
@@ -1151,7 +1153,11 @@ public class ShahedRouteScreen extends AtaScaledScreen {
             g.drawString(this.font, Tr.s("gui.ata.route.hint_scroll"), x, y + 32, 0x555555, false);
             g.drawString(this.font, Tr.s("gui.ata.route.hint_mmb"), x, y + 42, 0x555555, false);
         } else {
-            int maxVisible = 6;
+            BlockPos first = route.get(0);
+            boolean inZone = LauncherZoneValidator.isTargetInValidZone(lPos, currentLauncherYaw(), first);
+            int limitY = guiTop + GUI_HEIGHT - 332 - 4;
+            int reserved = 4 + 12 + 11 + (inZone ? 0 : 11);
+            int maxVisible = Math.max(1, Math.min(6, (limitY - y - reserved) / 11));
             int startIdx = Math.max(0, route.size() - maxVisible);
             for (int i = startIdx; i < route.size(); i++) {
                 BlockPos wp = route.get(i);
@@ -1163,29 +1169,18 @@ public class ShahedRouteScreen extends AtaScaledScreen {
                 y += 11;
             }
 
-            y += 6;
+            y += 4;
 
             double totalDist = calculateTotalDistance();
-            g.drawString(this.font, Tr.s("gui.ata.route.total_dist", totalDist), x, y,
-                    0xAAAAAA, false);
-            y += 13;
-
             double cruiseSpeed = ShahedConfig.getShahedCruiseSpeed();
-            if (cruiseSpeed > 0) {
-                double ticks = totalDist / cruiseSpeed;
-                double seconds = ticks / 20.0;
-                g.drawString(this.font,
-                        Tr.s("gui.ata.route.time", seconds), x, y,
-                        0xAAAAAA, false);
-            }
-            y += 13;
+            String time = cruiseSpeed > 0 ? String.valueOf(Math.round(totalDist / cruiseSpeed / 20.0)) : "-";
+            g.drawString(this.font, Tr.s("gui.ata.route.dist_time", Math.round(totalDist), time), x, y, 0xAAAAAA, false);
+            y += 12;
 
             g.drawString(this.font, Tr.s("gui.ata.route.max", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.shahed()), x,
                     y, 0x666666, false);
-            y += 14;
+            y += 11;
 
-            BlockPos first = route.get(0);
-            boolean inZone = LauncherZoneValidator.isTargetInValidZone(lPos, currentLauncherYaw(), first);
             if (!inZone) {
                 g.drawString(this.font, Tr.s("gui.ata.route.out_of_zone"), x, y, 0xFF5555, false);
             }

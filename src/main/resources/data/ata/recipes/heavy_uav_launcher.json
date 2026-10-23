@@ -1,0 +1,72 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "superbwarfare"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          "  S",
+          " SP",
+          "BMB"
+        ],
+        "key": {
+          "S": {
+            "item": "superbwarfare:steel_ingot"
+          },
+          "P": {
+            "item": "minecraft:sticky_piston"
+          },
+          "B": {
+            "item": "minecraft:iron_block"
+          },
+          "M": {
+            "item": "superbwarfare:motor"
+          }
+        },
+        "result": {
+          "item": "ata:heavy_uav_launcher",
+          "count": 1
+        }
+      }
+    },
+    {
+      "conditions": [
+        {
+          "type": "forge:true"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          "  S",
+          " SP",
+          "BMB"
+        ],
+        "key": {
+          "S": {
+            "item": "minecraft:iron_ingot"
+          },
+          "P": {
+            "item": "minecraft:sticky_piston"
+          },
+          "B": {
+            "item": "minecraft:iron_block"
+          },
+          "M": {
+            "item": "minecraft:redstone_block"
+          }
+        },
+        "result": {
+          "item": "ata:heavy_uav_launcher",
+          "count": 1
+        }
+      }
+    }
+  ]
+}

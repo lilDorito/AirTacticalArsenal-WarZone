@@ -11,6 +11,191 @@ those builds. See the README's "WarZone versions" section.
 
 ## 1.3.2-warzone
 
+### Item style and vehicle radar traits
+- Tooltips use one layout: a short description, and controls while holding Shift (launchers, tablet, cable,
+  terminal, radar, paint stand, spray can, Shahed, Orlan, Iskander). The long hint lines are gone. With Superb
+  Warfare WarZone the names are also coloured by type (drones gold, launch and control gear dark aqua, the Iskander
+  red); without it ATA shows the same tooltips itself.
+- Vehicle containers and drone items show their radar traits: the on-board radar (type, range, cone, refresh or
+  sweep) and the stealth signature, for example "Radar: AESA, 2000 m, ±60°, 4/s" and "Stealth: seen at 40%
+  range". The server sends the vehicle radar data to players when they join and on `/reload`, so datapack
+  changes show too (network protocol 20).
+- Fixed a strike drone's model staying in the air near the crater after it hit: the client now removes the drone
+  as soon as the server does.
+
+### Launch pose and tablet icons
+- A drone now leaves the catapult from exactly where it sat on it, at the rail's own angle (13° on the Heavy UAV
+  Launcher, 9.75° on the Light one), so there is no jump at launch. Add-on drones tell ATA where their model sits
+  on each launcher (`DroneVariants.registerRailMount`); without that they keep the old offset.
+- UAV Tablet: the launcher checkboxes and the route line use the plain ✔ tick, and the return button's arrow is
+  drawn twice as large.
+
+### Recipes
+- The UAV launchers, the UAV Tablet, the Air Defense Radar and the Alert Siren can be crafted (they were
+  creative-only):
+  - Light UAV Launcher: a rail of 2 steel ingots, a piston and 2 iron ingots for legs;
+  - Heavy UAV Launcher: a rail of 2 steel ingots, a sticky piston, 2 iron blocks and a motor;
+  - UAV Tablet: 6 iron ingots, a glass pane, a compass and redstone;
+  - Air Defense Radar: 3 copper ingots, 4 steel ingots, an observer and a redstone block;
+  - Alert Siren: 5 iron ingots, a note block and redstone.
+  Without Superb Warfare, iron ingots replace the steel and a redstone block the motor.
+- A mined Alert Siren drops itself (it dropped nothing).
+
+### Thermal camera and crash sound
+- With Superb Warfare installed (WarZone or upstream, any version that has thermal imaging), N in every drone
+  camera switches Superb Warfare's thermal view instead of ATA's night vision: white-hot picture, warm bodies
+  and vehicles stand out, sky and fog go dark. The HUD shows THERMAL (ТЕПЛОВІЗОР / ТЕПЛОВИЗОР) instead of NVG,
+  and the night-time darkening and daytime NVG wash are off while it's on. Without Superb Warfare, or with a
+  version that has no thermal imaging, N stays night vision. Your own thermal goggles keep working as before.
+- A drone falling after it was hit no longer keeps its steady far-off flight sound: the distant layer now fades,
+  drops in pitch and wobbles together with the close engine sound, as the Shahed's always did.
+
+### Strike camera controls, explosion sound, translations
+- New strike camera controls: hold R to lock a target, then press X to dive on it. The lock is a single
+  sequence: the bar fills once and locks whatever you are aiming at when it fills, so moving the drone or the
+  view no longer restarts it. The camera then stays on the locked point. Pressing X with nothing locked tells
+  you to lock first. Press R again to drop the lock. X is Superb Warfare's lock key, or ATA's own key without it.
+- A strike drone hands your view back before it explodes, so you hear the blast from where you stand, not from
+  inside the drone.
+- ATA's HUD texts (camera controls, phases, route screens) showed in English whatever the game language was.
+  They now follow the selected language again; the Ukrainian and Russian camera hints are fully translated.
+
+### Camera exit and lock-on
+- Leaving a drone camera no longer drops the mobs and items around you into the void: each entity is sent back
+  together with the chunk it stands in, as the chunks come back.
+- Fixed being left frozen in an empty world after the camera closed. An explosion near the drone that didn't
+  destroy it (a near miss, flak, another drone) closed the feed on your screen only, so the server kept you in the
+  camera and never sent your chunks back. Closing the feed now always tells the server, and the server always
+  brings you back, even if the drone is already gone.
+- Drone types added by other mods through the variant API are put on Superb Warfare's radar scan list, the same
+  way the Shahed, Orlan and Iskander already are.
+
+### Route map and number formatting
+- Numbers in ATA's screens and HUDs show as written in the language files again (whole metres, seconds, one
+  decimal where meant). Minecraft rewrites `%.0f` and `%d` in language files to plain `%s`, so distances and times
+  showed every decimal, like "3177.396938265414 bl.".
+- Strike route map: distance and flight time share one line, and the waypoint list shows only as many of the last
+  points as fit, so the Max line no longer runs into "Saved routes". The map scale moved into the map's
+  bottom-left corner, out of the way of the TERRAIN PROFILE title (both route maps).
+
+### Launch, dive and camera polish
+- Catapult launch: drones now leave from where they sit on the rail instead of popping up half a block, and are
+  thrown forward at catapult speed (18 m/s) at the rail's angle, then raise the nose steadily into the climb.
+- Strike lock (hold X) no longer keeps restarting while the drone moves: once you aim at a spot, the lock stays on
+  that spot as long as your view stays within 4° of it. R still only tracks a point with the camera; X locks the
+  dive. R and X work together: track a spot with R, then hold X.
+- Dive guidance rewritten: the drone turns toward the target in 3D at up to 7° per tick, slows to cruise speed
+  while it's turning hard, then accelerates down a straight line onto the target. No more spiralling around it. A
+  locked attack goes for the exact block you locked (not the top of the column above it) and dives as soon as it
+  is within 350 blocks, from any heading. Shaheds without a camera dive the same way onto their target.
+- Leaving a drone camera no longer stalls the game: the chunks around you come back nearest first, the closest
+  25 at once and the rest over half a second, instead of all at once.
+- When the drone you're watching explodes or crashes, the feed cuts at that moment and you hear the blast from
+  where you actually stand, not at full volume from inside the drone.
+
+### Strike cameras: loiter and lock
+- Strike drones with a camera no longer dive on their own: after the route they circle over its last point (64
+  blocks out) and wait. The camera shows LOITERING with the time left; after 15 minutes the drone dives on that
+  point by itself.
+- To attack, hold Superb Warfare's lock key (X by default; ATA's own "Lock strike dive target" key when Superb
+  Warfare isn't installed) on a spot for about a second, as when locking with an interceptor: a ticking sound and a
+  red bar fill up, a chime confirms. The drone leaves its route or loiter, turns and dives on that spot.
+- The lock works on anything loaded: what you see through the camera (the terrain sent to you now reaches 160
+  blocks around the drone), and past that along the line of sight on the server's loaded chunks, up to 1300 blocks
+  from the drone.
+- Works from the moment the drone climbs off the launcher: a lock during the climb levels it off and sends it
+  straight to the target. While diving it can still be re-aimed up to 60° off its course.
+- Left click no longer re-aims (it was too easy to trigger), and the drone now flies smoothly to the new target
+  instead of veering about: on your screen it follows the server's position every tick instead of guessing its
+  own path, which also cures the jitter when its route had turns.
+
+### Smoother climb out
+- Drones leave the launcher at the rail's angle (11°) and raise the nose gradually, at 6° a second, to the 20°
+  launch angle and then the 25° climb, instead of jumping to it. Same for the Orlan.
+- The Shahed's propeller on the heavy launcher spins up over the 4 seconds before launch.
+
+### Add-on engine sounds carry properly
+- A drone with its own engine sound is now heard over a set range with a smooth fade (`registerEngineSound` with a
+  range), crossfading into its far-field layer. Before, its loudness also shrank its hearing range, so it went
+  silent a few dozen blocks after launch until the far layer took over.
+
+### Launch and camera fixes
+- The launch flick is really gone now: a drone's first frame was drawn turning from due south and level, because
+  the spawn packet set its angles without the previous-frame angles, and until its synced angles arrived the
+  client pointed it south. Both are fixed for every drone built on the Shahed and the Orlan.
+- The launcher spin-up uses the loaded drone's own engine sound and loudness (and an optional start one-shot,
+  `DroneVariantsClient.registerStartSound`) instead of always the Shahed's.
+- Drone cameras no longer freeze when the drone flies past your render distance. The game stopped sending you the
+  drone (and the drones around it) once it left your own tracking range, so the view stuck until you reopened it
+  from the tablet; now the camera drone and everything within 160 blocks of it are sent straight back.
+
+### Strike drone cameras
+- Strike drones can now carry a camera (`hasCamera()` on the Shahed class; the Shahed itself has none). The UAV
+  Tablet opens it from the IN FLIGHT list like the Orlan's: same view, zoom, night vision, **R** lock and **Left
+  Alt** to leave, plus an orange strike HUD with the target, distance to it, phase, health, speed and the aim
+  point. The camera can also look 30° above the horizon to watch the route ahead.
+- **Left click re-aims the dive** at the aimed block (or the locked point): the drone drops the rest of its route
+  and heads for the new target, also mid-dive. Up to 1000 blocks from the drone.
+- While watching, the terrain and drones around it are streamed to you as with the Orlan; your body stays where
+  you left it and falls if it should.
+
+### Engine sounds per drone
+- Add-ons can give their drones their own engine loop, volume and pitch (`DroneVariantsClient.registerEngineSound`).
+  Variants without one keep the Shahed or Orlan sound. MH Warfare WarZone uses it for its drones.
+- Add-ons can also add a far-field loop (`registerFarSound`): a second, distant layer that fades in past a set
+  distance and carries to a set range, follows the drone and fades out with it.
+
+### Hit zones for add-on drones
+- The Orlan's hit zone (engine, wings, nose, body) now comes from `crashZoneAt(hitPos)`, which drones built on it
+  can override; the Shahed already had `determineHitZone`. MH Warfare WarZone uses both to read zones from its
+  part hitboxes instead of the Shahed-sized guesses.
+
+### Smoother launch
+- Shaheds, Orlans and every drone built on them no longer flick nose-down for a moment when they leave the
+  launcher: they spawned pitched 20° down and only turned to the 20° climb on the next server update.
+
+### One UAV Tablet
+- The Light and Heavy UAV Tablets are now one **UAV Tablet** (`ata:uav_tablet`). It links up to 10 launchers of
+  either weight. Old Light, Heavy, Strike, Recon, Orlan and control tablets in inventories turn into it; their
+  links are kept.
+- One screen instead of the STRIKE / RECON pages. The launcher list shows every linked launcher: what it carries
+  (red dot strike, blue dot recon, empty circle nothing), whether it has a route, and H or L for its weight. The
+  selected launcher shows its drone by name. ROUTE opens the Shahed or the Orlan route map for that drone, LAUNCH
+  and LAUNCH ALL start whatever is loaded. Routes for strike and recon launchers are set separately; with a mixed
+  selection, ROUTE takes the ones of the selected launcher's type. An empty launcher counts as strike if it's
+  heavy, recon if it's light.
+- IN FLIGHT lists every drone you own that is still flying, strike and recon, from any launcher, including ones
+  you have since unlinked. Drones with a camera open it on click; recon drones also have route change and return.
+  Strike drones without a camera just show their position and phase.
+- The screen refreshes itself every 2 seconds, so new launches, loaded launchers and landed drones show up
+  without reopening it.
+
+### Light and Heavy UAV launchers
+- The Recon UAV Launcher is now the **Light UAV Launcher** and the Strike UAV Launcher the **Heavy UAV
+  Launcher**, item and entity IDs included. Old worlds are converted: placed launchers,
+  loaded drones and tablets in inventories keep working.
+- A launcher takes every drone of its weight, strike or recon. The Shahed is heavy, the Orlan light; add-ons set
+  the weight of their own drones (EW WarZone: ZALA KUB-BLA light, Bayraktar TB2 heavy).
+- Putting a drone on the wrong launcher says which one it needs.
+- Saved strike coordinates are kept per launcher instead of per list position, so loading a drone elsewhere no
+  longer shifts them.
+- Shift + right click with an empty hand takes the drone off a heavy launcher in one click, as on the light one.
+  Before, the first click on a Shahed without a target silently aimed it 500 blocks ahead.
+
+### Interceptor hits
+- API for add-on interceptor drones: `interceptorHit(healthFraction, attacker, hitPos)` on the Shahed and Orlan (and
+  every drone built on them) deals a share of the drone's health as a heavy hit that can bring it down at once.
+  MH Warfare WarZone's Sting and P1-SUN use it.
+
+### Manual radar alerts
+- **ALARM OUTPUT: ON/OFF** is replaced by **ALERTS: AUTO / MANUAL**. Auto works as before. Manual never starts an
+  alert on its own; a radar that had its output switched off becomes manual.
+- In manual mode **DECLARE ALERT** gives full redstone output until **CANCEL ALERT**, and every radar joined to it
+  by redstone dust, repeaters or comparators (up to 4,096 blocks of wiring) goes on alert too and drives its own
+  sirens. A linked radar shows **ALERT FROM A LINKED RADAR** and stops about 2 seconds after the alert is
+  cancelled. Wiring loops can't keep an alert going.
+- The mode and a declared alert are saved with the radar.
+
 ### Drone variants for add-ons
 - New API (`api/DroneVariants`, `api/DroneVariantsClient`) lets another mod add its own strike and recon drones
   built on the Shahed and Orlan. SBW Electronic Warfare WarZone 1.2.0 uses it for KUB-BLA and Bayraktar TB2.

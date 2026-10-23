@@ -1,7 +1,7 @@
 package com.synarsis.airtacticalarsenal.item;
 
 import com.synarsis.airtacticalarsenal.entity.ModEntities;
-import com.synarsis.airtacticalarsenal.entity.StrikeUavLauncherEntity;
+import com.synarsis.airtacticalarsenal.entity.HeavyUavLauncherEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -19,9 +19,9 @@ import net.minecraft.world.phys.AABB;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class StrikeUavLauncherItem extends Item {
+public class HeavyUavLauncherItem extends Item {
 
-    public StrikeUavLauncherItem(Properties properties) {
+    public HeavyUavLauncherItem(Properties properties) {
         super(properties);
     }
 
@@ -51,14 +51,14 @@ public class StrikeUavLauncherItem extends Item {
         }
 
         AABB checkArea = new AABB(placePos).inflate(5.0);
-        List<StrikeUavLauncherEntity> nearbyLaunchers = serverLevel.getEntitiesOfClass(
-                StrikeUavLauncherEntity.class, checkArea, e -> e.isAlive());
+        List<com.synarsis.airtacticalarsenal.entity.UavLauncherEntity> nearbyLaunchers = serverLevel.getEntitiesOfClass(
+                com.synarsis.airtacticalarsenal.entity.UavLauncherEntity.class, checkArea, e -> e.isAlive());
         if (!nearbyLaunchers.isEmpty()) {
             player.displayClientMessage(Component.translatable("message.ata.place.too_close_launcher"), true);
             return InteractionResult.FAIL;
         }
 
-        StrikeUavLauncherEntity launcher = ModEntities.STRIKE_UAV_LAUNCHER.get().create(serverLevel);
+        HeavyUavLauncherEntity launcher = ModEntities.HEAVY_UAV_LAUNCHER.get().create(serverLevel);
         if (launcher == null) {
             return InteractionResult.FAIL;
         }
@@ -88,12 +88,4 @@ public class StrikeUavLauncherItem extends Item {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("tooltip.ata.launcher.mobile"));
-        tooltip.add(Component.translatable("tooltip.ata.strike_uav_launcher.for"));
-        tooltip.add(Component.literal(""));
-        tooltip.add(Component.translatable("tooltip.ata.place_hint"));
-        super.appendHoverText(stack, level, tooltip, flag);
-    }
 }

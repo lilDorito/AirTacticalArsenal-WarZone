@@ -12,7 +12,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class ShahedEngineSoundClient extends AbstractTickableSoundInstance {
+public class ShahedEngineSoundClient extends AbstractTickableSoundInstance implements CrashModulated {
     private final int entityId;
     private final Vec3 startPos;
     private final BlockPos targetPos;
@@ -56,9 +56,22 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance {
     private Vec3 lastServerPos = null;
     private Vec3 inferredVelocity = null;
 
+    private final float volumeScale;
+    private final float pitchScale;
+    private final com.synarsis.airtacticalarsenal.api.DroneVariantsClient.EngineSound custom;
+
     public ShahedEngineSoundClient(int entityId, Vec3 currentPos, BlockPos targetPos, String diveMode, int engineSound) {
-        super(engineSound == 1 ? ModSounds.SHAHED_ENGINE_2.get() : ModSounds.SHAHED_ENGINE.get(),
+        this(entityId, currentPos, targetPos, diveMode, engineSound, null);
+    }
+
+    public ShahedEngineSoundClient(int entityId, Vec3 currentPos, BlockPos targetPos, String diveMode, int engineSound,
+                                   com.synarsis.airtacticalarsenal.api.DroneVariantsClient.EngineSound custom) {
+        super(custom != null ? custom.loop().get()
+                        : engineSound == 1 ? ModSounds.SHAHED_ENGINE_2.get() : ModSounds.SHAHED_ENGINE.get(),
                 SoundSource.HOSTILE, SoundInstance.createUnseededRandom());
+        this.custom = custom;
+        this.volumeScale = 1.0f;
+        this.pitchScale = custom != null ? custom.pitch() : 1.0f;
         this.entityId = entityId;
         this.startPos = currentPos;
         this.currentDronePos = currentPos;
@@ -69,7 +82,7 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance {
         this.volume = 3.0f;
         this.pitch = 1.0f;
 
-        this.attenuation = SoundInstance.Attenuation.LINEAR;
+        this.attenuation = custom != null ? SoundInstance.Attenuation.NONE : SoundInstance.Attenuation.LINEAR;
         this.creationTime = System.currentTimeMillis();
         this.startTime = this.creationTime;
 
@@ -212,7 +225,7 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance {
         float fadeProgress = (float) timeSinceExplosion / (float) fadeTimeMs;
         fadeProgress = Math.min(1.0f, Math.max(0.0f, fadeProgress));
 
-        this.pitch = this.pitchAtExplosion * (1.0f - fadeProgress * 0.3f);
+        this.pitch = this.pitchAtExplosion * (1.0f - fadeProgress * 0.3f) * this.pitchScale;
         this.volume = this.volumeAtExplosion * (1.0f - fadeProgress) * 0.5f;
 
         if (this.volume < 0.01f) {
@@ -389,7 +402,7 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance {
                     this.targetVolumeMultiplier);
         }
 
-        this.pitch = this.currentPitch;
+        this.pitch = this.currentPitch * this.pitchScale;
         float baseVolume = this.calculateVolume(distance);
         this.volume = baseVolume * this.currentVolumeMultiplier;
 
@@ -424,11 +437,33 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance {
                 pitch = Math.max(0.5f, this.currentPitch - t * 0.02f);
             }
         }
-        this.pitch = pitch;
+        this.crashVolume = factor;
+        this.crashPitch = this.currentPitch > 0.01f ? pitch / this.currentPitch : 1.0f;
+        this.pitch = pitch * this.pitchScale;
         this.volume = calculateVolume(distance) * factor;
     }
 
+    private float crashVolume = 1.0f;
+    private float crashPitch = 1.0f;
+
+    @Override
+    public float crashVolumeFactor() {
+        return crashVolume;
+    }
+
+    @Override
+    public float crashPitchFactor() {
+        return crashPitch;
+    }
+
     private float calculateVolume(double distance) {
+        if (this.custom != null) {
+            return this.custom.gainAt(distance);
+        }
+        return baseVolume(distance) * this.volumeScale;
+    }
+
+    private float baseVolume(double distance) {
         if (distance >= 500.0) {
             return 0.0f;
         }

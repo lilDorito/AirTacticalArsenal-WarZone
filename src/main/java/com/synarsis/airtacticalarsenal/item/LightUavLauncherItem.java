@@ -1,8 +1,8 @@
 package com.synarsis.airtacticalarsenal.item;
 
-import com.synarsis.airtacticalarsenal.client.renderer.item.ReconUavLauncherItemRenderer;
+import com.synarsis.airtacticalarsenal.client.renderer.item.LightUavLauncherItemRenderer;
 import com.synarsis.airtacticalarsenal.entity.ModEntities;
-import com.synarsis.airtacticalarsenal.entity.ReconUavLauncherEntity;
+import com.synarsis.airtacticalarsenal.entity.LightUavLauncherEntity;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -27,22 +27,22 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class ReconUavLauncherItem extends Item implements GeoItem {
+public class LightUavLauncherItem extends Item implements GeoItem {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
-    public ReconUavLauncherItem(Properties properties) {
+    public LightUavLauncherItem(Properties properties) {
         super(properties);
     }
 
     @Override
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
         consumer.accept(new IClientItemExtensions() {
-            private ReconUavLauncherItemRenderer renderer;
+            private LightUavLauncherItemRenderer renderer;
 
             @Override
             public BlockEntityWithoutLevelRenderer getCustomRenderer() {
                 if (this.renderer == null) {
-                    this.renderer = new ReconUavLauncherItemRenderer();
+                    this.renderer = new LightUavLauncherItemRenderer();
                 }
                 return this.renderer;
             }
@@ -83,14 +83,14 @@ public class ReconUavLauncherItem extends Item implements GeoItem {
         }
 
         AABB checkArea = new AABB(placePos).inflate(5.0);
-        List<ReconUavLauncherEntity> nearbyLaunchers = serverLevel.getEntitiesOfClass(
-                ReconUavLauncherEntity.class, checkArea, e -> e.isAlive());
+        List<com.synarsis.airtacticalarsenal.entity.UavLauncherEntity> nearbyLaunchers = serverLevel.getEntitiesOfClass(
+                com.synarsis.airtacticalarsenal.entity.UavLauncherEntity.class, checkArea, e -> e.isAlive());
         if (!nearbyLaunchers.isEmpty()) {
             player.displayClientMessage(Component.translatable("message.ata.place.too_close_launcher"), true);
             return InteractionResult.FAIL;
         }
 
-        ReconUavLauncherEntity launcher = ModEntities.RECON_UAV_LAUNCHER.get().create(serverLevel);
+        LightUavLauncherEntity launcher = ModEntities.LIGHT_UAV_LAUNCHER.get().create(serverLevel);
         if (launcher == null) {
             return InteractionResult.FAIL;
         }
@@ -120,12 +120,4 @@ public class ReconUavLauncherItem extends Item implements GeoItem {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("tooltip.ata.launcher.mobile"));
-        tooltip.add(Component.translatable("tooltip.ata.recon_uav_launcher.for"));
-        tooltip.add(Component.literal(""));
-        tooltip.add(Component.translatable("tooltip.ata.place_hint"));
-        super.appendHoverText(stack, level, tooltip, flag);
-    }
 }

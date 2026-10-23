@@ -1,0 +1,37 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "ata:heavy_uav_launcher",
+      "required": false
+    },
+    {
+      "id": "ata:light_uav_launcher",
+      "required": false
+    },
+    {
+      "id": "ata:missile_launchpad",
+      "required": false
+    },
+    {
+      "id": "ata:missile_link_cable",
+      "required": false
+    },
+    {
+      "id": "ata:missile_terminal",
+      "required": false
+    },
+    {
+      "id": "ata:shahed_radar",
+      "required": false
+    },
+    {
+      "id": "ata:siren",
+      "required": false
+    },
+    {
+      "id": "ata:uav_tablet",
+      "required": false
+    }
+  ]
+}

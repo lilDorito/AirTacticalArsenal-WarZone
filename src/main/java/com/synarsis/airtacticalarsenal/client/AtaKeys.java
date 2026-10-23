@@ -12,5 +12,8 @@ public final class AtaKeys {
     public static final KeyMapping VEHICLE_RADAR = new KeyMapping("key.ata.vehicle_radar",
             InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_I, "key.categories.ata");
 
+    public static final KeyMapping STRIKE_LOCK = new KeyMapping("key.ata.strike_lock",
+            InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, "key.categories.ata");
+
     private AtaKeys() {}
 }

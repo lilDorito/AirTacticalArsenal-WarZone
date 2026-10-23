@@ -1,7 +1,7 @@
 package com.synarsis.airtacticalarsenal.network;
 
 import com.synarsis.airtacticalarsenal.entity.OrlanEntity;
-import com.synarsis.airtacticalarsenal.entity.ReconUavLauncherEntity;
+import com.synarsis.airtacticalarsenal.entity.UavLauncherEntity;
 import com.synarsis.airtacticalarsenal.util.LauncherZoneValidator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -47,14 +47,14 @@ public class LaunchFromReconUavTabletPacket {
 
             ServerLevel level = player.serverLevel();
 
-            ReconUavLauncherEntity launcher = findLauncher(level, launcherPos);
+            UavLauncherEntity launcher = findLauncher(level, launcherPos);
 
             if (launcher == null) {
                 player.displayClientMessage(Component.translatable("message.ata.launcher.not_found"), true);
                 return;
             }
 
-            if (!launcher.hasDrone()) {
+            if (!launcher.hasReconDrone()) {
                 player.displayClientMessage(Component.translatable("message.ata.launcher.no_orlan"), true);
                 return;
             }
@@ -112,7 +112,7 @@ public class LaunchFromReconUavTabletPacket {
                 return;
             }
 
-            Vec3 launchPos = launcher.position().add(0, 1.5, 0);
+            Vec3 launchPos = launcher.railLaunchPos();
             com.synarsis.airtacticalarsenal.api.DroneVariants.ReconFactory factory = com.synarsis.airtacticalarsenal.api.DroneVariants.recon(launcher.getDroneKind());
             OrlanEntity orlan = factory != null
                     ? factory.create(level, launchPos, targetPos, launcherYaw, launcher.blockPosition(), launcher.getStoredDroneStack())
@@ -122,6 +122,7 @@ public class LaunchFromReconUavTabletPacket {
             if (waypoints != null && !waypoints.isEmpty()) {
                 orlan.setWaypoints(waypoints);
             }
+            orlan.setRailPitch(launcher.railPitchDeg());
             orlan.isLegitSpawn = true;
             level.addFreshEntity(orlan);
 
@@ -134,10 +135,10 @@ public class LaunchFromReconUavTabletPacket {
         ctx.get().setPacketHandled(true);
     }
 
-    private ReconUavLauncherEntity findLauncher(ServerLevel level, BlockPos pos) {
+    private UavLauncherEntity findLauncher(ServerLevel level, BlockPos pos) {
         AABB searchBox = new AABB(pos).inflate(2.0);
-        List<ReconUavLauncherEntity> launchers = level.getEntitiesOfClass(
-                ReconUavLauncherEntity.class, searchBox);
+        List<UavLauncherEntity> launchers = level.getEntitiesOfClass(
+                UavLauncherEntity.class, searchBox);
         if (!launchers.isEmpty()) {
             return launchers.get(0);
         }

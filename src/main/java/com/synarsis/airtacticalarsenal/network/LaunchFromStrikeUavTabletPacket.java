@@ -1,6 +1,6 @@
 package com.synarsis.airtacticalarsenal.network;
 
-import com.synarsis.airtacticalarsenal.entity.StrikeUavLauncherEntity;
+import com.synarsis.airtacticalarsenal.entity.UavLauncherEntity;
 import com.synarsis.airtacticalarsenal.util.LauncherZoneValidator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -59,14 +59,14 @@ public class LaunchFromStrikeUavTabletPacket {
 
             ServerLevel level = player.serverLevel();
 
-            StrikeUavLauncherEntity launcher = findLauncher(level, launcherId, launcherPos);
+            UavLauncherEntity launcher = findLauncher(level, launcherId, launcherPos);
 
             if (launcher == null) {
                 player.displayClientMessage(Component.translatable("message.ata.launcher.not_found"), true);
                 return;
             }
 
-            if (!launcher.hasDrone()) {
+            if (!launcher.hasStrikeDrone()) {
                 player.displayClientMessage(Component.translatable("message.ata.launcher.no_drone"), true);
                 return;
             }
@@ -103,16 +103,16 @@ public class LaunchFromStrikeUavTabletPacket {
         ctx.get().setPacketHandled(true);
     }
 
-    private StrikeUavLauncherEntity findLauncher(ServerLevel level, int entityId, BlockPos pos) {
+    private UavLauncherEntity findLauncher(ServerLevel level, int entityId, BlockPos pos) {
 
         Entity entity = level.getEntity(entityId);
-        if (entity instanceof StrikeUavLauncherEntity launcher) {
+        if (entity instanceof UavLauncherEntity launcher) {
             return launcher;
         }
 
         AABB searchBox = new AABB(pos).inflate(2.0);
-        List<StrikeUavLauncherEntity> launchers = level.getEntitiesOfClass(
-            StrikeUavLauncherEntity.class, searchBox
+        List<UavLauncherEntity> launchers = level.getEntitiesOfClass(
+            UavLauncherEntity.class, searchBox
         );
 
         if (!launchers.isEmpty()) {

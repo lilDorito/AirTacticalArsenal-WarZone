@@ -176,13 +176,6 @@ public class MissileLinkCableItem extends Item {
             tooltip.add(Component.literal("§a[" + nbt.getInt("launcherX") 
                 + ", " + nbt.getInt("launcherY") 
                 + ", " + nbt.getInt("launcherZ") + "]"));
-            tooltip.add(Component.literal(""));
-            tooltip.add(Component.translatable("tooltip.ata.cable.connect"));
-        } else {
-            tooltip.add(Component.translatable("tooltip.ata.cable.register"));
-            tooltip.add(Component.translatable("tooltip.ata.cable.connect"));
-            tooltip.add(Component.literal(""));
-            tooltip.add(Component.translatable("tooltip.ata.cable.max_range", MAX_CABLE_DISTANCE));
         }
     }
 }

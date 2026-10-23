@@ -1,0 +1,66 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "superbwarfare"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          "  S",
+          " SP",
+          "I I"
+        ],
+        "key": {
+          "S": {
+            "item": "superbwarfare:steel_ingot"
+          },
+          "P": {
+            "item": "minecraft:piston"
+          },
+          "I": {
+            "item": "minecraft:iron_ingot"
+          }
+        },
+        "result": {
+          "item": "ata:light_uav_launcher",
+          "count": 1
+        }
+      }
+    },
+    {
+      "conditions": [
+        {
+          "type": "forge:true"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          "  S",
+          " SP",
+          "I I"
+        ],
+        "key": {
+          "S": {
+            "item": "minecraft:iron_ingot"
+          },
+          "P": {
+            "item": "minecraft:piston"
+          },
+          "I": {
+            "item": "minecraft:iron_ingot"
+          }
+        },
+        "result": {
+          "item": "ata:light_uav_launcher",
+          "count": 1
+        }
+      }
+    }
+  ]
+}

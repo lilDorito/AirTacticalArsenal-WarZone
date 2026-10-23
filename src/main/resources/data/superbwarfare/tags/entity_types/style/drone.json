@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "ata:orlan",
+      "required": false
+    },
+    {
+      "id": "ata:shahed",
+      "required": false
+    }
+  ]
+}

@@ -127,6 +127,18 @@ public class OrlanCameraHandler {
         } catch (Exception ignored) {}
     }
 
+    public static void cutFeedIfDestroyedNear(Vec3 pos) {
+        if (!cameraActive || pos == null) return;
+        Entity drone = getLinkedDrone();
+        Minecraft mc = Minecraft.getInstance();
+        Entity camera = mc.getCameraEntity();
+        boolean near = (drone != null && drone.position().distanceToSqr(pos) < 144.0)
+                || (camera != null && camera != mc.player && camera.position().distanceToSqr(pos) < 144.0);
+        if (near) {
+            stopCameraView();
+        }
+    }
+
     public static boolean isCameraActive() {
         return cameraActive;
     }
@@ -155,6 +167,13 @@ public class OrlanCameraHandler {
         return null;
     }
 
+    public static Entity getLinkedDrone() {
+        if (!cameraActive || linkedOrlanId == -1) return null;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return null;
+        return mc.level.getEntity(linkedOrlanId);
+    }
+
     public static boolean handleMouseScroll(double delta) {
         if (!cameraActive) return false;
 
@@ -180,12 +199,12 @@ public class OrlanCameraHandler {
 
         Entity entity = mc.level.getEntity(linkedOrlanId);
 
-        if (entity instanceof OrlanEntity orlan) {
+        if (entity != null && entity.isAlive()) {
 
             nullEntityTicks = 0;
 
-            if (mc.getCameraEntity() != orlan) {
-                mc.setCameraEntity(orlan);
+            if (mc.getCameraEntity() != entity) {
+                mc.setCameraEntity(entity);
             }
         } else {
 
@@ -234,6 +253,10 @@ public class OrlanCameraHandler {
     public static double getSmoothY() { return smoothY; }
     public static double getSmoothZ() { return smoothZ; }
 
+    private static float minCameraPitch() {
+        return getLinkedDrone() instanceof com.synarsis.airtacticalarsenal.entity.ShahedEntity ? -30.0f : MIN_CAMERA_PITCH;
+    }
+
     public static float getCameraPitch() {
         return cameraPitch;
     }
@@ -243,7 +266,7 @@ public class OrlanCameraHandler {
     }
 
     public static void setCameraPitch(float pitch) {
-        cameraPitch = Math.max(MIN_CAMERA_PITCH, Math.min(MAX_CAMERA_PITCH, pitch));
+        cameraPitch = Math.max(minCameraPitch(), Math.min(MAX_CAMERA_PITCH, pitch));
     }
 
     public static void setCameraYaw(float yaw) {
@@ -295,7 +318,7 @@ public class OrlanCameraHandler {
 
     public static boolean updateTrackingAngles(float partialTick) {
         if (!isLocked || lockTargetPos == null) return false;
-        OrlanEntity orlan = getLinkedOrlan();
+        Entity orlan = getLinkedDrone();
         if (orlan == null) return false;
 
         Vec3 eyePos = orlan.getEyePosition(partialTick);
@@ -311,18 +334,18 @@ public class OrlanCameraHandler {
         cameraYaw += yawDiff * TRACK_SMOOTH_SPEED;
         cameraPitch += (targetPitch - cameraPitch) * TRACK_SMOOTH_SPEED;
 
-        cameraPitch = Math.max(MIN_CAMERA_PITCH, Math.min(MAX_CAMERA_PITCH, cameraPitch));
+        cameraPitch = Math.max(minCameraPitch(), Math.min(MAX_CAMERA_PITCH, cameraPitch));
         return true;
     }
 
-    private static Vec3 performRaycast() {
+    public static Vec3 performRaycast() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return null;
-        OrlanEntity orlan = getLinkedOrlan();
+        Entity orlan = getLinkedDrone();
         if (orlan == null) return null;
         Vec3 eyePos = orlan.getEyePosition(1.0f);
         Vec3 lookDir = Vec3.directionFromRotation(cameraPitch, cameraYaw);
-        Vec3 endPos = eyePos.add(lookDir.scale(500.0));
+        Vec3 endPos = eyePos.add(lookDir.scale(1200.0));
         BlockHitResult result = mc.level.clip(new ClipContext(
                 eyePos, endPos, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, orlan));
         if (result.getType() == HitResult.Type.BLOCK) {
@@ -347,12 +370,34 @@ public class OrlanCameraHandler {
         }
     }
 
+    public static boolean isThermalActive() {
+        return nvgActive && com.synarsis.airtacticalarsenal.client.shader.SbwThermalBridge.isActive();
+    }
+
+    public static String visionName() {
+        return com.synarsis.airtacticalarsenal.util.Tr.s(
+                com.synarsis.airtacticalarsenal.client.shader.SbwThermalBridge.available()
+                        ? "hud.ata.vision.thermal" : "hud.ata.orlan.nvg");
+    }
+
+    public static void tickVision() {
+        if (!nvgActive || !com.synarsis.airtacticalarsenal.client.shader.SbwThermalBridge.isActive()) {
+            return;
+        }
+        if (!com.synarsis.airtacticalarsenal.client.shader.SbwThermalBridge.tick()) {
+            NvgShaderHandler.enable();
+        }
+    }
+
     private static void enableNvg() {
-        NvgShaderHandler.enable();
+        if (!com.synarsis.airtacticalarsenal.client.shader.SbwThermalBridge.enable()) {
+            NvgShaderHandler.enable();
+        }
         nvgActive = true;
     }
 
     private static void disableNvg() {
+        com.synarsis.airtacticalarsenal.client.shader.SbwThermalBridge.disable();
         NvgShaderHandler.disable();
         nvgActive = false;
     }
@@ -361,7 +406,7 @@ public class OrlanCameraHandler {
     private static final int ALTITUDE_TICK_INTERVAL = 3; 
 
     public static void tickAltitude() {
-        if (!cameraActive) return;
+        if (!cameraActive || getLinkedOrlan() == null) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen != null) return; 
         long window = mc.getWindow().getWindow();

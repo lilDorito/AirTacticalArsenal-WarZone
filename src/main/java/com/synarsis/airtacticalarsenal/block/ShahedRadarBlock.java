@@ -117,6 +117,7 @@ public class ShahedRadarBlock extends Block implements EntityBlock {
 
     @Override
     public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
+        propagateManualAlert(level, pos);
         refreshSignal(level, pos);
 
         if (com.synarsis.airtacticalarsenal.config.ShahedConfig.isRadarDarkBackground()) {
@@ -172,9 +173,76 @@ public class ShahedRadarBlock extends Block implements EntityBlock {
         if (!(level.getBlockEntity(pos) instanceof com.synarsis.airtacticalarsenal.block.entity.ShahedRadarBlockEntity radar)) {
             return 0;
         }
-        int power = hasOpenSky(level, pos) ? rawSignalStrength(level, pos, radar.getOwnerName()) : 0;
-        power = radar.holdPower(level.getGameTime(), power, ALARM_HOLD_TICKS);
-        return radar.isAlarmOutput() ? power : 0;
+        long now = level.getGameTime();
+        int power = 0;
+        if (!radar.isManualMode()) {
+            power = hasOpenSky(level, pos) ? rawSignalStrength(level, pos, radar.getOwnerName()) : 0;
+            power = radar.holdPower(now, power, ALARM_HOLD_TICKS);
+        }
+        if (radar.isManualAlert() || radar.isRelayed(now)) {
+            power = 15;
+        }
+        return power;
+    }
+
+    private static final int RELAY_HOLD_TICKS = 45;
+    private static final int MAX_PATH_NODES = 4096;
+
+    public void propagateManualAlert(ServerLevel level, BlockPos pos) {
+        if (!(level.getBlockEntity(pos) instanceof com.synarsis.airtacticalarsenal.block.entity.ShahedRadarBlockEntity radar)
+                || !radar.isManualAlert()) {
+            return;
+        }
+        long until = level.getGameTime() + RELAY_HOLD_TICKS;
+        java.util.Set<BlockPos> seen = new java.util.HashSet<>();
+        java.util.ArrayDeque<BlockPos> queue = new java.util.ArrayDeque<>();
+        seen.add(pos);
+        queue.add(pos);
+        while (!queue.isEmpty() && seen.size() < MAX_PATH_NODES) {
+            BlockPos current = queue.poll();
+            BlockState currentState = level.getBlockState(current);
+            boolean wire = currentState.getBlock() instanceof net.minecraft.world.level.block.RedStoneWireBlock;
+            for (BlockPos next : pathNeighbors(current, wire)) {
+                if (seen.contains(next) || !level.isLoaded(next)) {
+                    continue;
+                }
+                BlockState nextState = level.getBlockState(next);
+                if (nextState.getBlock() instanceof ShahedRadarBlock) {
+                    seen.add(next);
+                    queue.add(next);
+                    if (level.getBlockEntity(next) instanceof com.synarsis.airtacticalarsenal.block.entity.ShahedRadarBlockEntity other) {
+                        boolean wasOn = other.isRelayed(level.getGameTime());
+                        other.relayAlert(until);
+                        if (!wasOn) {
+                            refreshSignal(level, next);
+                        }
+                    }
+                } else if (isPathBlock(nextState)) {
+                    seen.add(next);
+                    queue.add(next);
+                }
+            }
+        }
+    }
+
+    private static boolean isPathBlock(BlockState state) {
+        Block block = state.getBlock();
+        return block instanceof net.minecraft.world.level.block.RedStoneWireBlock
+                || block instanceof net.minecraft.world.level.block.DiodeBlock;
+    }
+
+    private static java.util.List<BlockPos> pathNeighbors(BlockPos pos, boolean wire) {
+        java.util.List<BlockPos> result = new java.util.ArrayList<>();
+        for (Direction dir : Direction.values()) {
+            result.add(pos.relative(dir));
+        }
+        if (wire) {
+            for (Direction dir : Direction.Plane.HORIZONTAL) {
+                result.add(pos.relative(dir).above());
+                result.add(pos.relative(dir).below());
+            }
+        }
+        return result;
     }
 
     private int rawSignalStrength(ServerLevel level, BlockPos pos, String ownerName) {

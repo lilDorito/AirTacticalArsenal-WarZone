@@ -19,6 +19,7 @@ public final class OrlanCrashSound {
     private OrlanCrashSound() {}
 
     public static void play(Vec3 pos) {
+        com.synarsis.airtacticalarsenal.client.OrlanCameraHandler.cutFeedIfDestroyedNear(pos);
         if (!ShahedConfig.areCustomExplosionSoundsEnabled()) return;
         float pitch = 1.15f + RANDOM.nextFloat() * 0.15f;
         if (SbwExplosionSound.play(pos, ORLAN, pitch)) return;

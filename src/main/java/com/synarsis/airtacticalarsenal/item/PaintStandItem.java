@@ -122,12 +122,4 @@ public class PaintStandItem extends Item implements GeoItem {
         return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
-    @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("tooltip.ata.paint_stand.desc"));
-        tooltip.add(Component.literal(""));
-        tooltip.add(Component.translatable("tooltip.ata.place_hint"));
-        tooltip.add(Component.translatable("tooltip.ata.paint_stand.remove"));
-        super.appendHoverText(stack, level, tooltip, flag);
-    }
 }

@@ -15,14 +15,14 @@
 >
 > This is not an official release. It is not affiliated with or endorsed by Synarsis.
 
-Forge 1.20.1 mod that adds strike and recon drones (**Shahed-136**, **Orlan-10**), the **Add-on drones** (new in 1.3.2)
-- Other mods can add strike and recon drones built on the Shahed and Orlan (SBW Electronic Warfare WarZone adds
-  ZALA KUB-BLA and the Bayraktar TB2). They load on the same launchers, fly from the same tablets with the same routes,
-  camera, radar and crash physics, and are named by their own name in every message and screen.
-
-**Iskander-M**
+Forge 1.20.1 mod that adds strike and recon drones (**Shahed-136**, **Orlan-10**), the **Iskander-M**
 ballistic missile, an **air defense radar**, **on-board radars** for SuperbWarfare and AshVehicles aircraft
 and AA vehicles, and **alert sirens**.
+
+**Add-on drones** (new in 1.3.2): other mods can add strike and recon drones built on the Shahed and Orlan (SBW
+Electronic Warfare WarZone adds the ZALA KUB-BLA and the Bayraktar TB2). They load on the same launchers, fly from
+the same tablet with the same routes, camera, radar and crash physics, and are named by their own name in every
+message and screen.
 
 modId: `ata` (same as upstream) · version: `1.3.2-warzone`
 
@@ -70,6 +70,7 @@ Each one keeps the original mod id, so ATA treats it like the public version it'
 | SuperbWarfare WarZone `0.8.9.2-warzone-1.0.1` | SuperbWarfare 0.8.9.2 | own balance and fixes; lists ATA in `scan_white_list` by default; sends ATA drones and missiles to players beyond entity range, so they show on the tactical map and seekers can lock them from afar |
 | AshVehicles WarZone `4.6-warzone-1.0.1` | AshVehicles 4.6 | own weapon loadouts and balance, fixes |
 | MCSP WarZone `1.0.10-warzone-1.0.1` | MCSP 1.0.10 | own balance, fixes |
+| [SBW] Electronic Warfare WarZone `1.2.0-warzone` | [SBW] Electronic Warfare 1.1.1 merged with SBW Drone Warfare 1.0.6 | adds the ZALA KUB-BLA (light strike) and Bayraktar TB2 (heavy recon with missiles) through ATA's add-on drone API; its jammers, nets and direction finder act on ATA drones and radars |
 | SuperbWarfare `0.8.7.1` and AshVehicles `4.2` patched builds | SuperbWarfare 0.8.7.1, AshVehicles 4.2 | older WarZone builds, kept working by earlier ATA WarZone versions |
 
 When this README or the changelog describes something "in SuperbWarfare WarZone" or "in AshVehicles
@@ -92,8 +93,11 @@ The full history is in [CHANGELOG.md](CHANGELOG.md). In short:
   is installed.
 - The redstone alarm reacts to every air contact the screen shows. It ignores everything belonging to the
   placer or the placer's scoreboard team: their aircraft, helicopters, drones, missiles and shells. It stays on
-  until the sky has been clear for 5 seconds, then the next contact sets it off again. **ALARM OUTPUT: ON/OFF**
-  at the top of the screen's target list turns it off and on (placer, teammates and operators).
+  until the sky has been clear for 5 seconds, then the next contact sets it off again.
+- **ALERTS: AUTO / MANUAL** at the top of the target list (placer, teammates and operators). Auto works as above.
+  Manual never starts on its own: **DECLARE ALERT** turns the output on until **CANCEL ALERT**, and every other
+  radar joined to it by redstone dust, repeaters or comparators goes on alert too, with its own sirens. The mode
+  is saved with the radar.
 
 **Vehicle radars** (new in 1.3.0)
 - Fighters, attack helicopters and AA vehicles from SuperbWarfare and AshVehicles get an on-board radar in a
@@ -129,8 +133,10 @@ The full history is in [CHANGELOG.md](CHANGELOG.md). In short:
   mods still apply.
 
 **Gear names**
-- The launch gear is generic, ready for future addons: Strike UAV Launcher / Tablet, Recon UAV Launcher /
-  Tablet, Missile Launchpad, Missile Targeting Terminal, Missile Link Cable. Old worlds are converted.
+- The launch gear is generic, ready for future addons: Light and Heavy UAV Launcher, UAV Tablet, Missile
+  Launchpad, Missile Targeting Terminal, Missile Link Cable. Old worlds are converted.
+- UAV launchers are sorted by weight, not by role: a launcher takes strike and recon drones of its weight. One
+  UAV Tablet drives every launcher and every drone you have in the air.
 
 **With SuperbWarfare installed**
 - Recipes use SBW parts; explosions use SBW's sounds, mixed by distance; SBW seekers and AshVehicles missiles
@@ -163,9 +169,10 @@ The full history is in [CHANGELOG.md](CHANGELOG.md). In short:
 
 ### Control and detection
 
-- **Strike UAV Launcher** and **Strike UAV Tablet**: the tablet links up to 10 launchers, plans routes and
-  launches
-- **Recon UAV Launcher** and **Recon UAV Tablet**: the same for the Orlan
+- **Heavy UAV Launcher** for the Shahed and other heavy drones, **Light UAV Launcher** for the Orlan and other
+  light drones
+- **UAV Tablet**: links up to 10 launchers of either weight, plans routes and launches whatever is on them, and
+  lists every drone you have in the air, with the camera, route change and return for those that have them
 - **Missile Launchpad** and **Missile Targeting Terminal**, linked with the **Missile Link Cable** (up to 60
   blocks): the terminal manages several launchpads, sets targets and shows countdown and status
 - **Air Defense Radar**: tactical map with zoom, pan, a sweeping beam and typed contacts; redstone alarm
@@ -198,8 +205,8 @@ Output: `build\libs\air-tactical-arsenal-1.3.2-warzone.jar`. A dev client runs w
 
 ### Shahed-136
 
-1. Place a Strike UAV Launcher and right-click it with a Shahed to mount the drone.
-2. Right-click the launcher with the Strike UAV Tablet to link it.
+1. Place a Heavy UAV Launcher and right-click it with a Shahed to mount the drone.
+2. Right-click the launcher with the UAV Tablet to link it.
 3. Open the tablet, plan the route on the map and save it.
 4. Stand within 100 blocks of the launcher (`tabletLauncherRange`) and press LAUNCH.
 
@@ -214,9 +221,9 @@ Admin shortcut: `/ata attack shahed <start> <target> low|high` (and `/ata attack
 
 ### Orlan-10
 
-1. Place the Recon UAV Launcher and mount an Orlan-10 on it.
-2. Link it with the Recon UAV Tablet, open the tablet and plan the route.
-3. Launch, then switch to the FPV view. **N** toggles night vision, **R** locks the camera on a point, **Left
+1. Place the Light UAV Launcher and mount an Orlan-10 on it.
+2. Link it with the UAV Tablet, open the tablet and plan the route.
+3. Launch, then pick it in the tablet's IN FLIGHT list to switch to the FPV view. **N** toggles night vision (Superb Warfare's thermal view when Superb Warfare is installed), **R** locks the camera on a point, **Left
    Alt** leaves the camera.
 
 ### Air Defense Radar
@@ -224,8 +231,9 @@ Admin shortcut: `/ata attack shahed <start> <target> low|high` (and `/ata attack
 1. Place it with open sky above: no blocks at all over the 5x5 area around it, or it only shows
    **WEAK SIGNAL**.
 2. Right-click it to open the map. Its redstone output grows as an air contact gets closer; the placer's and
-   their team's own aircraft, drones and missiles don't count. Wire it to an **Alert Siren**; the
-   **ALARM OUTPUT** button in the target list switches the output off and on.
+   their team's own aircraft, drones and missiles don't count. Wire it to an **Alert Siren**.
+3. To declare alerts by hand, switch **ALERTS: AUTO** to **MANUAL** and press **DECLARE ALERT**. Radars wired to
+   it go on alert as well, so one operator can sound every siren on the network.
 
 ### Vehicle radars
 

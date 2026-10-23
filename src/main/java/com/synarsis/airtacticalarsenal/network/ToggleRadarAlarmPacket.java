@@ -12,18 +12,25 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class ToggleRadarAlarmPacket {
-    private final BlockPos radarPos;
+    public static final int TOGGLE_MODE = 0;
+    public static final int TOGGLE_ALERT = 1;
 
-    public ToggleRadarAlarmPacket(BlockPos radarPos) {
+    private final BlockPos radarPos;
+    private final int action;
+
+    public ToggleRadarAlarmPacket(BlockPos radarPos, int action) {
         this.radarPos = radarPos;
+        this.action = action;
     }
 
     public ToggleRadarAlarmPacket(FriendlyByteBuf buf) {
         this.radarPos = buf.readBlockPos();
+        this.action = buf.readVarInt();
     }
 
     public void toBytes(FriendlyByteBuf buf) {
         buf.writeBlockPos(radarPos);
+        buf.writeVarInt(action);
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> supplier) {
@@ -35,8 +42,13 @@ public class ToggleRadarAlarmPacket {
             if (player.position().distanceToSqr(Vec3.atCenterOf(radarPos)) > 64.0) return;
             if (!(level.getBlockEntity(radarPos) instanceof ShahedRadarBlockEntity radar)) return;
             if (!radar.canControl(player)) return;
-            radar.setAlarmOutput(!radar.isAlarmOutput());
+            if (action == TOGGLE_MODE) {
+                radar.setManualMode(!radar.isManualMode());
+            } else if (action == TOGGLE_ALERT && radar.isManualMode()) {
+                radar.setManualAlert(!radar.isManualAlert());
+            }
             if (level.getBlockState(radarPos).getBlock() instanceof ShahedRadarBlock block) {
+                block.propagateManualAlert(level, radarPos);
                 block.refreshSignal(level, radarPos);
             }
         });

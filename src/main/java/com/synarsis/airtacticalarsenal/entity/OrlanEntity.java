@@ -91,10 +91,12 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         LANDED 
     }
 
-    private static final double LAUNCH_INITIAL_SPEED = 0.3;
+    private static final double LAUNCH_INITIAL_SPEED = 0.9;
     private static final double LAUNCH_ACCELERATION = 0.02;
     private static final double LAUNCH_MAX_SPEED = 1.2;
     private static final double LAUNCH_ANGLE_DEG = 20.0;
+    private static final double RAIL_ANGLE_DEG = 11.0;
+    private static final double PATH_ANGLE_RATE_DEG = 0.3;
 
     private static final double CLIMB_ACCELERATION = 0.03;
     private static final double CLIMB_ANGLE_DEG = 25.0;
@@ -196,6 +198,8 @@ public class OrlanEntity extends Projectile implements GeoEntity {
 
     private final Set<Integer> trackedCameraEntities = new HashSet<>();
 
+    private boolean rotationSynced = true;
+    private double pathAngleDeg = RAIL_ANGLE_DEG;
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public OrlanEntity(EntityType<? extends OrlanEntity> type, Level level) {
@@ -278,10 +282,43 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         }
 
         this.setYRot((float) Math.toDegrees(Math.atan2(this.launchDirection.x, this.launchDirection.z)));
-        this.setXRot((float) -LAUNCH_ANGLE_DEG);
+        this.setXRot((float) RAIL_ANGLE_DEG);
+        this.xRotO = this.getXRot();
+        this.yRotO = this.getYRot();
         this.entityData.set(FLIGHT_PHASE_ID, this.flightPhase.ordinal());
-        this.entityData.set(SYNC_X_ROT, (float) -LAUNCH_ANGLE_DEG);
+        this.entityData.set(SYNC_X_ROT, (float) RAIL_ANGLE_DEG);
         this.entityData.set(SYNC_Y_ROT, this.getYRot());
+    }
+
+    public void setRailPitch(double degrees) {
+        this.pathAngleDeg = degrees;
+        this.setXRot((float) degrees);
+        this.xRotO = (float) degrees;
+        this.entityData.set(SYNC_X_ROT, (float) degrees);
+    }
+
+    private static double approachAngle(double current, double target) {
+        double diff = target - current;
+        if (Math.abs(diff) <= PATH_ANGLE_RATE_DEG) {
+            return target;
+        }
+        return current + Math.signum(diff) * PATH_ANGLE_RATE_DEG;
+    }
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (key == SYNC_Y_ROT || key == SYNC_X_ROT) {
+            this.rotationSynced = true;
+        }
+    }
+
+    @Override
+    public void recreateFromPacket(net.minecraft.network.protocol.game.ClientboundAddEntityPacket packet) {
+        super.recreateFromPacket(packet);
+        this.yRotO = this.getYRot();
+        this.xRotO = this.getXRot();
+        this.rotationSynced = false;
     }
 
     @Override
@@ -379,8 +416,8 @@ public class OrlanEntity extends Projectile implements GeoEntity {
                 return;
             }
 
-            float syncedXRot = this.entityData.get(SYNC_X_ROT);
-            float syncedYRot = this.entityData.get(SYNC_Y_ROT);
+            float syncedXRot = this.rotationSynced ? this.entityData.get(SYNC_X_ROT) : this.getXRot();
+            float syncedYRot = this.rotationSynced ? this.entityData.get(SYNC_Y_ROT) : this.getYRot();
             this.yRotO = this.getYRot();
             this.xRotO = this.getXRot();
             this.setYRot(lerpRotation(this.getYRot(), syncedYRot, 0.5f));
@@ -526,7 +563,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
             this.syncTickCounter = 0;
             NetworkHandler.sendToDimension(this.level(), new OrlanSpawnPacket(
                     this.getId(), this.position(), this.getDeltaMovement(), target,
-                    this.flightPhase.ordinal(), this.getRemainingFlightTicks()));
+                    this.flightPhase.ordinal(), this.getRemainingFlightTicks(), soundTypeKey()));
         }
 
         tickLinkedCamera();
@@ -615,7 +652,8 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     private Vec3 tickLaunchingPhase(Vec3 targetVec, Vec3 currentPos) {
         this.currentSpeed = Math.min(this.currentSpeed + LAUNCH_ACCELERATION, LAUNCH_MAX_SPEED);
 
-        double launchAngleRad = Math.toRadians(LAUNCH_ANGLE_DEG);
+        this.pathAngleDeg = approachAngle(this.pathAngleDeg, LAUNCH_ANGLE_DEG);
+        double launchAngleRad = Math.toRadians(this.pathAngleDeg);
         double horizontalSpeed = this.currentSpeed * Math.cos(launchAngleRad);
         double verticalSpeed = this.currentSpeed * Math.sin(launchAngleRad);
 
@@ -650,6 +688,8 @@ public class OrlanEntity extends Projectile implements GeoEntity {
             climbAngleRad = Math.toRadians(3.0);
         }
 
+        this.pathAngleDeg = approachAngle(this.pathAngleDeg, Math.toDegrees(climbAngleRad));
+        climbAngleRad = Math.toRadians(this.pathAngleDeg);
         double horizontalSpeed = this.currentSpeed * Math.cos(climbAngleRad);
         double verticalSpeed = this.currentSpeed * Math.sin(climbAngleRad);
 
@@ -991,6 +1031,13 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         return false;
     }
 
+    public void interceptorHit(float healthFraction, Entity attacker, Vec3 hitPos) {
+        if (this.level().isClientSide || this.destroyed) {
+            return;
+        }
+        applyDamage(this.maxHealth * healthFraction, attacker, hitPos, false, true);
+    }
+
     private void applyDamage(float amount, Entity attacker, Vec3 hitPos, boolean explosion) {
         applyDamage(amount, attacker, hitPos, explosion, false);
     }
@@ -1011,7 +1058,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         boolean crashAllowed = ShahedConfig.isDroneCrashOnShootdown() && !airburst
                 && this.flightPhase != FlightPhase.LANDED && this.flightPhase != FlightPhase.LAUNCHING
                 && this.flightPhase != FlightPhase.LANDING;
-        int zone = explosion ? CrashDynamics.ZONE_BODY : CrashDynamics.zoneOf(hitPos.subtract(this.position()), this.lastDirection, 0.8);
+        int zone = explosion ? CrashDynamics.ZONE_BODY : crashZoneAt(hitPos);
         switch (zone) {
             case CrashDynamics.ZONE_ENGINE -> this.durability.engineHp -= amount;
             case CrashDynamics.ZONE_WING_LEFT -> this.durability.wingLeftHp -= amount;
@@ -1194,6 +1241,15 @@ public class OrlanEntity extends Projectile implements GeoEntity {
             }
         }
         this.entityData.set(LINKED_PLAYER, newVal);
+    }
+
+    public int crashZoneAt(Vec3 hitPos) {
+        return CrashDynamics.zoneOf(hitPos.subtract(this.position()), this.lastDirection, 0.8);
+    }
+
+    public String soundTypeKey() {
+        net.minecraft.resources.ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(this.getType());
+        return key != null ? key.toString() : "";
     }
 
     public String getLinkedPlayerUUID() {

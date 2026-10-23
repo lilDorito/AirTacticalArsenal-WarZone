@@ -25,17 +25,16 @@ public class ModCreativeTabs {
                         output.accept(ModBlocks.MISSILE_LAUNCHPAD.get());
                         output.accept(ModItems.ISKANDER.get());
                         output.accept(ModItems.SHAHED.get());
-                        output.accept(ModItems.STRIKE_UAV_LAUNCHER.get());
-                        output.accept(ModItems.STRIKE_UAV_TABLET.get());
+                        output.accept(ModItems.HEAVY_UAV_LAUNCHER.get());
+                        output.accept(ModItems.UAV_TABLET.get());
                         output.accept(ModItems.MISSILE_LINK_CABLE.get());
                         output.accept(ModItems.PAINT_STAND.get());
 
                         ItemStack fullSprayCan = new ItemStack(ModItems.SPRAY_CAN.get());
                         SprayCanItem.setCharge(fullSprayCan, SprayCanItem.MAX_CHARGE);
                         output.accept(fullSprayCan);
-                        output.accept(ModItems.RECON_UAV_LAUNCHER.get());
+                        output.accept(ModItems.LIGHT_UAV_LAUNCHER.get());
                         output.accept(ModItems.ORLAN.get());
-                        output.accept(ModItems.RECON_UAV_TABLET.get());
                     })
                     .build());
 

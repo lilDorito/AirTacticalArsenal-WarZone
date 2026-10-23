@@ -36,16 +36,43 @@ public class ShahedRadarBlockEntity extends BlockEntity implements GeoBlockEntit
         setChanged();
     }
 
-    private boolean alarmOutput = true;
+    private boolean manualMode = false;
+    private boolean manualAlert = false;
+    private long relayUntil = Long.MIN_VALUE;
     private long lastContactTime = Long.MIN_VALUE;
     private int heldPower = 0;
 
-    public boolean isAlarmOutput() {
-        return alarmOutput;
+    public boolean isManualMode() {
+        return manualMode;
     }
 
-    public void setAlarmOutput(boolean on) {
-        this.alarmOutput = on;
+    public void setManualMode(boolean manual) {
+        this.manualMode = manual;
+        if (!manual) {
+            this.manualAlert = false;
+        }
+        this.heldPower = 0;
+        changed();
+    }
+
+    public boolean isManualAlert() {
+        return manualMode && manualAlert;
+    }
+
+    public void setManualAlert(boolean alert) {
+        this.manualAlert = manualMode && alert;
+        changed();
+    }
+
+    public boolean isRelayed(long now) {
+        return now < relayUntil;
+    }
+
+    public void relayAlert(long until) {
+        this.relayUntil = Math.max(this.relayUntil, until);
+    }
+
+    private void changed() {
         setChanged();
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
@@ -74,14 +101,20 @@ public class ShahedRadarBlockEntity extends BlockEntity implements GeoBlockEntit
     public void load(CompoundTag tag) {
         super.load(tag);
         this.ownerName = tag.getString("OwnerName");
-        this.alarmOutput = !tag.contains("AlarmOutput") || tag.getBoolean("AlarmOutput");
+        if (tag.contains("ManualMode")) {
+            this.manualMode = tag.getBoolean("ManualMode");
+        } else {
+            this.manualMode = tag.contains("AlarmOutput") && !tag.getBoolean("AlarmOutput");
+        }
+        this.manualAlert = this.manualMode && tag.getBoolean("ManualAlert");
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         if (!ownerName.isEmpty()) tag.putString("OwnerName", ownerName);
-        tag.putBoolean("AlarmOutput", alarmOutput);
+        tag.putBoolean("ManualMode", manualMode);
+        tag.putBoolean("ManualAlert", manualAlert);
     }
 
     @Override

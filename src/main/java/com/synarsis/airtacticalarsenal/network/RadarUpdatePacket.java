@@ -17,7 +17,7 @@ public class RadarUpdatePacket {
     private final List<TargetData> targets;
     private final int minAltitude;
     private final boolean openSky;
-    private final boolean alarmOutput;
+    private final int alarmState;
     private final boolean canToggleAlarm;
 
     public static class TargetData {
@@ -38,13 +38,21 @@ public class RadarUpdatePacket {
         }
     }
 
+    public static final int ALARM_MANUAL = 1;
+    public static final int ALARM_DECLARED = 2;
+    public static final int ALARM_RELAYED = 4;
+
+    public static int alarmState(boolean manual, boolean declared, boolean relayed) {
+        return (manual ? ALARM_MANUAL : 0) | (declared ? ALARM_DECLARED : 0) | (relayed ? ALARM_RELAYED : 0);
+    }
+
     public RadarUpdatePacket(BlockPos radarPos, List<TargetData> targets, int minAltitude, boolean openSky,
-                             boolean alarmOutput, boolean canToggleAlarm) {
+                             int alarmState, boolean canToggleAlarm) {
         this.radarPos = radarPos;
         this.targets = targets;
         this.minAltitude = minAltitude;
         this.openSky = openSky;
-        this.alarmOutput = alarmOutput;
+        this.alarmState = alarmState;
         this.canToggleAlarm = canToggleAlarm;
     }
 
@@ -52,7 +60,7 @@ public class RadarUpdatePacket {
         this.radarPos = buf.readBlockPos();
         this.minAltitude = buf.readInt();
         this.openSky = buf.readBoolean();
-        this.alarmOutput = buf.readBoolean();
+        this.alarmState = buf.readByte();
         this.canToggleAlarm = buf.readBoolean();
         int count = buf.readInt();
         this.targets = new ArrayList<>();
@@ -72,7 +80,7 @@ public class RadarUpdatePacket {
         buf.writeBlockPos(this.radarPos);
         buf.writeInt(this.minAltitude);
         buf.writeBoolean(this.openSky);
-        buf.writeBoolean(this.alarmOutput);
+        buf.writeByte(this.alarmState);
         buf.writeBoolean(this.canToggleAlarm);
         buf.writeInt(this.targets.size());
         for (TargetData t : targets) {
@@ -90,15 +98,15 @@ public class RadarUpdatePacket {
     public boolean handle(Supplier<NetworkEvent.Context> supplier) {
         NetworkEvent.Context ctx = supplier.get();
         ctx.enqueueWork(() -> {
-            DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () -> handleClient(radarPos, targets, minAltitude, openSky, alarmOutput, canToggleAlarm));
+            DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () -> handleClient(radarPos, targets, minAltitude, openSky, alarmState, canToggleAlarm));
         });
         return true;
     }
 
     @OnlyIn(Dist.CLIENT)
     private static void handleClient(BlockPos radarPos, List<TargetData> targets, int minAltitude, boolean openSky,
-                                     boolean alarmOutput, boolean canToggleAlarm) {
+                                     int alarmState, boolean canToggleAlarm) {
         com.synarsis.airtacticalarsenal.client.gui.ShahedRadarScreen.updateTargets(radarPos, targets, minAltitude, openSky,
-                alarmOutput, canToggleAlarm);
+                alarmState, canToggleAlarm);
     }
 }

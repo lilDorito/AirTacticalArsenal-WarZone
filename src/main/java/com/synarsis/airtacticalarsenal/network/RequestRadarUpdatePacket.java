@@ -36,10 +36,10 @@ public class RequestRadarUpdatePacket {
             ServerLevel level = player.serverLevel();
             Vec3 radarCenter = Vec3.atCenterOf(radarPos);
 
-            boolean alarm = true;
+            int alarm = 0;
             boolean canToggle = false;
             if (level.getBlockEntity(radarPos) instanceof com.synarsis.airtacticalarsenal.block.entity.ShahedRadarBlockEntity radar) {
-                alarm = radar.isAlarmOutput();
+                alarm = RadarUpdatePacket.alarmState(radar.isManualMode(), radar.isManualAlert(), radar.isRelayed(level.getGameTime()));
                 canToggle = radar.canControl(player);
             }
 

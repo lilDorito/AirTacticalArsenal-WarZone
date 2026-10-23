@@ -61,10 +61,12 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         DIVING 
     }
 
-    private static final double LAUNCH_INITIAL_SPEED = 0.3; 
+    private static final double LAUNCH_INITIAL_SPEED = 0.9; 
     private static final double LAUNCH_ACCELERATION = 0.02; 
     private static final double LAUNCH_MAX_SPEED = 1.2; 
-    private static final double LAUNCH_ANGLE_DEG = 20.0; 
+    private static final double LAUNCH_ANGLE_DEG = 20.0;
+    private static final double RAIL_ANGLE_DEG = 11.0;
+    private static final double PATH_ANGLE_RATE_DEG = 0.3; 
 
     private static final double CLIMB_ACCELERATION = 0.03; 
     private static final double CLIMB_ANGLE_DEG = 25.0; 
@@ -74,9 +76,19 @@ public class ShahedEntity extends Projectile implements GeoEntity {
     private static final double ALTITUDE_TOLERANCE = 5.0; 
 
     private static final double HEIGHT_CORRECTION_FACTOR = 0.15; 
+    private static final double LOITER_RADIUS = 64.0;
+    public static final int LOITER_MAX_TICKS = 15 * 60 * 20;
+    private static final double MAX_DIVE_REAIM_DEG = 60.0;
+    private static final double DIVE_TURN_DEG_PER_TICK = 7.0;
 
     private static final double DIVE_ACCELERATION = 0.08; 
 
+    private static final EntityDataAccessor<Boolean> ATTACK_COMMANDED = SynchedEntityData.defineId(ShahedEntity.class,
+            EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> LOITERING = SynchedEntityData.defineId(ShahedEntity.class,
+            EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> LOITER_LEFT = SynchedEntityData.defineId(ShahedEntity.class,
+            EntityDataSerializers.INT);
     private static final EntityDataAccessor<BlockPos> TARGET_POS = SynchedEntityData.defineId(ShahedEntity.class,
             EntityDataSerializers.BLOCK_POS);
     private static final EntityDataAccessor<Boolean> IS_DIVING = SynchedEntityData.defineId(ShahedEntity.class,
@@ -169,6 +181,93 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         return new ItemStack(com.synarsis.airtacticalarsenal.item.ModItems.SHAHED.get());
     }
 
+    public boolean hasCamera() {
+        return false;
+    }
+
+    public String soundTypeKey() {
+        net.minecraft.resources.ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(this.getType());
+        return key != null ? key.toString() : "";
+    }
+
+    public BlockPos getStrikeTarget() {
+        return this.entityData.get(TARGET_POS);
+    }
+
+    public DroneCameraLink cameraLink() {
+        return this.cameraLink;
+    }
+
+    public enum AttackResult {
+        OK, TOO_LATE, UNAVAILABLE
+    }
+
+    public boolean isAttackCommanded() {
+        return this.entityData.get(ATTACK_COMMANDED);
+    }
+
+    public boolean isLoitering() {
+        return this.entityData.get(LOITERING);
+    }
+
+    public int loiterTicksLeft() {
+        return this.level().isClientSide ? this.entityData.get(LOITER_LEFT) : Math.max(0, LOITER_MAX_TICKS - this.loiterTicks);
+    }
+
+    public AttackResult commandAttack(BlockPos target) {
+        if (this.level().isClientSide || this.exploding || this.isRemoved() || isCrashing()) {
+            return AttackResult.UNAVAILABLE;
+        }
+        if (this.flightPhase == FlightPhase.DIVING) {
+            Vec3 heading = new Vec3(this.lastDirection.x, 0, this.lastDirection.z);
+            Vec3 toTarget = new Vec3(target.getX() + 0.5 - this.getX(), 0, target.getZ() + 0.5 - this.getZ());
+            if (heading.lengthSqr() > 1.0E-4 && toTarget.lengthSqr() > 1.0E-4
+                    && heading.normalize().dot(toTarget.normalize()) < Math.cos(Math.toRadians(MAX_DIVE_REAIM_DEG))) {
+                return AttackResult.TOO_LATE;
+            }
+        }
+        this.entityData.set(TARGET_POS, target);
+        this.currentWaypointIndex = this.waypoints.size();
+        this.entityData.set(ATTACK_COMMANDED, true);
+        this.entityData.set(LOITERING, false);
+        return AttackResult.OK;
+    }
+
+    private Vec3 tickLoiter(Vec3 center, Vec3 currentPos) {
+        if (!this.level().isClientSide) {
+            if (!this.entityData.get(LOITERING)) {
+                this.entityData.set(LOITERING, true);
+            }
+            this.loiterTicks++;
+            if (this.loiterTicks % 20 == 0) {
+                this.entityData.set(LOITER_LEFT, Math.max(0, LOITER_MAX_TICKS - this.loiterTicks));
+            }
+            if (this.loiterTicks >= LOITER_MAX_TICKS) {
+                this.entityData.set(ATTACK_COMMANDED, true);
+                this.entityData.set(LOITERING, false);
+            }
+        }
+        Vec3 toCenter = new Vec3(center.x - currentPos.x, 0, center.z - currentPos.z);
+        double distance = toCenter.length();
+        Vec3 desired;
+        if (distance < 1.0E-3) {
+            desired = this.lastDirection;
+        } else {
+            Vec3 radial = toCenter.scale(1.0 / distance);
+            if (distance > LOITER_RADIUS * 1.6) {
+                desired = radial;
+            } else {
+                Vec3 tangent = new Vec3(-radial.z, 0, radial.x);
+                double error = (distance - LOITER_RADIUS) / LOITER_RADIUS;
+                desired = tangent.add(radial.scale(Math.max(-1.0, Math.min(1.0, error)) * 1.5)).normalize();
+            }
+        }
+        Vec3 smoothDir = smoothTurn(this.lastDirection, desired, this.turnRateDeg());
+        double heightDiff = this.targetAltitude - this.getY();
+        double verticalCorrection = Math.max(-0.8, Math.min(0.8, heightDiff * HEIGHT_CORRECTION_FACTOR));
+        return new Vec3(smoothDir.x * this.currentSpeed, verticalCorrection, smoothDir.z * this.currentSpeed);
+    }
+
     public String getDroneNameKey() {
         return "drone.ata.shahed";
     }
@@ -197,6 +296,10 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
     private List<BlockPos> waypoints = new ArrayList<>();
     private int currentWaypointIndex = 0;
+    private final DroneCameraLink cameraLink = new DroneCameraLink(this);
+    private boolean rotationSynced = true;
+    private int loiterTicks = 0;
+    private double pathAngleDeg = RAIL_ANGLE_DEG;
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     private int syncTickCounter = 0;
@@ -273,11 +376,44 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         }
 
         this.setYRot((float) Math.toDegrees(Math.atan2(this.launchDirection.x, this.launchDirection.z)));
-        this.setXRot((float) -LAUNCH_ANGLE_DEG);
+        this.setXRot((float) RAIL_ANGLE_DEG);
+        this.xRotO = this.getXRot();
+        this.yRotO = this.getYRot();
 
         this.entityData.set(FLIGHT_PHASE_ID, this.flightPhase.ordinal());
-        this.entityData.set(SYNC_X_ROT, (float) -LAUNCH_ANGLE_DEG);
+        this.entityData.set(SYNC_X_ROT, (float) RAIL_ANGLE_DEG);
         this.entityData.set(SYNC_Y_ROT, this.getYRot());
+    }
+
+    public void setRailPitch(double degrees) {
+        this.pathAngleDeg = degrees;
+        this.setXRot((float) degrees);
+        this.xRotO = (float) degrees;
+        this.entityData.set(SYNC_X_ROT, (float) degrees);
+    }
+
+    private static double approachAngle(double current, double target) {
+        double diff = target - current;
+        if (Math.abs(diff) <= PATH_ANGLE_RATE_DEG) {
+            return target;
+        }
+        return current + Math.signum(diff) * PATH_ANGLE_RATE_DEG;
+    }
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (key == SYNC_Y_ROT || key == SYNC_X_ROT) {
+            this.rotationSynced = true;
+        }
+    }
+
+    @Override
+    public void recreateFromPacket(net.minecraft.network.protocol.game.ClientboundAddEntityPacket packet) {
+        super.recreateFromPacket(packet);
+        this.yRotO = this.getYRot();
+        this.xRotO = this.getXRot();
+        this.rotationSynced = false;
     }
 
     @Override
@@ -304,6 +440,9 @@ public class ShahedEntity extends Projectile implements GeoEntity {
     @Override
     protected void defineSynchedData() {
         this.entityData.define(TARGET_POS, BlockPos.ZERO);
+        this.entityData.define(ATTACK_COMMANDED, false);
+        this.entityData.define(LOITERING, false);
+        this.entityData.define(LOITER_LEFT, LOITER_MAX_TICKS);
         this.entityData.define(IS_DIVING, false);
         this.entityData.define(DIVE_MODE, "low");
         this.entityData.define(FLIGHT_PHASE_ID, 0);
@@ -342,6 +481,10 @@ public class ShahedEntity extends Projectile implements GeoEntity {
                 handlePaintStandAttachment();
             }
             return;
+        }
+
+        if (this.hasCamera() && this.level() instanceof ServerLevel cameraLevel) {
+            this.cameraLink.tick(cameraLevel);
         }
 
         if (this.level().isClientSide && this.lerpSteps > 0) {
@@ -389,7 +532,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         }
 
         if (this.level().isClientSide && this.launchDirection.lengthSqr() < 1.0E-6) {
-            double yaw = Math.toRadians(this.entityData.get(SYNC_Y_ROT));
+            double yaw = Math.toRadians(this.rotationSynced ? this.entityData.get(SYNC_Y_ROT) : this.getYRot());
             this.launchDirection = new Vec3(Math.sin(yaw), 0, Math.cos(yaw));
             this.lastDirection = this.launchDirection;
             if (this.currentSpeed <= 0) this.currentSpeed = LAUNCH_INITIAL_SPEED;
@@ -407,14 +550,20 @@ public class ShahedEntity extends Projectile implements GeoEntity {
                 motion = tickLaunchingPhase(targetVec, currentPos);
                 break;
             case CLIMBING:
-                motion = tickClimbingPhase(targetVec, currentPos);
+                if (!this.level().isClientSide && isAttackCommanded()) {
+                    transitionToPhase(FlightPhase.CRUISING);
+                    motion = tickCruisingPhase(targetVec, currentPos, horizontalDist);
+                } else {
+                    motion = tickClimbingPhase(targetVec, currentPos);
+                }
                 break;
             case CRUISING:
                 motion = tickCruisingPhase(targetVec, currentPos, horizontalDist);
                 break;
             case DIVING:
 
-                Vec3 diveTarget = new Vec3(targetVec.x, findSurfaceY(target), targetVec.z);
+                Vec3 diveTarget = isAttackCommanded() ? Vec3.atCenterOf(target).add(0, 0.5, 0)
+                        : new Vec3(targetVec.x, findSurfaceY(target), targetVec.z);
                 motion = tickDivingPhase(diveTarget, currentPos);
                 break;
             default:
@@ -429,8 +578,8 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         }
 
         if (this.level().isClientSide) {
-            float syncedXRot = this.entityData.get(SYNC_X_ROT);
-            float syncedYRot = this.entityData.get(SYNC_Y_ROT);
+            float syncedXRot = this.rotationSynced ? this.entityData.get(SYNC_X_ROT) : this.getXRot();
+            float syncedYRot = this.rotationSynced ? this.entityData.get(SYNC_Y_ROT) : this.getYRot();
 
             this.yRotO = this.getYRot();
             this.xRotO = this.getXRot();
@@ -439,8 +588,6 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             this.setXRot(syncedXRot);
             this.setYBodyRot(syncedYRot);
             this.setYHeadRot(syncedYRot);
-
-            this.setPos(this.getX() + motion.x, this.getY() + motion.y, this.getZ() + motion.z);
             return;
         }
 
@@ -499,9 +646,12 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         }
 
         if (this.isDiving) {
-            double surfaceY = findSurfaceY(target);
-
-            if (this.getY() <= surfaceY + 2.0) {
+            if (isAttackCommanded()) {
+                if (this.position().distanceTo(Vec3.atCenterOf(target).add(0, 0.5, 0)) <= 2.5) {
+                    this.explode();
+                    return;
+                }
+            } else if (this.getY() <= findSurfaceY(target) + 2.0) {
                 this.explode();
                 return;
             }
@@ -518,13 +668,13 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
         if (!this.initialPacketSent) {
             this.initialPacketSent = true;
-            NetworkHandler.sendToDimension(this.level(), new ShahedSpawnPacket(this.getId(), this.position(), target, mode, this.engineSound));
+            NetworkHandler.sendToDimension(this.level(), new ShahedSpawnPacket(this.getId(), this.position(), target, mode, this.engineSound, soundTypeKey()));
         }
 
         this.syncTickCounter++;
         if (this.syncTickCounter >= SYNC_INTERVAL) {
             this.syncTickCounter = 0;
-            NetworkHandler.sendToDimension(this.level(), new ShahedSpawnPacket(this.getId(), this.position(), target, mode, this.engineSound));
+            NetworkHandler.sendToDimension(this.level(), new ShahedSpawnPacket(this.getId(), this.position(), target, mode, this.engineSound, soundTypeKey()));
         }
     }
 
@@ -532,7 +682,8 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
         this.currentSpeed = Math.min(this.currentSpeed + LAUNCH_ACCELERATION, LAUNCH_MAX_SPEED);
 
-        double launchAngleRad = Math.toRadians(LAUNCH_ANGLE_DEG);
+        this.pathAngleDeg = approachAngle(this.pathAngleDeg, LAUNCH_ANGLE_DEG);
+        double launchAngleRad = Math.toRadians(this.pathAngleDeg);
         double horizontalSpeed = this.currentSpeed * Math.cos(launchAngleRad);
         double verticalSpeed = this.currentSpeed * Math.sin(launchAngleRad);
 
@@ -569,6 +720,8 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             climbAngleRad = Math.toRadians(3.0);
         }
 
+        this.pathAngleDeg = approachAngle(this.pathAngleDeg, Math.toDegrees(climbAngleRad));
+        climbAngleRad = Math.toRadians(this.pathAngleDeg);
         double horizontalSpeed = this.currentSpeed * Math.cos(climbAngleRad);
         double verticalSpeed = this.currentSpeed * Math.sin(climbAngleRad);
 
@@ -635,6 +788,13 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             onFinalLeg = true;
         }
 
+        if (onFinalLeg && this.hasCamera() && !isAttackCommanded()) {
+            return tickLoiter(targetVec, currentPos);
+        }
+        if (!this.level().isClientSide && this.entityData.get(LOITERING)) {
+            this.entityData.set(LOITERING, false);
+        }
+
         Vec3 desiredDir = new Vec3(navTarget.x - currentPos.x, 0, navTarget.z - currentPos.z);
         if (desiredDir.lengthSqr() > 1.0E-4) {
             desiredDir = desiredDir.normalize();
@@ -653,7 +813,9 @@ public class ShahedEntity extends Projectile implements GeoEntity {
                 verticalCorrection,
                 smoothDir.z * this.currentSpeed);
 
-        if (onFinalLeg && horizontalDist < this.diveTransitionDistance) {
+        if (onFinalLeg && isAttackCommanded() && horizontalDist < this.diveTransitionDistance) {
+            transitionToPhase(FlightPhase.DIVING);
+        } else if (onFinalLeg && horizontalDist < this.diveTransitionDistance) {
             Vec3 toTargetDir = new Vec3(targetVec.x - currentPos.x, 0, targetVec.z - currentPos.z);
             if (toTargetDir.lengthSqr() > 1.0E-4) {
                 toTargetDir = toTargetDir.normalize();
@@ -683,36 +845,38 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         Vec3 toTarget = targetVec.subtract(currentPos);
         double distanceToTarget = toTarget.length();
 
-        if (distanceToTarget < 5.0) {
-            return toTarget; 
+        if (distanceToTarget < 3.0) {
+            return toTarget;
         }
 
-        Vec3 directionToTarget = toTarget.normalize();
+        Vec3 desired = toTarget.scale(1.0 / distanceToTarget);
+        Vec3 current = this.lastDirection.lengthSqr() > 1.0E-6 ? this.lastDirection.normalize() : desired;
+        double cos = Math.max(-1.0, Math.min(1.0, current.dot(desired)));
+        double angle = Math.acos(cos);
+        double maxTurn = Math.toRadians(DIVE_TURN_DEG_PER_TICK);
+        Vec3 direction;
+        if (angle <= maxTurn) {
+            direction = desired;
+        } else {
+            Vec3 axisHelper = desired.subtract(current.scale(cos));
+            if (axisHelper.lengthSqr() < 1.0E-8) {
+                axisHelper = new Vec3(0, -1, 0).subtract(current.scale(current.y * -1.0));
+                if (axisHelper.lengthSqr() < 1.0E-8) {
+                    axisHelper = new Vec3(1, 0, 0);
+                }
+            }
+            Vec3 perpendicular = axisHelper.normalize();
+            direction = current.scale(Math.cos(maxTurn)).add(perpendicular.scale(Math.sin(maxTurn))).normalize();
+        }
 
         this.diveProgress = Math.min(1.0f, this.diveProgress + 0.05f);
-
-        if (distanceToTarget < 30.0) {
-            this.currentSpeed = Math.min(this.currentSpeed + DIVE_ACCELERATION, this.diveSpeed());
-
-            return directionToTarget.scale(this.currentSpeed);
+        double speedCap = angle > Math.toRadians(35.0) ? this.cruiseSpeed() : this.diveSpeed();
+        if (this.currentSpeed > speedCap) {
+            this.currentSpeed = Math.max(speedCap, this.currentSpeed - DIVE_ACCELERATION);
+        } else {
+            this.currentSpeed = Math.min(this.currentSpeed + DIVE_ACCELERATION, speedCap);
         }
-
-        this.currentSpeed = Math.min(this.currentSpeed + DIVE_ACCELERATION, this.diveSpeed());
-
-        Vec3 desiredHoriz = new Vec3(directionToTarget.x, 0, directionToTarget.z);
-        if (desiredHoriz.lengthSqr() > 1.0E-4) {
-            desiredHoriz = desiredHoriz.normalize();
-
-            Vec3 smoothHoriz = smoothTurn(this.lastDirection, desiredHoriz, 5.0);
-
-            double targetVy = directionToTarget.y;
-            double currentVy = this.lastDirection.y;
-            double smoothVy = currentVy + (targetVy - currentVy) * 0.4;
-            Vec3 combined = new Vec3(smoothHoriz.x, smoothVy, smoothHoriz.z).normalize();
-            return combined.scale(this.currentSpeed);
-        }
-
-        return directionToTarget.scale(this.currentSpeed);
+        return direction.scale(Math.min(this.currentSpeed, distanceToTarget));
     }
 
     private static Vec3 smoothTurn(Vec3 current, Vec3 desired, double maxDegreesPerTick) {
@@ -778,6 +942,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         this.exploding = true;
 
         if (!this.level().isClientSide) {
+            releaseCameraFirst();
             Vec3 pos = this.position();
             NetworkHandler.sendToDimension(this.level(), new ShahedExplosionPacket(pos));
 
@@ -956,6 +1121,10 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
             MissileChunkManager.unregisterMissile(this);
 
+            if (this.level() instanceof ServerLevel cameraLevel) {
+                this.cameraLink.release(cameraLevel);
+            }
+
             NetworkHandler.sendToAllPlayers(new ShahedRemovePacket(this.getId()));
         }
         super.remove(reason);
@@ -994,6 +1163,8 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         tag.putInt("TargetY", target.getY());
         tag.putInt("TargetZ", target.getZ());
         tag.putBoolean("IsDiving", this.isDiving);
+        tag.putBoolean("AttackCommanded", this.isAttackCommanded());
+        tag.putInt("LoiterTicks", this.loiterTicks);
         tag.putBoolean("Crashing", this.crash.active());
         tag.putFloat("DiveProgress", this.diveProgress);
         tag.putString("DiveMode", this.entityData.get(DIVE_MODE));
@@ -1045,6 +1216,8 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         BlockPos target = new BlockPos(tag.getInt("TargetX"), tag.getInt("TargetY"), tag.getInt("TargetZ"));
         this.entityData.set(TARGET_POS, target);
         this.isDiving = tag.getBoolean("IsDiving");
+        this.entityData.set(ATTACK_COMMANDED, tag.getBoolean("AttackCommanded"));
+        this.loiterTicks = tag.getInt("LoiterTicks");
         this.discardOnLoad = tag.getBoolean("Crashing");
         this.diveProgress = tag.getFloat("DiveProgress");
         String mode = tag.getString("DiveMode");
@@ -1231,6 +1404,10 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             this.damageMultiplier = multiplier;
             this.name = name;
         }
+    }
+
+    public void interceptorHit(float healthFraction, Entity attacker, Vec3 hitPos) {
+        takeDamage((float) this.maxHealthValue() * healthFraction, attacker, hitPos, "heavy");
     }
 
     public void takeDamage(float damage, Entity attacker, Vec3 hitPos, String source) {
@@ -1643,7 +1820,14 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         removeSelf();
     }
 
+    private void releaseCameraFirst() {
+        if (this.level() instanceof ServerLevel serverLevel) {
+            this.cameraLink.release(serverLevel);
+        }
+    }
+
     private void spawnShootdownEffects(Vec3 pos) {
+        releaseCameraFirst();
 
         NetworkHandler.sendToDimension(this.level(), new ShahedExplosionPacket(pos));
 

@@ -25,15 +25,15 @@ public class ModItems {
             () -> new MissileLinkCableItem(new Item.Properties()
                     .stacksTo(16)));
 
-    public static final RegistryObject<Item> STRIKE_UAV_LAUNCHER = ITEMS.register("strike_uav_launcher",
-            () -> new StrikeUavLauncherItem(new Item.Properties()
+    public static final RegistryObject<Item> HEAVY_UAV_LAUNCHER = ITEMS.register("heavy_uav_launcher",
+            () -> new HeavyUavLauncherItem(new Item.Properties()
                     .stacksTo(1)
                     .rarity(Rarity.EPIC)));
 
-    public static final RegistryObject<Item> STRIKE_UAV_TABLET = ITEMS.register("strike_uav_tablet",
-            () -> new StrikeUavTabletItem(new Item.Properties()
+    public static final RegistryObject<Item> UAV_TABLET = ITEMS.register("uav_tablet",
+            () -> new UavTabletItem(new Item.Properties()
                     .stacksTo(1)
-                    .rarity(Rarity.RARE)));
+                    .rarity(Rarity.EPIC)));
 
     public static final RegistryObject<Item> PAINT_STAND = ITEMS.register("paint_stand",
             () -> new PaintStandItem(new Item.Properties()
@@ -44,8 +44,8 @@ public class ModItems {
             () -> new SprayCanItem(new Item.Properties()
                     .stacksTo(1)));
 
-    public static final RegistryObject<Item> RECON_UAV_LAUNCHER = ITEMS.register("recon_uav_launcher",
-            () -> new ReconUavLauncherItem(new Item.Properties()
+    public static final RegistryObject<Item> LIGHT_UAV_LAUNCHER = ITEMS.register("light_uav_launcher",
+            () -> new LightUavLauncherItem(new Item.Properties()
                     .stacksTo(1)
                     .rarity(Rarity.EPIC)));
 
@@ -53,11 +53,6 @@ public class ModItems {
             () -> new OrlanItem(new Item.Properties()
                     .stacksTo(1)
                     .rarity(Rarity.RARE)));
-
-    public static final RegistryObject<Item> RECON_UAV_TABLET = ITEMS.register("recon_uav_tablet",
-            () -> new ReconUavTabletItem(new Item.Properties()
-                    .stacksTo(1)
-                    .rarity(Rarity.EPIC)));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
