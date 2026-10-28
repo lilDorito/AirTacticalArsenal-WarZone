@@ -19,7 +19,7 @@ import java.util.Map;
 public class LauncherSpinUpSound extends AbstractTickableSoundInstance {
     private static final Map<Integer, LauncherSpinUpSound> ACTIVE = new HashMap<>();
     private static final int RAMP_TICKS = 100;
-    private static final int FADE_TICKS = 6;
+    private static final int FADE_TICKS = 40;
 
     private final UavLauncherEntity launcher;
     private int age;
@@ -75,7 +75,8 @@ public class LauncherSpinUpSound extends AbstractTickableSoundInstance {
         this.pitch = (0.5f + 0.5f * t) * this.pitchScale;
         if (fade >= 0) {
             fade++;
-            gain *= Math.max(0f, 1f - fade / (float) FADE_TICKS);
+            float left = Math.max(0f, 1f - fade / (float) FADE_TICKS);
+            gain *= left * left;
             if (fade >= FADE_TICKS) {
                 ACTIVE.remove(launcher.getId(), this);
                 this.volume = 0f;
@@ -84,8 +85,10 @@ public class LauncherSpinUpSound extends AbstractTickableSoundInstance {
             }
         }
         this.volume = gain * this.volumeScale;
-        this.x = launcher.getX();
-        this.y = launcher.getY() + 1.5;
-        this.z = launcher.getZ();
+        if (fade < 0) {
+            this.x = launcher.getX();
+            this.y = launcher.getY() + 1.5;
+            this.z = launcher.getZ();
+        }
     }
 }

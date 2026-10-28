@@ -65,7 +65,7 @@ public class UpdateOrlanRoutePacket {
             }
 
             BlockPos routeStart = orlan.getLauncherPos() != null ? orlan.getLauncherPos() : orlan.blockPosition();
-            if (!com.synarsis.airtacticalarsenal.util.RouteLimits.check(player, com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(routeStart, newWaypoints), com.synarsis.airtacticalarsenal.util.RouteLimits.orlanMax())) {
+            if (!com.synarsis.airtacticalarsenal.util.RouteLimits.check(player, com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(routeStart, newWaypoints), com.synarsis.airtacticalarsenal.util.RouteLimits.orlanMax(com.synarsis.airtacticalarsenal.api.DroneVariants.kindOf(orlan)))) {
                 return;
             }
 

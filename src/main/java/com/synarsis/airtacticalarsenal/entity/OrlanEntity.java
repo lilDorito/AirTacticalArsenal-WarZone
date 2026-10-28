@@ -79,6 +79,24 @@ public class OrlanEntity extends Projectile implements GeoEntity {
 
     public static void clearRegistry() {
         activeOrlanRegistry.clear();
+        PARKED.clear();
+    }
+
+    public record LandedDrone(UUID uuid, String owner, String nameKey, String kind,
+                              net.minecraft.resources.ResourceKey<Level> dimension, int x, int z) {
+    }
+
+    private static final Map<UUID, LandedDrone> PARKED = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static List<LandedDrone> parkedByOwner(Level level, UUID owner) {
+        List<LandedDrone> result = new ArrayList<>();
+        String ownerStr = owner.toString();
+        for (LandedDrone drone : PARKED.values()) {
+            if (drone.dimension().equals(level.dimension()) && ownerStr.equals(drone.owner())) {
+                result.add(drone);
+            }
+        }
+        return result;
     }
 
     public enum FlightPhase {
@@ -128,6 +146,16 @@ public class OrlanEntity extends Projectile implements GeoEntity {
             EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SYNC_ROLL = SynchedEntityData.defineId(OrlanEntity.class,
             EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Integer> SKIN = SynchedEntityData.defineId(OrlanEntity.class,
+            EntityDataSerializers.INT);
+
+    public int getSkin() {
+        return this.entityData.get(SKIN);
+    }
+
+    public void setSkin(int skin) {
+        this.entityData.set(SKIN, Math.max(0, skin));
+    }
 
     private final CrashDynamics crash = new CrashDynamics();
     private final com.synarsis.airtacticalarsenal.entity.crash.Durability durability =
@@ -196,7 +224,8 @@ public class OrlanEntity extends Projectile implements GeoEntity {
 
     private ChunkPos lastSentChunkPos = null;
 
-    private final Set<Integer> trackedCameraEntities = new HashSet<>();
+    private final CameraEntityStream trackedCameraEntities = new CameraEntityStream();
+    private final EntityDataMirror cameraSelfData = new EntityDataMirror();
 
     private boolean rotationSynced = true;
     private double pathAngleDeg = RAIL_ANGLE_DEG;
@@ -209,6 +238,10 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     }
 
     public boolean isLegitSpawn = false;
+
+    public double plannedCruiseSpeed() {
+        return cruiseSpeed();
+    }
 
     protected double cruiseSpeed() {
         return CRUISE_SPEED;
@@ -369,6 +402,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         this.entityData.define(FLIGHT_TIMER, getMaxFlightTicks());
         this.entityData.define(LAUNCHER_POS_DATA, BlockPos.ZERO);
         this.entityData.define(TARGET_ALTITUDE_DATA, (float) this.patrolAltitude());
+        this.entityData.define(SKIN, 0);
     }
 
     @Override
@@ -554,6 +588,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
 
         if (!activeOrlanRegistry.containsKey(this.getId())) {
             activeOrlanRegistry.put(this.getId(), this);
+            PARKED.remove(this.getUUID());
         }
 
         this.syncTickCounter++;
@@ -616,13 +651,10 @@ public class OrlanEntity extends Projectile implements GeoEntity {
                                 linkedPlayer.getYRot(), linkedPlayer.getXRot(),
                                 RelativeMovement.ROTATION);
 
+                        cameraSelfData.sync(linkedPlayer, this);
                         if (this.tickCount % 10 == 0) {
                             linkedPlayer.connection.send(new ClientboundTeleportEntityPacket(this));
                             linkedPlayer.connection.send(new ClientboundSetEntityMotionPacket(this));
-                            var dataValues = this.getEntityData().getNonDefaultValues();
-                            if (dataValues != null) {
-                                linkedPlayer.connection.send(new ClientboundSetEntityDataPacket(this.getId(), dataValues));
-                            }
                         }
 
                         int cameraChunkRadius = (this.flightPhase == FlightPhase.PATROLLING)
@@ -638,9 +670,8 @@ public class OrlanEntity extends Projectile implements GeoEntity {
                             lastSentChunkPos = currentChunk;
                         }
 
-                        if (this.tickCount % 3 == 0) {
-                            syncNearbyEntities(linkedPlayer, srvLevel);
-                        }
+                        com.synarsis.airtacticalarsenal.network.DroneStatePacket.send(linkedPlayer, this);
+                        syncNearbyEntities(linkedPlayer, srvLevel);
                     }
                 }
             } catch (IllegalArgumentException ignored) {
@@ -1282,65 +1313,13 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     }
 
     private void syncNearbyEntities(ServerPlayer viewer, ServerLevel level) {
-
         int chunkRadius = (this.flightPhase == FlightPhase.PATROLLING)
                 ? OrlanCameraViewPacket.PATROLLING_CAMERA_CHUNK_RADIUS
                 : OrlanCameraViewPacket.DRONE_CHUNK_RADIUS;
-        double scanRadius = chunkRadius * 16.0;
-        AABB scanBox = new AABB(
-                this.getX() - scanRadius, this.getY() - 300, this.getZ() - scanRadius,
-                this.getX() + scanRadius, this.getY() + 300, this.getZ() + scanRadius);
-
-        List<Entity> nearbyEntities = level.getEntities(this, scanBox,
-                e -> e != viewer && e.isAlive() && !(e instanceof OrlanEntity && e.getId() == this.getId())
-                        && !(e instanceof net.minecraft.world.entity.Marker)
-                        && e.getType().clientTrackingRange() > 0);
-
-        Set<Integer> currentNearby = new HashSet<>();
-        for (Entity e : nearbyEntities) {
-            int eid = e.getId();
-
-            if (!trackedCameraEntities.contains(eid)) {
-                net.minecraft.network.protocol.Packet<?> addPacket;
-                try {
-                    addPacket = e.getAddEntityPacket();
-                } catch (RuntimeException ex) {
-                    continue;
-                }
-                if (addPacket == null) continue;
-                currentNearby.add(eid);
-                viewer.connection.send(addPacket);
-                var dataValues = e.getEntityData().getNonDefaultValues();
-                if (dataValues != null) {
-                    viewer.connection.send(new ClientboundSetEntityDataPacket(eid, dataValues));
-                }
-                viewer.connection.send(new ClientboundTeleportEntityPacket(e));
-                if (e.getDeltaMovement().lengthSqr() > 0.001) {
-                    viewer.connection.send(new ClientboundSetEntityMotionPacket(e));
-                }
-            } else {
-                currentNearby.add(eid);
-
-                viewer.connection.send(new ClientboundTeleportEntityPacket(e));
-                if (e.getDeltaMovement().lengthSqr() > 0.001) {
-                    viewer.connection.send(new ClientboundSetEntityMotionPacket(e));
-                }
-            }
-        }
-
-        Set<Integer> removed = new HashSet<>();
-        for (int eid : trackedCameraEntities) {
-            if (!currentNearby.contains(eid)) {
-                removed.add(eid);
-            }
-        }
-        if (!removed.isEmpty()) {
-            viewer.connection
-                    .send(new ClientboundRemoveEntitiesPacket(removed.stream().mapToInt(Integer::intValue).toArray()));
-        }
-
-        trackedCameraEntities.clear();
-        trackedCameraEntities.addAll(currentNearby);
+        trackedCameraEntities.tick(viewer, level, this, chunkRadius * 16.0,
+                e -> e != viewer && e.isAlive() && !(e instanceof net.minecraft.world.entity.Marker)
+                        && e.getType().clientTrackingRange() > 0,
+                this.tickCount % 3 == 0);
     }
 
     public void clearCameraTracking(String playerUUID) {
@@ -1351,8 +1330,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
                 ServerPlayer player = srvLevel.getServer().getPlayerList()
                         .getPlayer(UUID.fromString(playerUUID));
                 if (player != null) {
-                    int[] ids = trackedCameraEntities.stream().mapToInt(Integer::intValue).toArray();
-                    player.connection.send(new ClientboundRemoveEntitiesPacket(ids));
+                    trackedCameraEntities.removeAll(player);
                 }
             } catch (IllegalArgumentException ignored) {
             }
@@ -1419,6 +1397,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         tag.putFloat("MaxHealth", this.maxHealth);
         tag.putString("LinkedPlayer", this.getLinkedPlayerUUID());
         tag.putString("OwnerUUID", this.getOwnerUUIDString());
+        tag.putInt("AtaSkin", this.getSkin());
         tag.putInt("FlightTimer", this.entityData.get(FLIGHT_TIMER));
         tag.putInt("LauncherPosX", this.launcherPos.getX());
         tag.putInt("LauncherPosY", this.launcherPos.getY());
@@ -1445,6 +1424,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
+        this.setSkin(tag.getInt("AtaSkin"));
         this.discardOnLoad = tag.getBoolean("Crashing");
         if (tag.contains("LegitSpawn")) {
             this.isLegitSpawn = tag.getBoolean("LegitSpawn");
@@ -1587,6 +1567,14 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         if (!this.level().isClientSide) {
 
             activeOrlanRegistry.remove(this.getId());
+            if (reason == RemovalReason.UNLOADED_TO_CHUNK && this.flightPhase == FlightPhase.LANDED
+                    && !this.getOwnerUUIDString().isEmpty()) {
+                PARKED.put(this.getUUID(), new LandedDrone(this.getUUID(), this.getOwnerUUIDString(), this.getDroneNameKey(),
+                        com.synarsis.airtacticalarsenal.api.DroneVariants.kindOf(this), this.level().dimension(),
+                        (int) this.getX(), (int) this.getZ()));
+            } else {
+                PARKED.remove(this.getUUID());
+            }
 
             String linkedUUID = getLinkedPlayerUUID();
             if (!linkedUUID.isEmpty() && this.level() instanceof ServerLevel srvLevel) {
@@ -1609,7 +1597,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
                         OrlanCameraViewPacket.resyncPlayerEntities(linkedPlayer, srvLevel);
 
                         NetworkHandler.sendToPlayer(linkedPlayer,
-                                new com.synarsis.airtacticalarsenal.network.OrlanCameraForceExitPacket());
+                                new com.synarsis.airtacticalarsenal.network.OrlanCameraForceExitPacket(reason.shouldDestroy()));
                     }
                 } catch (IllegalArgumentException ignored) {
                 }

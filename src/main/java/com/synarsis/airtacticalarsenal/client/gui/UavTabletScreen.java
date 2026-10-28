@@ -65,6 +65,15 @@ public class UavTabletScreen extends AtaScaledScreen {
     private Button removeButton;
     private Button routeButton;
     private Button checkAllButton;
+    private Button strategicButton;
+    private Button gapButton;
+    private Button spreadButton;
+    private Button totButton;
+    private static final int[] SALVO_GAPS = {0, 1, 2, 3, 5, 10};
+    private static final int[] SALVO_SPREADS = {0, 10, 20, 30, 50};
+    private static int salvoGap = 2;
+    private static int salvoSpread;
+    private static boolean salvoTot;
     private final List<Button> launcherButtons = new ArrayList<>();
     private final List<Button> droneButtons = new ArrayList<>();
     private final List<Button> returnButtons = new ArrayList<>();
@@ -177,16 +186,131 @@ public class UavTabletScreen extends AtaScaledScreen {
                 .build();
         this.addWidget(this.launchButton);
 
-        this.launchAllButton = Button.builder(Component.translatable("gui.ata.tablet.launch_all"), button -> onLaunchAllClicked())
+        this.launchAllButton = Button.builder(Component.translatable("gui.ata.tablet.salvo"), button -> onLaunchAllClicked())
                 .bounds(rightX + btnW + 5, guiTop + 155, btnW, 20)
                 .build();
         this.addWidget(this.launchAllButton);
 
+        this.gapButton = Button.builder(Component.empty(), button -> {
+                    salvoGap = (salvoGap + 1) % SALVO_GAPS.length;
+                    updateSalvoLabels();
+                })
+                .bounds(rightX, guiTop + 180, 73, 20)
+                .build();
+        this.addWidget(this.gapButton);
+        this.spreadButton = Button.builder(Component.empty(), button -> {
+                    salvoSpread = (salvoSpread + 1) % SALVO_SPREADS.length;
+                    updateSalvoLabels();
+                })
+                .bounds(rightX + 76, guiTop + 180, 73, 20)
+                .build();
+        this.addWidget(this.spreadButton);
+        this.totButton = Button.builder(Component.empty(), button -> {
+                    salvoTot = !salvoTot;
+                    updateSalvoLabels();
+                })
+                .bounds(rightX + 152, guiTop + 180, 73, 20)
+                .build();
+        this.addWidget(this.totButton);
+        updateSalvoLabels();
+
+        this.strategicButton = Button.builder(Component.translatable("gui.ata.tablet.strategic"),
+                        button -> Minecraft.getInstance().setScreen(new StrategicMapScreen(this, launchers, flying)))
+                .bounds(guiLeft + GUI_WIDTH - 112, guiTop + 4, 104, 16)
+                .build();
+        this.addWidget(this.strategicButton);
+
         updateButtonStates();
     }
 
+    private void updateSalvoLabels() {
+        if (gapButton == null) {
+            return;
+        }
+        gapButton.setMessage(Component.translatable("gui.ata.tablet.salvo_gap", SALVO_GAPS[salvoGap]));
+        spreadButton.setMessage(Component.translatable("gui.ata.tablet.salvo_spread", SALVO_SPREADS[salvoSpread]));
+        totButton.setMessage(Component.translatable(salvoTot ? "gui.ata.tablet.salvo_tot_on" : "gui.ata.tablet.salvo_tot_off"));
+        gapButton.active = !salvoTot;
+    }
+
+    private int checkedRole() {
+        for (int idx : checked) {
+            if (idx >= 0 && idx < launchers.size()) {
+                return effectiveRole(idx);
+            }
+        }
+        return UavLauncherEntity.ROLE_NONE;
+    }
+
+    private int salvoRole() {
+        int role = checkedRole();
+        if (role != UavLauncherEntity.ROLE_NONE) {
+            return role;
+        }
+        if (selected >= 0 && selected < launchers.size()) {
+            return effectiveRole(selected);
+        }
+        for (int i = 0; i < launchers.size(); i++) {
+            if (hasDrone(i)) {
+                return effectiveRole(i);
+            }
+        }
+        return UavLauncherEntity.ROLE_STRIKE;
+    }
+
+    private List<Integer> salvoCandidates() {
+        int role = salvoRole();
+        List<Integer> result = new ArrayList<>();
+        List<Integer> pool = new ArrayList<>();
+        if (!checked.isEmpty()) {
+            pool.addAll(checked);
+            Collections.sort(pool);
+        } else {
+            for (int i = 0; i < launchers.size(); i++) {
+                pool.add(i);
+            }
+        }
+        List<Integer> usable = new ArrayList<>();
+        for (int idx : pool) {
+            if (idx < launchers.size() && effectiveRole(idx) == role && hasDrone(idx) && isPlayerInRange(idx)
+                    && !com.synarsis.airtacticalarsenal.api.DroneVariants.interceptor(launchers.get(idx).kind())) {
+                usable.add(idx);
+            }
+        }
+        int main = salvoMain(usable);
+        for (int idx : usable) {
+            if ((hasRoute(idx) || main >= 0)
+                    && result.size() < com.synarsis.airtacticalarsenal.salvo.SalvoScheduler.MAX_LAUNCHERS) {
+                result.add(idx);
+            }
+        }
+        return result;
+    }
+
+    private int salvoMain(List<Integer> usable) {
+        if (selected >= 0 && usable.contains(selected) && hasRoute(selected)) {
+            return selected;
+        }
+        for (int idx : usable) {
+            if (hasRoute(idx)) {
+                return idx;
+            }
+        }
+        return -1;
+    }
+
     private boolean allChecked() {
-        return !launchers.isEmpty() && checked.size() == launchers.size();
+        int role = salvoRole();
+        int count = 0;
+        for (int i = 0; i < launchers.size(); i++) {
+            if (effectiveRole(i) == role) {
+                count++;
+                if (!checked.contains(i)) {
+                    return false;
+                }
+            }
+        }
+        return count > 0;
     }
 
     private boolean hasDrone(int idx) {
@@ -235,10 +359,14 @@ public class UavTabletScreen extends AtaScaledScreen {
         for (int i = 0; i < visible; i++) {
             final int idx = i + scrollOffset;
             OpenUavTabletPacket.LauncherInfo info = launchers.get(idx);
-            String check = checked.contains(idx) ? "§a[✔]" : "§7[ ]";
+            boolean otherType = !checked.isEmpty() && effectiveRole(idx) != checkedRole();
+            String check = checked.contains(idx) ? "§a[✔]" : otherType ? "§8[–]" : "§7[ ]";
             String droneIcon;
             if (!hasDrone(idx)) {
                 droneIcon = "§8○";
+            } else if (info.role() == UavLauncherEntity.ROLE_STRIKE
+                    && com.synarsis.airtacticalarsenal.api.DroneVariants.interceptor(info.kind())) {
+                droneIcon = "§d●";
             } else if (info.role() == UavLauncherEntity.ROLE_STRIKE) {
                 droneIcon = "§c●";
             } else {
@@ -273,17 +401,19 @@ public class UavTabletScreen extends AtaScaledScreen {
             int y = guiTop + DRONES_TOP + i * 24;
             Button main = Button.builder(Component.literal(droneEntry(drone, idx)),
                             button -> connectCamera(drone))
-                    .bounds(guiLeft + 10, y, drone.recon() ? 340 : 410, 20)
+                    .bounds(guiLeft + 10, y, drone.recon() && drone.entityId() >= 0 ? 340 : canReroute(drone) ? 380 : 410, 20)
                     .build();
             main.active = drone.camera();
             droneButtons.add(main);
             this.addWidget(main);
-            if (drone.recon()) {
+            if (canReroute(drone)) {
                 Button routeBtn = Button.builder(Component.literal("§6→"), button -> updateDroneRoute(drone))
-                        .bounds(guiLeft + 355, y, 35, 20)
+                        .bounds(drone.recon() ? guiLeft + 355 : guiLeft + 395, y, 35, 20)
                         .build();
                 droneButtons.add(routeBtn);
                 this.addWidget(routeBtn);
+            }
+            if (drone.recon() && drone.entityId() >= 0) {
                 Button returnBtn = Button.builder(Component.empty(), button -> returnDrone(drone))
                         .bounds(guiLeft + 395, y, 35, 20)
                         .build();
@@ -350,6 +480,11 @@ public class UavTabletScreen extends AtaScaledScreen {
     private void onLauncherButtonClicked(int index) {
         if (Screen.hasShiftDown()) {
             if (!checked.remove(index)) {
+                int role = checkedRole();
+                if (role != UavLauncherEntity.ROLE_NONE && role != effectiveRole(index)) {
+                    checked.clear();
+                    statusMessage = Tr.s("gui.ata.tablet.salvo_one_type");
+                }
                 checked.add(index);
             }
         } else if (index >= 0 && index < launchers.size()) {
@@ -365,8 +500,12 @@ public class UavTabletScreen extends AtaScaledScreen {
         if (allChecked()) {
             checked.clear();
         } else {
+            int role = salvoRole();
+            checked.clear();
             for (int i = 0; i < launchers.size(); i++) {
-                checked.add(i);
+                if (effectiveRole(i) == role) {
+                    checked.add(i);
+                }
             }
         }
         rebuildLauncherButtons();
@@ -395,14 +534,10 @@ public class UavTabletScreen extends AtaScaledScreen {
         launchButton.active = hasSelection && ready(selected);
         removeButton.active = hasSelection;
         routeButton.active = hasSelection || !checked.isEmpty();
-        boolean anyReady = false;
-        for (int i = 0; i < launchers.size(); i++) {
-            if (ready(i)) {
-                anyReady = true;
-                break;
-            }
-        }
-        launchAllButton.active = anyReady;
+        List<Integer> salvo = salvoCandidates();
+        launchAllButton.active = !salvo.isEmpty();
+        launchAllButton.setMessage(Component.translatable(salvoRole() == UavLauncherEntity.ROLE_STRIKE
+                ? "gui.ata.tablet.salvo_strike" : "gui.ata.tablet.salvo_recon", salvo.size()));
         String tooFar = Tr.s("gui.ata.tablet.too_far", ClientRouteLimits.tabletRange());
         if (hasSelection && !inRange) {
             statusMessage = tooFar;
@@ -453,10 +588,20 @@ public class UavTabletScreen extends AtaScaledScreen {
             rebuildLauncherButtons();
             updateButtonStates();
         };
+        int limit = Integer.MAX_VALUE;
+        for (int idx : group) {
+            String kind = hasDrone(idx) ? launchers.get(idx).kind() : "";
+            limit = Math.min(limit, role == UavLauncherEntity.ROLE_STRIKE ? ClientRouteLimits.shahed(kind) : ClientRouteLimits.orlan(kind));
+        }
         if (role == UavLauncherEntity.ROLE_STRIKE) {
-            Minecraft.getInstance().setScreen(new ShahedRouteScreen(this, positions, yaws, drones, groupRoutes, onSave));
+            boolean interceptors = true;
+            for (int idx : group) {
+                interceptors &= hasDrone(idx) && com.synarsis.airtacticalarsenal.api.DroneVariants.interceptor(launchers.get(idx).kind());
+            }
+            Minecraft.getInstance().setScreen(new ShahedRouteScreen(this, positions, yaws, drones, groupRoutes, onSave)
+                    .withRouteMax(limit).asInterceptor(interceptors));
         } else {
-            Minecraft.getInstance().setScreen(new OrlanRouteScreen(this, positions, yaws, drones, groupRoutes, onSave));
+            Minecraft.getInstance().setScreen(new OrlanRouteScreen(this, positions, yaws, drones, groupRoutes, onSave).withRouteMax(limit));
         }
     }
 
@@ -481,14 +626,22 @@ public class UavTabletScreen extends AtaScaledScreen {
     }
 
     private void onLaunchAllClicked() {
-        int count = 0;
-        for (int i = 0; i < launchers.size(); i++) {
-            if (ready(i)) {
-                launch(i);
-                count++;
-            }
+        List<Integer> salvo = salvoCandidates();
+        if (salvo.isEmpty()) {
+            statusMessage = Tr.s("gui.ata.tablet.no_ready");
+            return;
         }
-        statusMessage = count == 0 ? Tr.s("gui.ata.tablet.no_ready") : Tr.s("gui.ata.tablet.launched_count", count);
+        boolean strike = effectiveRole(salvo.get(0)) == UavLauncherEntity.ROLE_STRIKE;
+        List<BlockPos> positions = new ArrayList<>();
+        for (int idx : salvo) {
+            positions.add(launchers.get(idx).pos());
+            launchedLocally.add(idx);
+        }
+        int main = salvoMain(salvo);
+        NetworkHandler.sendToServer(new com.synarsis.airtacticalarsenal.network.SalvoPacket(strike,
+                positions, SALVO_GAPS[salvoGap] * 20, SALVO_SPREADS[salvoSpread], salvoTot,
+                main >= 0 ? launchers.get(main).pos() : null));
+        statusMessage = Tr.s("gui.ata.tablet.launched_count", salvo.size());
         rebuildLauncherButtons();
         updateButtonStates();
     }
@@ -532,12 +685,28 @@ public class UavTabletScreen extends AtaScaledScreen {
         if (!drone.camera()) {
             return;
         }
+        NetworkHandler.sendToServer(new com.synarsis.airtacticalarsenal.network.CameraRenderDistancePacket(
+                Minecraft.getInstance().options.getEffectiveRenderDistance()));
         NetworkHandler.sendToServer(new OrlanCameraViewPacket(drone.entityId(), true));
         OrlanCameraHandler.startCameraView(drone.entityId());
         this.onClose();
     }
 
-    private void updateDroneRoute(OpenUavTabletPacket.FlyingInfo drone) {
+    static boolean canReroute(OpenUavTabletPacket.FlyingInfo drone) {
+        if (drone.entityId() < 0) {
+            return false;
+        }
+        if (drone.recon()) {
+            return true;
+        }
+        return drone.camera() && drone.phase() >= com.synarsis.airtacticalarsenal.entity.ShahedEntity.FlightPhase.CLIMBING.ordinal();
+    }
+
+    void updateDroneRoute(OpenUavTabletPacket.FlyingInfo drone) {
+        if (!drone.recon()) {
+            updateStrikeRoute(drone);
+            return;
+        }
         Entity entity = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getEntity(drone.entityId()) : null;
         BlockPos dronePos = entity != null ? entity.blockPosition() : new BlockPos(drone.x(), 64, drone.z());
         float yaw = entity != null ? entity.getYRot() : 0.0F;
@@ -555,7 +724,29 @@ public class UavTabletScreen extends AtaScaledScreen {
                 NetworkHandler.sendToServer(new UpdateOrlanRoutePacket(entityId, updated.get(0)));
                 statusMessage = Tr.s("gui.ata.recon_uav_tablet.route_updated");
             }
-        }, entityId));
+        }, entityId).withRouteMax(ClientRouteLimits.orlan(drone.kind())));
+    }
+
+    private void updateStrikeRoute(OpenUavTabletPacket.FlyingInfo drone) {
+        Entity entity = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getEntity(drone.entityId()) : null;
+        BlockPos dronePos = entity != null ? entity.blockPosition() : new BlockPos(drone.x(), 64, drone.z());
+        float yaw = entity != null ? entity.getYRot() : 0.0F;
+        List<BlockPos> positions = new ArrayList<>();
+        positions.add(dronePos);
+        List<Float> yaws = new ArrayList<>();
+        yaws.add(yaw);
+        List<Boolean> drones = new ArrayList<>();
+        drones.add(true);
+        List<List<BlockPos>> droneRoutes = new ArrayList<>();
+        droneRoutes.add(new ArrayList<>());
+        final int entityId = drone.entityId();
+        Minecraft.getInstance().setScreen(new ShahedRouteScreen(this, positions, yaws, drones, droneRoutes, updated -> {
+            if (!updated.isEmpty() && !updated.get(0).isEmpty()) {
+                NetworkHandler.sendToServer(new com.synarsis.airtacticalarsenal.network.UpdateStrikeRoutePacket(entityId, updated.get(0)));
+                statusMessage = Tr.s("gui.ata.recon_uav_tablet.route_updated");
+            }
+        }, entityId).withRouteMax(Math.max(1, drone.remainingTicks()))
+                .asInterceptor(com.synarsis.airtacticalarsenal.api.DroneVariants.interceptor(drone.kind())));
     }
 
     private void returnDrone(OpenUavTabletPacket.FlyingInfo drone) {
@@ -616,7 +807,9 @@ public class UavTabletScreen extends AtaScaledScreen {
                     + " §8[" + pos.getX() + ", " + pos.getY() + ", " + pos.getZ() + "]", rightX, y, 0x888888, false);
             y += 14;
             if (hasDrone(selected)) {
-                String role = Tr.s(info.role() == UavLauncherEntity.ROLE_STRIKE ? "gui.ata.uav_tablet.strike" : "gui.ata.uav_tablet.recon");
+                String role = Tr.s(info.role() != UavLauncherEntity.ROLE_STRIKE ? "gui.ata.uav_tablet.recon"
+                        : com.synarsis.airtacticalarsenal.api.DroneVariants.interceptor(info.kind())
+                        ? "gui.ata.uav_tablet.interceptor" : "gui.ata.uav_tablet.strike");
                 g.drawString(this.font, "§a● §f" + Tr.s(info.nameKey()) + " §7· " + role, rightX, y, 0xFFFFFF, false);
             } else {
                 g.drawString(this.font, Tr.s("gui.ata.tablet.no_drone"), rightX, y, 0xFFFFFF, false);
@@ -653,10 +846,14 @@ public class UavTabletScreen extends AtaScaledScreen {
             }
         }
 
+        strategicButton.render(g, mouseX, mouseY, partialTick);
         routeButton.render(g, mouseX, mouseY, partialTick);
         removeButton.render(g, mouseX, mouseY, partialTick);
         launchButton.render(g, mouseX, mouseY, partialTick);
         launchAllButton.render(g, mouseX, mouseY, partialTick);
+        gapButton.render(g, mouseX, mouseY, partialTick);
+        spreadButton.render(g, mouseX, mouseY, partialTick);
+        totButton.render(g, mouseX, mouseY, partialTick);
 
         g.fill(guiLeft + 5, guiTop + DIVIDER_Y, guiLeft + GUI_WIDTH - 5, guiTop + DIVIDER_Y + 2, BORDER_COLOR);
         g.drawString(this.font, Tr.s("gui.ata.uav_tablet.in_flight", flying.size()), guiLeft + 10, guiTop + DIVIDER_Y + 8, ACCENT_COLOR, false);

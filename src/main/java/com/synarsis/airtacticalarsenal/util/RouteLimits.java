@@ -41,6 +41,18 @@ public final class RouteLimits {
         return ShahedConfig.getOrlanMaxRouteDistance();
     }
 
+    public static int shahedMax(String kind) {
+        return scaled(shahedMax(), kind);
+    }
+
+    public static int orlanMax(String kind) {
+        return scaled(orlanMax(), kind);
+    }
+
+    public static int scaled(int base, String kind) {
+        return (int) Math.round(base * com.synarsis.airtacticalarsenal.api.DroneVariants.routeScale(kind));
+    }
+
     public static boolean check(ServerPlayer player, double length, int max) {
         if (length <= max) return true;
         player.displayClientMessage(Component.translatable("message.ata.route.too_long",

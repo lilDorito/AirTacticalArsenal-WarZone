@@ -52,6 +52,7 @@ public class ShahedConfig {
     public static final ForgeConfigSpec.DoubleValue SHAHED_CRATER_RADIUS;
     public static final ForgeConfigSpec.IntValue SHAHED_MAX_ROUTE_DISTANCE;
     public static final ForgeConfigSpec.IntValue TABLET_LAUNCHER_RANGE;
+    public static final ForgeConfigSpec.IntValue DRONE_CAMERA_CHUNK_RADIUS;
     public static final ForgeConfigSpec.IntValue ORLAN_MAX_ROUTE_DISTANCE;
     public static final ForgeConfigSpec.IntValue ORLAN_FLIGHT_TIME_MINUTES;
 
@@ -184,6 +185,7 @@ public class ShahedConfig {
     public static double getShahedCraterRadius() { return SHAHED_CRATER_RADIUS.get(); }
     public static int getShahedMaxRouteDistance() { return SHAHED_MAX_ROUTE_DISTANCE.get(); }
     public static int getTabletLauncherRange() { return TABLET_LAUNCHER_RANGE.get(); }
+    public static int getDroneCameraChunkRadius() { return DRONE_CAMERA_CHUNK_RADIUS.get(); }
     public static int getOrlanMaxRouteDistance() { return ORLAN_MAX_ROUTE_DISTANCE.get(); }
     public static int getOrlanFlightTimeMinutes() { return ORLAN_FLIGHT_TIME_MINUTES.get(); }
 
@@ -284,6 +286,10 @@ public class ShahedConfig {
                 "How close (in blocks) a player must be to a Strike or Recon UAV launcher to save a route",
                 "or launch from a tablet. Sent to players on join.")
                 .defineInRange("tabletLauncherRange", 100, 30, 250);
+        DRONE_CAMERA_CHUNK_RADIUS = BUILDER.comment(
+                "Minimum chunks around a drone sent to the player watching its camera (16 = 256 blocks). A player with a",
+                "higher render distance gets that many, up to 32. People, mobs and vehicles are synced within the same distance.")
+                .defineInRange("droneCameraChunkRadius", 16, 16, 32);
         BUILDER.pop();
 
         BUILDER.push("Orlan Settings");
@@ -340,7 +346,7 @@ public class ShahedConfig {
         ISKANDER_LAUNCH_TICKS = BUILDER.comment("Duration of vertical launch phase (ticks, 20 = 1 sec). Default 60 = 3 seconds").defineInRange("iskanderLaunchTicks", 60, 20, 300);
         ISKANDER_KVO_DEVIATION = BUILDER.comment("Circular Error Probable - target deviation in blocks").defineInRange("iskanderKvoDeviation", 3.0, 0.0, 50.0);
         ISKANDER_MIN_DISTANCE = BUILDER.comment("Minimum launch distance for Iskander in blocks").defineInRange("iskanderMinDistance", 1000, 100, 2000);
-        ISKANDER_MAX_RANGE = BUILDER.comment("Maximum launch distance for Iskander in blocks").defineInRange("iskanderMaxRange", 5000, 500, 10000);
+        ISKANDER_MAX_RANGE = BUILDER.comment("Maximum launch distance for Iskander in blocks").defineInRange("iskanderMaxRange", 5000, 500, 20000);
         ISKANDER_MAX_FLIGHT_HEIGHT = BUILDER.comment("Maximum flight height in blocks absolute Y coordinate (e.g. 600 means missile apex will not exceed Y=600)").defineInRange("iskanderMaxFlightHeight", 600, 100, 1500);
         ISKANDER_DIVE_ANGLE = BUILDER.comment("Terminal dive angle in degrees (70-85 recommended)").defineInRange("iskanderDiveAngle", 75.0, 45.0, 89.0);
         ISKANDER_CRATER_RADIUS = BUILDER.comment(

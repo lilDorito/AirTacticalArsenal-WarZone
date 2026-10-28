@@ -21,8 +21,11 @@ public class ModSounds {
     public static final RegistryObject<SoundEvent> EXPLOSION_5 = registerSoundEvent("explosion_5");
 
     public static final RegistryObject<SoundEvent> SIREN = registerSoundEvent("siren");
+    public static final RegistryObject<SoundEvent> ALL_CLEAR = registerSoundEvent("all_clear");
 
     public static final RegistryObject<SoundEvent> ORLAN_ENGINE = registerSoundEvent("orlan_engine");
+    public static final RegistryObject<SoundEvent> SHAHED_ENGINE_FAR = registerSoundEvent("shahed_engine_far");
+    public static final RegistryObject<SoundEvent> ORLAN_ENGINE_FAR = registerSoundEvent("orlan_engine_far");
 
     public static final RegistryObject<SoundEvent> ISKANDER_LAUNCH = registerSoundEvent("iskander_launch");
     public static final RegistryObject<SoundEvent> ISKANDER_PREPARING = registerSoundEvent("iskander_preparing");

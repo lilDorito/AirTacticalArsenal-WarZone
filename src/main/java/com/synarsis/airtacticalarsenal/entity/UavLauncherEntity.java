@@ -56,6 +56,9 @@ public abstract class UavLauncherEntity extends Entity implements GeoEntity {
             .defineId(UavLauncherEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> DATA_DRONE_ROLE = SynchedEntityData
             .defineId(UavLauncherEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_DRONE_SKIN = SynchedEntityData
+            .defineId(UavLauncherEntity.class, EntityDataSerializers.INT);
+    private static final String SKIN_TAG = "AtaSkin";
 
     private static final int LAUNCH_DELAY_TICKS = 100;
 
@@ -71,6 +74,8 @@ public abstract class UavLauncherEntity extends Entity implements GeoEntity {
     private List<BlockPos> savedRoute = null;
     private int launchTimer = 0;
     private Player launchingPlayer = null;
+    private boolean reconPending = false;
+    private List<BlockPos> reconWaypoints = null;
 
     public boolean isLegitSpawn = false;
 
@@ -93,6 +98,11 @@ public abstract class UavLauncherEntity extends Entity implements GeoEntity {
         this.entityData.define(DATA_ENGINE_SOUND, 0);
         this.entityData.define(DATA_DRONE_KIND, "");
         this.entityData.define(DATA_DRONE_ROLE, ROLE_NONE);
+        this.entityData.define(DATA_DRONE_SKIN, 0);
+    }
+
+    public int getDroneSkin() {
+        return this.entityData.get(DATA_DRONE_SKIN);
     }
 
     public String getDroneKind() {
@@ -125,6 +135,59 @@ public abstract class UavLauncherEntity extends Entity implements GeoEntity {
 
     public boolean servesRecon() {
         return !hasDrone() || getDroneRole() == ROLE_RECON;
+    }
+
+    private void burnBehind(float progress) {
+        if (progress < 0.25f || this.tickCount % 5 != 0) {
+            return;
+        }
+        Vec3 nozzle = railLaunchPos();
+        Vec3 back = Vec3.directionFromRotation(0, this.getYRot()).normalize().scale(-1.0);
+        double length = 2.0 + 3.0 * progress;
+        Vec3 end = nozzle.add(back.scale(length));
+        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(nozzle, end).inflate(1.5);
+        for (net.minecraft.world.entity.LivingEntity living : level().getEntitiesOfClass(
+                net.minecraft.world.entity.LivingEntity.class, box)) {
+            Vec3 c = living.getBoundingBox().getCenter();
+            Vec3 rel = c.subtract(nozzle);
+            double along = rel.dot(back);
+            if (along < 0.0 || along > length) {
+                continue;
+            }
+            double side = rel.subtract(back.scale(along)).length();
+            if (side > 1.0 + 0.4 * along / length) {
+                continue;
+            }
+            living.setSecondsOnFire(2);
+            living.hurt(level().damageSources().inFire(), 1.0f + 2.0f * progress);
+        }
+    }
+
+    public double plannedCruiseSpeed(ServerLevel serverLevel) {
+        try {
+            Vec3 pos = this.position();
+            BlockPos target = this.blockPosition();
+            if (hasStrikeDrone()) {
+                DroneVariants.StrikeFactory factory = DroneVariants.strike(getDroneKind());
+                ShahedEntity drone = factory != null
+                        ? factory.create(serverLevel, pos, target, "low", this.getYRot())
+                        : new ShahedEntity(serverLevel, pos, target, "low", this.getYRot());
+                double speed = drone.plannedCruiseSpeed();
+                drone.discard();
+                return speed;
+            }
+            if (hasReconDrone()) {
+                DroneVariants.ReconFactory factory = DroneVariants.recon(getDroneKind());
+                OrlanEntity drone = factory != null
+                        ? factory.create(serverLevel, pos, target, this.getYRot(), this.blockPosition(), getStoredDroneStack())
+                        : new OrlanEntity(serverLevel, pos, target, this.getYRot(), this.blockPosition());
+                double speed = drone.plannedCruiseSpeed();
+                drone.discard();
+                return speed;
+            }
+        } catch (RuntimeException ignored) {
+        }
+        return 1.5;
     }
 
     public boolean isLaunching() {
@@ -186,6 +249,7 @@ public abstract class UavLauncherEntity extends Entity implements GeoEntity {
         }
         setDroneKind(tag.getString("DroneKind"));
         storedVariant = tag.contains("DroneStack") ? tag.getCompound("DroneStack") : null;
+        this.entityData.set(DATA_DRONE_SKIN, tag.getInt("DroneSkin"));
         savedRoute = readRoute(tag);
     }
 
@@ -204,6 +268,7 @@ public abstract class UavLauncherEntity extends Entity implements GeoEntity {
         tag.putString("DiveMode", diveMode);
         tag.putString("ShahedColor", shahedColor);
         tag.putString("DroneKind", getDroneKind());
+        tag.putInt("DroneSkin", getDroneSkin());
         if (storedVariant != null) {
             tag.put("DroneStack", storedVariant.copy());
         }
@@ -259,10 +324,17 @@ public abstract class UavLauncherEntity extends Entity implements GeoEntity {
                     () -> () -> com.synarsis.airtacticalarsenal.client.sound.LauncherSpinUpSound.ensure(this));
         }
 
+        if (launchTimer > 0 && !level().isClientSide && DroneVariants.jetBlast(getDroneKind())) {
+            burnBehind(1.0f - launchTimer / (float) LAUNCH_DELAY_TICKS);
+        }
         if (launchTimer > 0 && !level().isClientSide) {
             launchTimer--;
             if (launchTimer == 0 && level() instanceof ServerLevel serverLevel) {
-                actuallyLaunchStrike(serverLevel);
+                if (reconPending) {
+                    actuallyLaunchRecon(serverLevel);
+                } else {
+                    actuallyLaunchStrike(serverLevel);
+                }
             }
         }
     }
@@ -355,6 +427,14 @@ public abstract class UavLauncherEntity extends Entity implements GeoEntity {
         storedDroneUuid = UUID.randomUUID();
         setDroneKind(variant ? DroneVariants.key(held.getItem()) : "");
         storedVariant = variant ? held.copyWithCount(1).save(new CompoundTag()) : null;
+        int skins = DroneVariants.skinCount(getDroneKind());
+        int skin = skins > 1 ? this.random.nextInt(skins) : 0;
+        if (storedVariant != null && skins > 1) {
+            CompoundTag stackTag = storedVariant.getCompound("tag");
+            stackTag.putInt(SKIN_TAG, skin);
+            storedVariant.put("tag", stackTag);
+        }
+        this.entityData.set(DATA_DRONE_SKIN, skin);
         this.shahedColor = "white";
         CompoundTag itemTag = held.getTag();
         if (role == ROLE_STRIKE && itemTag != null) {
@@ -382,6 +462,7 @@ public abstract class UavLauncherEntity extends Entity implements GeoEntity {
         this.diveMode = mode;
         this.launchingPlayer = player;
         this.launchTimer = LAUNCH_DELAY_TICKS;
+        keepTickingForLaunch();
         this.entityData.set(DATA_ENGINE_SOUND, this.random.nextInt(2));
         this.entityData.set(DATA_IS_LAUNCHING, true);
     }
@@ -397,6 +478,64 @@ public abstract class UavLauncherEntity extends Entity implements GeoEntity {
         this.routeWaypoints = waypoints != null ? new ArrayList<>(waypoints) : null;
         this.launchAltitude = altitude;
         startLaunchSequence(player, target, mode);
+    }
+
+    public void startReconLaunch(Player player, BlockPos target, List<BlockPos> waypoints) {
+        if (launchTimer > 0 || !hasReconDrone()) {
+            return;
+        }
+        this.targetPos = target;
+        this.reconWaypoints = waypoints != null ? new ArrayList<>(waypoints) : null;
+        this.reconPending = true;
+        this.launchingPlayer = player;
+        this.launchTimer = LAUNCH_DELAY_TICKS;
+        keepTickingForLaunch();
+        this.entityData.set(DATA_IS_LAUNCHING, true);
+    }
+
+    private static final net.minecraft.server.level.TicketType<net.minecraft.world.level.ChunkPos> LAUNCH_TICKET =
+            net.minecraft.server.level.TicketType.create("ata_launch",
+                    java.util.Comparator.comparingLong(net.minecraft.world.level.ChunkPos::toLong), LAUNCH_DELAY_TICKS + 60);
+
+    private void keepTickingForLaunch() {
+        if (this.level() instanceof ServerLevel serverLevel) {
+            net.minecraft.world.level.ChunkPos chunk = this.chunkPosition();
+            serverLevel.getChunkSource().addRegionTicket(LAUNCH_TICKET, chunk, 2, chunk);
+        }
+    }
+
+    private void actuallyLaunchRecon(ServerLevel serverLevel) {
+        this.reconPending = false;
+        if (targetPos == null || !hasReconDrone()) {
+            this.entityData.set(DATA_IS_LAUNCHING, false);
+            return;
+        }
+        float launcherYaw = this.getYRot();
+        Vec3 launchPos = railLaunchPos();
+        DroneVariants.ReconFactory factory = DroneVariants.recon(getDroneKind());
+        OrlanEntity orlan = factory != null
+                ? factory.create(serverLevel, launchPos, targetPos, launcherYaw, this.blockPosition(), getStoredDroneStack())
+                : new OrlanEntity(serverLevel, launchPos, targetPos, launcherYaw, this.blockPosition());
+        if (launchingPlayer != null) {
+            orlan.setOwner(launchingPlayer);
+            orlan.setOwnerUUID(launchingPlayer.getUUID().toString());
+        }
+        if (reconWaypoints != null && !reconWaypoints.isEmpty()) {
+            orlan.setWaypoints(reconWaypoints);
+        }
+        orlan.setSkin(getDroneSkin());
+        orlan.setRailPitch(railPitchDeg());
+        orlan.isLegitSpawn = true;
+        serverLevel.addFreshEntity(orlan);
+        if (launchingPlayer != null) {
+            launchingPlayer.displayClientMessage(Component.translatable("message.ata.orlan.launched", orlan.getDroneName(),
+                    targetPos.getX(), targetPos.getZ()), true);
+        }
+        clearStoredDrone();
+        targetPos = null;
+        launchingPlayer = null;
+        reconWaypoints = null;
+        this.entityData.set(DATA_IS_LAUNCHING, false);
     }
 
     private void actuallyLaunchStrike(ServerLevel serverLevel) {
@@ -417,6 +556,7 @@ public abstract class UavLauncherEntity extends Entity implements GeoEntity {
             drone.setOwner(launchingPlayer);
         }
         drone.setShahedColor(this.shahedColor);
+        drone.setSkin(getDroneSkin());
         drone.setEngineSound(getEngineSound());
         if (this.routeWaypoints != null && !this.routeWaypoints.isEmpty()) {
             drone.setWaypoints(this.routeWaypoints);
@@ -490,11 +630,13 @@ public abstract class UavLauncherEntity extends Entity implements GeoEntity {
         this.entityData.set(DATA_SHAHED_COLOR, "white");
         setDroneKind("");
         this.entityData.set(DATA_DRONE_ROLE, ROLE_NONE);
+        this.entityData.set(DATA_DRONE_SKIN, 0);
         this.entityData.set(DATA_HAS_DRONE, false);
     }
 
     private ItemStack droneStackForDrop() {
         ItemStack stack = getStoredDroneStack();
+        stack.removeTagKey(SKIN_TAG);
         if (getDroneRole() == ROLE_STRIKE) {
             CompoundTag tag = stack.getOrCreateTag();
             if (targetPos != null) {
@@ -543,6 +685,9 @@ public abstract class UavLauncherEntity extends Entity implements GeoEntity {
     @Override
     public void remove(RemovalReason reason) {
         dropStoredDroneAsItem();
+        if (!level().isClientSide && reason.shouldDestroy() && this.isLegitSpawn) {
+            com.synarsis.airtacticalarsenal.item.UavTabletItem.forgetLauncher(this);
+        }
         super.remove(reason);
     }
 

@@ -24,14 +24,25 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class DroneCameraLink {
-    private static final int CHUNK_RADIUS = OrlanCameraViewPacket.PATROLLING_CAMERA_CHUNK_RADIUS;
+    private static final java.util.Map<UUID, Integer> RENDER_DISTANCE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static void setRenderDistance(UUID player, int chunks) {
+        RENDER_DISTANCE.put(player, Math.max(2, Math.min(32, chunks)));
+    }
+
+    private int chunkRadius() {
+        int min = com.synarsis.airtacticalarsenal.config.ShahedConfig.getDroneCameraChunkRadius();
+        int wanted = viewer != null ? RENDER_DISTANCE.getOrDefault(viewer, min) : min;
+        return Math.max(min, Math.min(32, wanted));
+    }
 
     private final Entity drone;
     private UUID viewer;
     private Vec3 physicsPos;
     private float fallDistance;
     private ChunkPos lastSentChunk;
-    private final Set<Integer> tracked = new HashSet<>();
+    private final CameraEntityStream tracked = new CameraEntityStream();
+    private final EntityDataMirror selfData = new EntityDataMirror();
 
     public DroneCameraLink(Entity drone) {
         this.drone = drone;
@@ -66,20 +77,22 @@ public final class DroneCameraLink {
             player.connection.send(new ClientboundSetEntityDataPacket(drone.getId(), data));
         }
         player.connection.send(new ClientboundTeleportEntityPacket(drone));
+        selfData.mark(drone);
         lastSentChunk = drone.chunkPosition();
-        ChunkPos outside = new ChunkPos(lastSentChunk.x + 4 * CHUNK_RADIUS + 1, lastSentChunk.z + 4 * CHUNK_RADIUS + 1);
-        OrlanCameraViewPacket.sendDroneChunksDelta(outside, lastSentChunk, player, level, CHUNK_RADIUS);
+        ChunkPos outside = new ChunkPos(lastSentChunk.x + 4 * chunkRadius() + 1, lastSentChunk.z + 4 * chunkRadius() + 1);
+        OrlanCameraViewPacket.sendDroneChunksDelta(outside, lastSentChunk, player, level, chunkRadius());
     }
 
     public void disconnect(ServerPlayer player, boolean forceExit) {
+        disconnect(player, forceExit, false);
+    }
+
+    public void disconnect(ServerPlayer player, boolean forceExit, boolean lost) {
         if (!isLinkedTo(player.getUUID())) {
             return;
         }
         ServerLevel level = player.serverLevel();
-        if (!tracked.isEmpty()) {
-            player.connection.send(new ClientboundRemoveEntitiesPacket(tracked.stream().mapToInt(Integer::intValue).toArray()));
-            tracked.clear();
-        }
+        tracked.removeAll(player);
         CameraTrackingGuard.clearStrikeViewer(viewer, drone);
         viewer = null;
         player.setNoGravity(false);
@@ -94,7 +107,7 @@ public final class DroneCameraLink {
         OrlanCameraViewPacket.sendPlayerChunks(player, level);
         OrlanCameraViewPacket.resyncPlayerEntities(player, level);
         if (forceExit) {
-            NetworkHandler.sendToPlayer(player, new OrlanCameraForceExitPacket());
+            NetworkHandler.sendToPlayer(player, new OrlanCameraForceExitPacket(lost));
         }
     }
 
@@ -104,7 +117,7 @@ public final class DroneCameraLink {
         }
         ServerPlayer player = level.getServer().getPlayerList().getPlayer(viewer);
         if (player != null) {
-            disconnect(player, true);
+            disconnect(player, true, true);
         } else {
             CameraTrackingGuard.clearStrikeViewer(viewer, drone);
             viewer = null;
@@ -146,64 +159,22 @@ public final class DroneCameraLink {
                 RelativeMovement.ROTATION);
 
         player.connection.send(new ClientboundTeleportEntityPacket(drone));
+        com.synarsis.airtacticalarsenal.network.DroneStatePacket.send(player, drone);
+        selfData.sync(player, drone);
         if (drone.tickCount % 5 == 0) {
             player.connection.send(new ClientboundSetEntityMotionPacket(drone));
-            var data = drone.getEntityData().getNonDefaultValues();
-            if (data != null) {
-                player.connection.send(new ClientboundSetEntityDataPacket(drone.getId(), data));
-            }
         }
 
         ChunkPos chunk = drone.chunkPosition();
         if (lastSentChunk == null) {
             lastSentChunk = chunk;
         } else if (!chunk.equals(lastSentChunk)) {
-            OrlanCameraViewPacket.sendDroneChunksDelta(lastSentChunk, chunk, player, level, CHUNK_RADIUS);
+            OrlanCameraViewPacket.sendDroneChunksDelta(lastSentChunk, chunk, player, level, chunkRadius());
             lastSentChunk = chunk;
         }
 
-        if (drone.tickCount % 3 == 0) {
-            syncNearby(player, level);
-        }
-    }
-
-    private void syncNearby(ServerPlayer player, ServerLevel level) {
-        double radius = CHUNK_RADIUS * 16.0;
-        AABB box = new AABB(drone.getX() - radius, drone.getY() - 300, drone.getZ() - radius,
-                drone.getX() + radius, drone.getY() + 300, drone.getZ() + radius);
-        List<Entity> nearby = level.getEntities(drone, box,
-                e -> e != player && e.isAlive() && !(e instanceof Marker) && e.getType().clientTrackingRange() > 0);
-        Set<Integer> current = new HashSet<>();
-        for (Entity e : nearby) {
-            int id = e.getId();
-            if (!tracked.contains(id)) {
-                Packet<?> add;
-                try {
-                    add = e.getAddEntityPacket();
-                } catch (RuntimeException ex) {
-                    continue;
-                }
-                if (add == null) {
-                    continue;
-                }
-                player.connection.send(add);
-                var data = e.getEntityData().getNonDefaultValues();
-                if (data != null) {
-                    player.connection.send(new ClientboundSetEntityDataPacket(id, data));
-                }
-            }
-            current.add(id);
-            player.connection.send(new ClientboundTeleportEntityPacket(e));
-            if (e.getDeltaMovement().lengthSqr() > 0.001) {
-                player.connection.send(new ClientboundSetEntityMotionPacket(e));
-            }
-        }
-        Set<Integer> gone = new HashSet<>(tracked);
-        gone.removeAll(current);
-        if (!gone.isEmpty()) {
-            player.connection.send(new ClientboundRemoveEntitiesPacket(gone.stream().mapToInt(Integer::intValue).toArray()));
-        }
-        tracked.clear();
-        tracked.addAll(current);
+        tracked.tick(player, level, drone, chunkRadius() * 16.0,
+                e -> e != player && e.isAlive() && !(e instanceof Marker) && e.getType().clientTrackingRange() > 0,
+                drone.tickCount % 3 == 0);
     }
 }

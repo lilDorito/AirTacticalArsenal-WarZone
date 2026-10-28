@@ -90,7 +90,8 @@ public class OrlanRouteScreen extends AtaScaledScreen {
     private EditBox coordXField;
     private EditBox coordZField;
 
-    private final BlockPos mapCenter;
+    private BlockPos mapCenter;
+    private int mapBpp = -1;
     private String statusMessage = "";
     private int statusTicks = 0;
 
@@ -128,13 +129,7 @@ public class OrlanRouteScreen extends AtaScaledScreen {
         this.viewCenterX = firstPos.getX();
         this.viewCenterZ = firstPos.getZ();
 
-        if (RouteTerrainRenderer.hasCachedDataNear(firstPos.getX(), firstPos.getZ())) {
-            this.mapCenter = new BlockPos(
-                RouteTerrainRenderer.getCachedCenterXNear(firstPos.getX(), firstPos.getZ()), 0,
-                RouteTerrainRenderer.getCachedCenterZNear(firstPos.getX(), firstPos.getZ()));
-        } else {
-            this.mapCenter = firstPos;
-        }
+        this.mapCenter = firstPos;
 
         for (int i = 0; i < allRoutes.size(); i++) {
             autoPlaceFirstWaypoint(i);
@@ -152,6 +147,17 @@ public class OrlanRouteScreen extends AtaScaledScreen {
         int wx = lPos.getX() + (int)(-Math.sin(rad) * dist);
         int wz = lPos.getZ() + (int)(Math.cos(rad) * dist);
         allRoutes.get(routeIndex).add(new BlockPos(wx, DEFAULT_WAYPOINT_ALT, wz));
+    }
+
+    private int routeMax = -1;
+
+    public OrlanRouteScreen withRouteMax(int max) {
+        this.routeMax = max;
+        return this;
+    }
+
+    private int routeMax() {
+        return routeMax > 0 ? routeMax : com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan();
     }
 
     private List<BlockPos> currentRoute() {
@@ -179,9 +185,17 @@ public class OrlanRouteScreen extends AtaScaledScreen {
         clipMaxY = clipMinY + MAP_SIZE;
 
         if (terrainRenderer == null) {
-            terrainRenderer = new RouteTerrainRenderer(mapCenter.getX(), mapCenter.getZ());
+            BlockPos firstPos = launcherPositions.get(0);
+            mapBpp = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.routeBpp(
+                    (int) Math.ceil(routeMax() * 1.05), firstPos.getX(), firstPos.getZ());
+            if (RouteTerrainRenderer.hasCachedDataNear(firstPos.getX(), firstPos.getZ(), mapBpp)) {
+                mapCenter = new BlockPos(RouteTerrainRenderer.getCachedCenterXNear(firstPos.getX(), firstPos.getZ(), mapBpp), 0,
+                        RouteTerrainRenderer.getCachedCenterZNear(firstPos.getX(), firstPos.getZ(), mapBpp));
+            }
+            terrainRenderer = new RouteTerrainRenderer(mapCenter.getX(), mapCenter.getZ(), mapBpp);
+            scale = Math.min(scale, maxScale());
             if (!terrainRenderer.hasCacheData()) {
-                NetworkHandler.sendToServer(new RequestRouteMapPacket(launcherPositions.get(0)));
+                NetworkHandler.sendToServer(new RequestRouteMapPacket(launcherPositions.get(0), mapBpp));
             }
         }
 
@@ -294,9 +308,9 @@ public class OrlanRouteScreen extends AtaScaledScreen {
             }
             BlockPos newPoint = new BlockPos(wx, DEFAULT_WAYPOINT_ALT, wz);
             currentRoute().add(newPoint);
-            if (calculateTotalDistance() > com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan()) {
+            if (calculateTotalDistance() > routeMax()) {
                 currentRoute().remove(currentRoute().size() - 1);
-                setStatus(Tr.s("gui.ata.route.exceeds_max", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan()));
+                setStatus(Tr.s("gui.ata.route.exceeds_max", routeMax()));
                 return;
             }
             int wpIdx = currentRoute().size() - 1;
@@ -324,13 +338,13 @@ public class OrlanRouteScreen extends AtaScaledScreen {
     private int mapToWorldX(double screenX) {
         int guiLeft = (this.width - GUI_WIDTH) / 2;
         int mapCenterX = guiLeft + MAP_MARGIN + MAP_SIZE / 2;
-        return (int) ((screenX - mapCenterX) * scale + viewCenterX);
+        return (int) MapBorder.clampX((screenX - mapCenterX) * scale + viewCenterX);
     }
 
     private int mapToWorldZ(double screenZ) {
         int guiTop = (this.height - GUI_HEIGHT) / 2;
         int mapCenterZ = guiTop + MAP_MARGIN + 20 + MAP_SIZE / 2;
-        return (int) ((screenZ - mapCenterZ) * scale + viewCenterZ);
+        return (int) MapBorder.clampZ((screenZ - mapCenterZ) * scale + viewCenterZ);
     }
 
     private boolean isOnMap(double mouseX, double mouseY) {
@@ -387,9 +401,9 @@ public class OrlanRouteScreen extends AtaScaledScreen {
                     }
 
                     currentRoute().add(newPoint);
-                    if (calculateTotalDistance() > com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan()) {
+                    if (calculateTotalDistance() > routeMax()) {
                         currentRoute().remove(currentRoute().size() - 1);
-                        setStatus(Tr.s("gui.ata.route.exceeds_max", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan()));
+                        setStatus(Tr.s("gui.ata.route.exceeds_max", routeMax()));
                         return true;
                     }
                     int wpIdx = currentRoute().size() - 1;
@@ -436,6 +450,8 @@ public class OrlanRouteScreen extends AtaScaledScreen {
         if (button == 2 && isDragging) {
             viewCenterX -= dragX * scale;
             viewCenterZ -= dragY * scale;
+            viewCenterX = MapBorder.clampX(viewCenterX);
+            viewCenterZ = MapBorder.clampZ(viewCenterZ);
             return true;
         }
         return super.mouseDraggedScaled(mouseX, mouseY, button, dragX, dragY);
@@ -637,7 +653,7 @@ public class OrlanRouteScreen extends AtaScaledScreen {
             mapRequestTicks++;
             if (mapRequestTicks >= MAP_REQUEST_INTERVAL) {
                 mapRequestTicks = 0;
-                NetworkHandler.sendToServer(new RequestRouteMapPacket(launcherPositions.get(0)));
+                NetworkHandler.sendToServer(new RequestRouteMapPacket(launcherPositions.get(0), mapBpp));
             }
         }
     }
@@ -707,6 +723,8 @@ public class OrlanRouteScreen extends AtaScaledScreen {
     private void renderMap(GuiGraphics g, int mapX, int mapY) {
         g.fill(mapX, mapY, mapX + MAP_SIZE, mapY + MAP_SIZE, 0xFF0A0A0A);
         renderTerrainTexture(g, mapX, mapY);
+        MapBorder.shade(g, mapX, mapY, mapX + MAP_SIZE, mapY + MAP_SIZE,
+                mapX + MAP_SIZE / 2, mapY + MAP_SIZE / 2, viewCenterX, viewCenterZ, scale);
         renderLaunchZone(g, mapX, mapY);
 
         int cx = mapX + MAP_SIZE / 2;
@@ -963,7 +981,7 @@ public class OrlanRouteScreen extends AtaScaledScreen {
             double totalDist = calculateTotalDistance();
             g.drawString(this.font, Tr.s("gui.ata.route.total_dist", Math.round(totalDist)), x, y, 0xAAAAAA, false);
             y += 13;
-            g.drawString(this.font, Tr.s("gui.ata.route.max", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan()),
+            g.drawString(this.font, Tr.s("gui.ata.route.max", routeMax()),
                     x, y, 0x666666, false);
             y += 14;
 
@@ -1220,9 +1238,10 @@ public class OrlanRouteScreen extends AtaScaledScreen {
         return false;
     }
 
-    private static double maxScale() {
-        int radius = Math.max(com.synarsis.airtacticalarsenal.client.ClientRouteLimits.shahed(),
-                com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan());
-        return Math.max(80.0, radius * 1.1 / (MAP_SIZE / 2.0));
+    private double maxScale() {
+        BlockPos firstPos = launcherPositions.get(0);
+        double reach = Math.max(80.0 * (MAP_SIZE / 2.0), routeMax() * 1.1);
+        reach = Math.min(reach, com.synarsis.airtacticalarsenal.client.ClientRouteLimits.borderReach(firstPos.getX(), firstPos.getZ()) * 1.1);
+        return Math.max(MIN_SCALE, reach / (MAP_SIZE / 2.0));
     }
 }

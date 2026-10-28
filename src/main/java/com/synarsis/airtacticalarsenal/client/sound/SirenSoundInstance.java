@@ -18,12 +18,21 @@ public class SirenSoundInstance extends AbstractTickableSoundInstance {
     private static final Map<BlockPos, SirenSoundInstance> activeSounds = new HashMap<>();
     private static final double MAX_DISTANCE = 300.0;
 
+    private static final int ALL_CLEAR_TICKS = 110;
+
     private final BlockPos sirenPos;
     private final Vec3 sirenVec;
     private boolean forceStopped = false;
+    private final int maxTicks;
+    private int age;
 
     public SirenSoundInstance(BlockPos pos) {
-        super(ModSounds.SIREN.get(), SoundSource.BLOCKS, SoundInstance.createUnseededRandom());
+        this(pos, ModSounds.SIREN.get(), false, -1);
+    }
+
+    private SirenSoundInstance(BlockPos pos, net.minecraft.sounds.SoundEvent sound, boolean loop, int maxTicks) {
+        super(sound, SoundSource.BLOCKS, SoundInstance.createUnseededRandom());
+        this.maxTicks = maxTicks;
         this.sirenPos = pos;
         this.sirenVec = Vec3.atCenterOf(pos);
 
@@ -32,7 +41,7 @@ public class SirenSoundInstance extends AbstractTickableSoundInstance {
         this.y = pos.getY() + 0.5;
         this.z = pos.getZ() + 0.5;
 
-        this.looping = false;
+        this.looping = loop;
         this.delay = 0;
         this.pitch = 1.0f;
         this.attenuation = Attenuation.LINEAR;
@@ -73,6 +82,15 @@ public class SirenSoundInstance extends AbstractTickableSoundInstance {
         mc.getSoundManager().play(sound);
     }
 
+    public static void playAllClear(BlockPos pos) {
+        Minecraft mc = Minecraft.getInstance();
+        stopSiren(pos);
+        if (mc.player == null || mc.player.position().distanceTo(Vec3.atCenterOf(pos)) > MAX_DISTANCE) return;
+        SirenSoundInstance sound = new SirenSoundInstance(pos, ModSounds.ALL_CLEAR.get(), true, ALL_CLEAR_TICKS);
+        activeSounds.put(pos, sound);
+        mc.getSoundManager().play(sound);
+    }
+
     public static void stopSiren(BlockPos pos) {
         Minecraft mc = Minecraft.getInstance();
 
@@ -89,6 +107,12 @@ public class SirenSoundInstance extends AbstractTickableSoundInstance {
     public void tick() {
         if (this.forceStopped) return;
 
+        this.age++;
+        if (this.maxTicks > 0 && this.age >= this.maxTicks) {
+            this.forceStopped = true;
+            activeSounds.remove(this.sirenPos, this);
+            return;
+        }
         this.volume = calculateVolume();
 
         if (this.volume <= 0.001f) {

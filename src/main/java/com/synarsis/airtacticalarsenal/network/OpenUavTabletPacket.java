@@ -13,7 +13,7 @@ import java.util.function.Supplier;
 
 public class OpenUavTabletPacket {
 
-    public record LauncherInfo(BlockPos pos, float yaw, int role, String nameKey, boolean heavy, List<BlockPos> route) {
+    public record LauncherInfo(BlockPos pos, float yaw, int role, String nameKey, boolean heavy, List<BlockPos> route, String kind) {
         public boolean hasDrone() {
             return role != 0;
         }
@@ -24,7 +24,7 @@ public class OpenUavTabletPacket {
     }
 
     public record FlyingInfo(int entityId, boolean recon, String nameKey, int x, int z, int targetX, int targetZ,
-                             int phase, int remainingTicks, boolean camera) {
+                             int phase, int remainingTicks, boolean camera, String kind) {
     }
 
     private final List<LauncherInfo> launchers;
@@ -52,14 +52,15 @@ public class OpenUavTabletPacket {
             for (int j = 0; j < routeSize; j++) {
                 route.add(buf.readBlockPos());
             }
-            this.launchers.add(new LauncherInfo(pos, yaw, role, nameKey, heavy, route));
+            String kind = buf.readUtf(256);
+            this.launchers.add(new LauncherInfo(pos, yaw, role, nameKey, heavy, route, kind));
         }
         int flyingCount = buf.readVarInt();
         this.flying = new ArrayList<>(flyingCount);
         for (int i = 0; i < flyingCount; i++) {
             this.flying.add(new FlyingInfo(buf.readInt(), buf.readBoolean(), buf.readUtf(128),
                     buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt(),
-                    buf.readVarInt(), buf.readVarInt(), buf.readBoolean()));
+                    buf.readVarInt(), buf.readVarInt(), buf.readBoolean(), buf.readUtf(256)));
         }
     }
 
@@ -76,6 +77,7 @@ public class OpenUavTabletPacket {
             for (BlockPos wp : launcher.route()) {
                 buf.writeBlockPos(wp);
             }
+            buf.writeUtf(launcher.kind() == null ? "" : launcher.kind(), 256);
         }
         buf.writeVarInt(flying.size());
         for (FlyingInfo drone : flying) {
@@ -89,6 +91,7 @@ public class OpenUavTabletPacket {
             buf.writeVarInt(Math.max(0, drone.phase()));
             buf.writeVarInt(Math.max(0, drone.remainingTicks()));
             buf.writeBoolean(drone.camera());
+            buf.writeUtf(drone.kind() == null ? "" : drone.kind(), 256);
         }
     }
 

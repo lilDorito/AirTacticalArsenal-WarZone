@@ -24,7 +24,7 @@ Electronic Warfare WarZone adds the ZALA KUB-BLA and the Bayraktar TB2). They lo
 the same tablet with the same routes, camera, radar and crash physics, and are named by their own name in every
 message and screen.
 
-modId: `ata` (same as upstream) · version: `1.3.2-warzone`
+modId: `ata` (same as upstream) · version: `1.3.3-warzone`
 
 ## Contents
 
@@ -173,11 +173,22 @@ The full history is in [CHANGELOG.md](CHANGELOG.md). In short:
   light drones
 - **UAV Tablet**: links up to 10 launchers of either weight, plans routes and launches whatever is on them, and
   lists every drone you have in the air, with the camera, route change and return for those that have them
+- **Strategic Map** (button in the tablet): every drone you launched on one terrain map, with its icon, the line
+  to its target (or back to its launcher) and a drop-down to open its camera; landed recon drones stay listed
+- **Strike drone cameras**: click, or hold a button and move the mouse to draw a box: left to dive on a point or a
+  person or vehicle (the drone flies straight at the middle of the box and follows it), right to circle over it,
+  R to go back to the route; people, mobs and vehicles in view are marked with squares
+- **Salvos and new routes in flight**: one tablet launches up to 10 drones of one kind with a gap, a target spread
+  or time on target, and gives camera-equipped drones a new route in flight
+- **Maps and the world border**: route maps are as big as the range of the drones on the chosen launchers, and
+  no map reaches past the world border; outside it is shaded and a red line marks it
+- **Missile Targeting Map**: click the target on a terrain map with the missile's range rings
 - **Missile Launchpad** and **Missile Targeting Terminal**, linked with the **Missile Link Cable** (up to 60
   blocks): the terminal manages several launchpads, sets targets and shows countdown and status
 - **Air Defense Radar**: tactical map with zoom, pan, a sweeping beam and typed contacts; redstone alarm
 - **Vehicle radars**: on-board radar HUD for SBW and AshVehicles aircraft and AA vehicles
-- **Alert Siren**: redstone-driven alarm
+- **Alert Siren**: redstone-driven alarm, about 30 seconds each time it is switched on, and the all-clear signal
+  (twice) when it is switched off
 
 ### Other
 
@@ -198,7 +209,7 @@ The full history is in [CHANGELOG.md](CHANGELOG.md). In short:
 .\gradlew.bat build
 ```
 
-Output: `build\libs\air-tactical-arsenal-1.3.2-warzone.jar`. A dev client runs with `.\gradlew.bat runClient`
+Output: `build\libs\air-tactical-arsenal-1.3.3-warzone.jar`. A dev client runs with `.\gradlew.bat runClient`
 (also `runServer`, `runData`); `build.bat` is a small helper script.
 
 ## How to play
@@ -317,7 +328,8 @@ chunks loaded around players are painted in every `mapRefreshMinutes`.
   flight, radar range and altitude, `vehicleRadars`, route lengths, `tabletLauncherRange`, Orlan flight time,
   whitelist/blacklist zones
 - `config/ata-client.toml` (each player): vehicle radar panel shown or hidden, position (left centre by
-  default), size (`vehicleRadarPanelSize`, default 73) and heading-up for round scopes
+  default), size (`vehicleRadarPanelSize`, default 73) and heading-up for round scopes; `strikeAim` (`SELECT`
+  by default, `KEY` for hold R + X), `targetSquares`, `dopplerStrength` (default 1.0) and `soundTravelDelay`
 
 ## Project layout
 

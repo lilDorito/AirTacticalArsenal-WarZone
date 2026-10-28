@@ -7,7 +7,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public class NetworkHandler {
-    private static final String PROTOCOL_VERSION = "20";
+    private static final String PROTOCOL_VERSION = "33";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(com.synarsis.airtacticalarsenal.ShahedMod.MOD_ID, "main"),
             () -> PROTOCOL_VERSION,
@@ -281,6 +281,56 @@ public class NetworkHandler {
                 .encoder(VehicleRadarSyncPacket::encode)
                 .decoder(VehicleRadarSyncPacket::new)
                 .consumerMainThread(VehicleRadarSyncPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(StrikeAimPacket.class, id++)
+                .encoder(StrikeAimPacket::encode)
+                .decoder(StrikeAimPacket::new)
+                .consumerMainThread(StrikeAimPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(DroneSteerPacket.class, id++)
+                .encoder(DroneSteerPacket::encode)
+                .decoder(DroneSteerPacket::new)
+                .consumerMainThread(DroneSteerPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(CameraLookPacket.class, id++)
+                .encoder(CameraLookPacket::encode)
+                .decoder(CameraLookPacket::new)
+                .consumerMainThread(CameraLookPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(UpdateStrikeRoutePacket.class, id++)
+                .encoder(UpdateStrikeRoutePacket::encode)
+                .decoder(UpdateStrikeRoutePacket::new)
+                .consumerMainThread(UpdateStrikeRoutePacket::handle)
+                .add();
+        INSTANCE.messageBuilder(SalvoPacket.class, id++)
+                .encoder(SalvoPacket::encode)
+                .decoder(SalvoPacket::new)
+                .consumerMainThread(SalvoPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(CameraRenderDistancePacket.class, id++)
+                .encoder(CameraRenderDistancePacket::encode)
+                .decoder(CameraRenderDistancePacket::new)
+                .consumerMainThread(CameraRenderDistancePacket::handle)
+                .add();
+        INSTANCE.messageBuilder(ShahedCrashSoundPacket.class, id++)
+                .encoder(ShahedCrashSoundPacket::encode)
+                .decoder(ShahedCrashSoundPacket::new)
+                .consumerMainThread(ShahedCrashSoundPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(DroneChunkPacket.class, id++, net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(DroneChunkPacket::encode)
+                .decoder(DroneChunkPacket::new)
+                .consumerNetworkThread(DroneChunkPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(GroundLockPacket.class, id++, net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER)
+                .encoder(GroundLockPacket::encode)
+                .decoder(GroundLockPacket::new)
+                .consumerMainThread(GroundLockPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(DroneStatePacket.class, id++, net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(DroneStatePacket::encode)
+                .decoder(DroneStatePacket::new)
+                .consumerNetworkThread(DroneStatePacket::handle)
                 .add();
     }
 

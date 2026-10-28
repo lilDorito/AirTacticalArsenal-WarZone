@@ -17,7 +17,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class SirenBlock extends Block {
-    private static final int SIREN_LOOP_TICKS = 572;
     private static final Map<ResourceKey<Level>, Map<BlockPos, Long>> STARTED = new HashMap<>();
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
 
@@ -43,7 +42,7 @@ public class SirenBlock extends Block {
                 if (powered) {
                     start(server, pos);
                 } else {
-                    stop(server, pos);
+                    allClear(server, pos);
                 }
             }
         }
@@ -52,19 +51,19 @@ public class SirenBlock extends Block {
     @Override
     public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
         if (!state.getValue(POWERED)) return;
-        Long started = startedAt(level).get(pos);
-        long elapsed = started == null ? SIREN_LOOP_TICKS : level.getGameTime() - started;
-        if (elapsed >= SIREN_LOOP_TICKS - 1) {
+        if (!startedAt(level).containsKey(pos)) {
             start(level, pos);
-        } else {
-            level.scheduleTick(pos, this, (int) (SIREN_LOOP_TICKS - elapsed));
         }
     }
 
     private void start(ServerLevel level, BlockPos pos) {
         NetworkHandler.sendToDimension(level, new SirenSoundPacket(pos));
         startedAt(level).put(pos.immutable(), level.getGameTime());
-        level.scheduleTick(pos, this, SIREN_LOOP_TICKS);
+    }
+
+    private static void allClear(ServerLevel level, BlockPos pos) {
+        boolean sounded = startedAt(level).remove(pos) != null;
+        NetworkHandler.sendToDimension(level, new SirenSoundPacket(pos, sounded ? SirenSoundPacket.ALL_CLEAR : SirenSoundPacket.STOP));
     }
 
     private static void stop(ServerLevel level, BlockPos pos) {

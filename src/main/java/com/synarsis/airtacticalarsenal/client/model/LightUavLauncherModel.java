@@ -28,4 +28,17 @@ public class LightUavLauncherModel extends GeoModel<LightUavLauncherEntity> {
     public ResourceLocation getAnimationResource(LightUavLauncherEntity animatable) {
         return ANIMATION;
     }
+
+    @Override
+    public void setCustomAnimations(LightUavLauncherEntity launcher, long instanceId,
+                                    software.bernie.geckolib.core.animation.AnimationState<LightUavLauncherEntity> state) {
+        super.setCustomAnimations(launcher, instanceId, state);
+        software.bernie.geckolib.core.animatable.model.CoreGeoBone propeller = getAnimationProcessor().getBone("proppeler");
+        if (propeller != null) {
+            float partial = state == null ? 0.0f : state.getPartialTick();
+            propeller.setRotZ(com.synarsis.airtacticalarsenal.client.LauncherSpin.angle(launcher, partial, ORLAN_PROP_RAD_PER_TICK));
+        }
+    }
+
+    private static final float ORLAN_PROP_RAD_PER_TICK = (float) Math.toRadians(1260.0) / 20.0f;
 }

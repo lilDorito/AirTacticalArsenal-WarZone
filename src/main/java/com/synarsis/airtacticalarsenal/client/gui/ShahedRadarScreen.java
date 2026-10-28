@@ -259,6 +259,8 @@ public class ShahedRadarScreen extends Screen {
 
         renderFrame(g, cx, cy, half);
         if (!weakSignal) renderTerrainMap(g, cx, cy, half);
+        if (!weakSignal) MapBorder.shade(g, cx - half, cy - half, cx + half, cy + half, cx, cy,
+                radarPos.getX() + panWorldX, radarPos.getZ() + panWorldZ, getWorldRadius() / (double) half);
 
         g.enableScissor(cx - half, cy - half, cx + half, cy + half);
         renderCrosshair(g, cx, cy, half);
@@ -777,9 +779,11 @@ public class ShahedRadarScreen extends Screen {
         return com.synarsis.airtacticalarsenal.client.ClientRouteLimits.radarRange();
     }
 
-    private static int maxZoomIndex() {
-        int need = (int) (detectRadius() * 1.05);
-        for (int i = 3; i < ZOOM_LEVELS.length; i++) {
+    private int maxZoomIndex() {
+        int radius = detectRadius();
+        int reach = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.borderReach(radarPos.getX(), radarPos.getZ());
+        int need = (int) (Math.min(radius, reach) * 1.05);
+        for (int i = reach < radius ? 0 : 3; i < ZOOM_LEVELS.length; i++) {
             if (ZOOM_LEVELS[i] * 256 >= need) return i;
         }
         return ZOOM_LEVELS.length - 1;

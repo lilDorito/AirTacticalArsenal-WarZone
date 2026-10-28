@@ -94,7 +94,7 @@ public class StrikeRetargetPacket {
         ctx.get().setPacketHandled(true);
     }
 
-    private static BlockPos marchLoaded(ServerLevel level, ShahedEntity drone, Vec3 start, Vec3 dir) {
+    static BlockPos marchLoaded(ServerLevel level, ShahedEntity drone, Vec3 start, Vec3 dir) {
         if (dir.lengthSqr() < 1.0E-6 || start.distanceToSqr(drone.position()) > 400.0) {
             return null;
         }

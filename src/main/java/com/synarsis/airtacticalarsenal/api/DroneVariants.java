@@ -72,10 +72,69 @@ public final class DroneVariants {
     public static void registerWeight(Item item, EntityType<?> type, UavWeight weight) {
         ITEM_WEIGHTS.put(key(item), weight);
         ENTITY_WEIGHTS.put(type, weight);
+        ENTITY_KINDS.put(type, key(item));
         ResourceLocation typeId = ForgeRegistries.ENTITY_TYPES.getKey(type);
         if (typeId != null) {
             ENTITY_TYPES.put(key(item), typeId.toString());
         }
+    }
+
+    private static final Map<EntityType<?>, String> ENTITY_KINDS = new ConcurrentHashMap<>();
+    private static final java.util.Set<String> JET_BLAST = ConcurrentHashMap.newKeySet();
+
+    public static void registerJetBlast(Item item) {
+        JET_BLAST.add(key(item));
+    }
+
+    public static boolean jetBlast(String kind) {
+        return kind != null && JET_BLAST.contains(kind);
+    }
+
+    private static final java.util.Set<String> INTERCEPTORS = ConcurrentHashMap.newKeySet();
+
+    public static void registerInterceptor(Item item) {
+        INTERCEPTORS.add(key(item));
+    }
+
+    public static boolean interceptor(String kind) {
+        return kind != null && INTERCEPTORS.contains(kind);
+    }
+    private static final Map<String, java.util.function.DoubleSupplier> ROUTE_SCALES = new ConcurrentHashMap<>();
+    private static final Map<String, Integer> SKINS = new ConcurrentHashMap<>();
+
+    public static void registerRouteScale(Item item, java.util.function.DoubleSupplier scale) {
+        ROUTE_SCALES.put(key(item), scale);
+    }
+
+    public static double routeScale(String kind) {
+        java.util.function.DoubleSupplier scale = kind == null || kind.isEmpty() ? null : ROUTE_SCALES.get(kind);
+        if (scale == null) {
+            return 1.0;
+        }
+        double value = scale.getAsDouble();
+        return value > 0.0 ? value : 1.0;
+    }
+
+    public static Map<String, Double> routeScales() {
+        Map<String, Double> scales = new java.util.HashMap<>();
+        for (String kind : ROUTE_SCALES.keySet()) {
+            scales.put(kind, routeScale(kind));
+        }
+        return scales;
+    }
+
+    public static String kindOf(Entity drone) {
+        return drone == null ? "" : ENTITY_KINDS.getOrDefault(drone.getType(), "");
+    }
+
+    public static void registerSkins(Item item, int count) {
+        if (count > 1) {
+            SKINS.put(key(item), count);
+        }
+    }
+
+    public static int skinCount(String kind) {
+        return kind == null || kind.isEmpty() ? 1 : SKINS.getOrDefault(kind, 1);
     }
 
     private static final Map<String, net.minecraft.world.phys.Vec3> RAIL_MOUNTS = new ConcurrentHashMap<>();

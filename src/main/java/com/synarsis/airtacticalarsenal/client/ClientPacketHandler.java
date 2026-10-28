@@ -23,6 +23,8 @@ public class ClientPacketHandler {
         Minecraft mc = Minecraft.getInstance();
         if (mc.screen instanceof UavTabletScreen open) {
             open.update(launchers, flying);
+        } else if (mc.screen instanceof com.synarsis.airtacticalarsenal.client.gui.StrategicMapScreen map) {
+            map.update(launchers, flying);
         } else if (!refresh) {
             mc.setScreen(new UavTabletScreen(launchers, flying));
         }

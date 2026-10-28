@@ -13,4 +13,10 @@ public class ModParticles {
 
     public static final RegistryObject<SimpleParticleType> DEBRIS = 
         PARTICLES.register("debris", () -> new SimpleParticleType(false));
+
+    public static final RegistryObject<SimpleParticleType> JET_FLAME =
+        PARTICLES.register("jet_flame", () -> new SimpleParticleType(true));
+
+    public static final RegistryObject<SimpleParticleType> JET_FLAME_LARGE =
+        PARTICLES.register("jet_flame_large", () -> new SimpleParticleType(true));
 }

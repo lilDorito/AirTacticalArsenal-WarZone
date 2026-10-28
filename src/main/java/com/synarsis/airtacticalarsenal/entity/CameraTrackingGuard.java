@@ -46,7 +46,7 @@ public final class CameraTrackingGuard {
         STRIKE_VIEWERS.remove(viewer, drone);
     }
 
-    private static Entity viewedDrone(ServerPlayer player) {
+    public static Entity viewedDrone(ServerPlayer player) {
         Entity strike = STRIKE_VIEWERS.get(player.getUUID());
         if (strike != null && strike.isAlive()) {
             return strike;
@@ -123,6 +123,7 @@ public final class CameraTrackingGuard {
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
         STRIKE_VIEWERS.clear();
+        ShahedEntity.clearRegistry();
         synchronized (PENDING) {
             PENDING.clear();
         }

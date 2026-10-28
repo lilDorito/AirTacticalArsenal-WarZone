@@ -48,6 +48,7 @@ class ClientForgeEvents {
         OrlanCameraHandler.tickLockOn();
         OrlanCameraHandler.tickAltitude();
         OrlanCameraHandler.tickVision();
+        DroneChunkCache.tickCleanup();
         com.synarsis.airtacticalarsenal.client.radar.VehicleRadarClient.tick();
         while (AtaKeys.VEHICLE_RADAR.consumeClick()) {
             boolean show = !com.synarsis.airtacticalarsenal.config.AtaClientConfig.VEHICLE_RADAR_HUD.get();
@@ -72,6 +73,8 @@ class ClientForgeEvents {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
+        StrikeAimClient.beginCameraFrame(mc.player);
+        StrikeAimClient.applyRollTurn(mc.player, (float) event.getPartialTick());
         if (OrlanCameraHandler.updateTrackingAngles((float) event.getPartialTick())) {
 
             mc.player.setXRot(OrlanCameraHandler.getCameraPitch());
@@ -85,7 +88,8 @@ class ClientForgeEvents {
 
         event.setYaw(OrlanCameraHandler.getCameraYaw());
         event.setPitch(OrlanCameraHandler.getCameraPitch());
-        event.setRoll(0);
+        event.setRoll(OrlanCameraHandler.getCameraRoll((float) event.getPartialTick()));
+        StrikeAimClient.endCameraFrame(mc.player);
     }
 
     @SubscribeEvent
@@ -101,7 +105,7 @@ class ClientForgeEvents {
             OrlanCameraHandler.handleExitKey();
         }
 
-        if (event.getKey() == GLFW.GLFW_KEY_R) {
+        if (event.getKey() == GLFW.GLFW_KEY_R && StrikeAimClient.aimDrone() == null && StrikeAimClient.steeredDrone() == null) {
             OrlanCameraHandler.handleLockKey(event.getAction());
         }
 

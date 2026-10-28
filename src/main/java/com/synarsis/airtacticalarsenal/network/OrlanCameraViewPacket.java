@@ -1,5 +1,7 @@
 package com.synarsis.airtacticalarsenal.network;
 
+import com.synarsis.airtacticalarsenal.entity.CameraTrackingGuard;
+
 import com.synarsis.airtacticalarsenal.entity.OrlanEntity;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
@@ -148,22 +150,18 @@ public class OrlanCameraViewPacket {
     }
 
     public static void sendDroneChunks(OrlanEntity orlan, ServerPlayer player, ServerLevel level, int radius) {
-        cancelPendingReturn(player);
         ChunkPos droneChunk = orlan.chunkPosition();
-        player.connection.send(new ClientboundSetChunkCacheCenterPacket(droneChunk.x, droneChunk.z));
-
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                int cx = droneChunk.x + dx;
-                int cz = droneChunk.z + dz;
-
-                ChunkAccess ca = level.getChunk(cx, cz, ChunkStatus.FULL, true);
-                if (ca instanceof LevelChunk lc) {
-                    player.connection.send(new ClientboundLevelChunkWithLightPacket(
-                            lc, level.getLightEngine(), null, null));
-                }
-            }
+        ChunkPos outside = new ChunkPos(droneChunk.x + 4 * radius + 1, droneChunk.z + 4 * radius + 1);
+        DroneQueue queue = DRONE_QUEUE.get(player.getUUID());
+        if (queue != null) {
+            queue.pending.clear();
         }
+        sendDroneChunksDelta(outside, droneChunk, player, level, radius);
+    }
+
+    private static void sendDroneChunk(ServerPlayer player, DroneQueue queue, LevelChunk chunk, ServerLevel level) {
+        NetworkHandler.sendToPlayer(player, new DroneChunkPacket(queue.center.x, queue.center.z, queue.radius,
+                chunk == null ? null : new ClientboundLevelChunkWithLightPacket(chunk, level.getLightEngine(), null, null)));
     }
 
     public static void sendDroneChunksDelta(ChunkPos oldCenter, ChunkPos newCenter, ServerPlayer player, ServerLevel level) {
@@ -172,48 +170,146 @@ public class OrlanCameraViewPacket {
 
     public static void sendDroneChunksDelta(ChunkPos oldCenter, ChunkPos newCenter, ServerPlayer player, ServerLevel level, int r) {
         cancelPendingReturn(player);
-        player.connection.send(new ClientboundSetChunkCacheCenterPacket(newCenter.x, newCenter.z));
-
+        DroneQueue queue = DRONE_QUEUE.get(player.getUUID());
+        if (queue != null && queue.level != level) {
+            queue.releaseAll();
+            queue = null;
+        }
+        if (queue == null) {
+            queue = new DroneQueue(level);
+            DRONE_QUEUE.put(player.getUUID(), queue);
+        }
+        queue.center = newCenter;
+        queue.radius = r;
+        sendDroneChunk(player, queue, null, level);
+        DroneQueue q = queue;
+        queue.pending.removeIf(key -> !q.inRange(key));
+        queue.requested.removeIf(key -> {
+            if (q.inRange(key)) {
+                return false;
+            }
+            q.release(key);
+            return true;
+        });
         for (int dx = -r; dx <= r; dx++) {
             for (int dz = -r; dz <= r; dz++) {
                 int cx = newCenter.x + dx;
                 int cz = newCenter.z + dz;
-
                 if (Math.abs(cx - oldCenter.x) <= r && Math.abs(cz - oldCenter.z) <= r) {
                     continue;
                 }
-                ChunkAccess ca = level.getChunk(cx, cz, ChunkStatus.FULL, true);
-                if (ca instanceof LevelChunk lc) {
-                    player.connection.send(new ClientboundLevelChunkWithLightPacket(
-                            lc, level.getLightEngine(), null, null));
+                queue.pending.add(ChunkPos.asLong(cx, cz));
+            }
+        }
+    }
+
+    private static final int DRONE_CHUNKS_PER_TICK = 8;
+    private static final int DRONE_REQUESTS_PER_TICK = 16;
+    private static final int DRONE_REQUESTS_OUTSTANDING = 48;
+    private static final net.minecraft.server.level.TicketType<ChunkPos> CAMERA_TICKET =
+            net.minecraft.server.level.TicketType.create("ata_drone_camera", java.util.Comparator.comparingLong(ChunkPos::toLong), 100);
+    private static final java.util.Map<java.util.UUID, DroneQueue> DRONE_QUEUE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static final class DroneQueue {
+        final ServerLevel level;
+        final java.util.Set<Long> pending = new java.util.HashSet<>();
+        final java.util.Set<Long> requested = new java.util.HashSet<>();
+        ChunkPos center;
+        int radius;
+
+        DroneQueue(ServerLevel level) {
+            this.level = level;
+        }
+
+        boolean inRange(long key) {
+            return Math.abs(ChunkPos.getX(key) - center.x) <= radius && Math.abs(ChunkPos.getZ(key) - center.z) <= radius;
+        }
+
+        void request(long key) {
+            ChunkPos pos = new ChunkPos(key);
+            level.getChunkSource().addRegionTicket(CAMERA_TICKET, pos, 0, pos);
+        }
+
+        void release(long key) {
+            ChunkPos pos = new ChunkPos(key);
+            level.getChunkSource().removeRegionTicket(CAMERA_TICKET, pos, 0, pos);
+        }
+
+        void releaseAll() {
+            for (long key : requested) {
+                release(key);
+            }
+            requested.clear();
+            pending.clear();
+        }
+    }
+
+    public static void clearDroneQueue(ServerPlayer player) {
+        DroneQueue queue = DRONE_QUEUE.remove(player.getUUID());
+        if (queue != null) {
+            queue.releaseAll();
+        }
+    }
+
+    private static void tickDroneQueues(net.minecraft.server.MinecraftServer server) {
+        if (DRONE_QUEUE.isEmpty()) return;
+        java.util.Iterator<java.util.Map.Entry<java.util.UUID, DroneQueue>> it = DRONE_QUEUE.entrySet().iterator();
+        while (it.hasNext()) {
+            var entry = it.next();
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+            DroneQueue queue = entry.getValue();
+            if (player == null || queue.center == null || player.serverLevel() != queue.level) {
+                queue.releaseAll();
+                it.remove();
+                continue;
+            }
+            if (server.getTickCount() % 40 == 0) {
+                for (long key : queue.requested) {
+                    queue.request(key);
+                }
+            }
+            if (queue.pending.isEmpty()) {
+                continue;
+            }
+            ServerLevel level = queue.level;
+            ChunkPos center = queue.center;
+            java.util.List<Long> order = new java.util.ArrayList<>(queue.pending);
+            order.sort(java.util.Comparator.comparingInt(key ->
+                    Math.max(Math.abs(ChunkPos.getX(key) - center.x), Math.abs(ChunkPos.getZ(key) - center.z))));
+            int sent = 0;
+            int requests = 0;
+            for (long key : order) {
+                if (sent >= DRONE_CHUNKS_PER_TICK && requests >= DRONE_REQUESTS_PER_TICK) {
+                    break;
+                }
+                LevelChunk loaded = level.getChunkSource().getChunkNow(ChunkPos.getX(key), ChunkPos.getZ(key));
+                if (loaded != null) {
+                    if (sent < DRONE_CHUNKS_PER_TICK) {
+                        sendDroneChunk(player, queue, loaded, level);
+                        queue.pending.remove(key);
+                        if (queue.requested.remove(key)) {
+                            queue.release(key);
+                        }
+                        sent++;
+                    }
+                    continue;
+                }
+                if (!queue.requested.contains(key) && requests < DRONE_REQUESTS_PER_TICK
+                        && queue.requested.size() < DRONE_REQUESTS_OUTSTANDING) {
+                    queue.requested.add(key);
+                    queue.request(key);
+                    requests++;
                 }
             }
         }
     }
 
     public static void sendPlayerChunks(ServerPlayer player, ServerLevel level) {
+        clearDroneQueue(player);
+        cancelPendingReturn(player);
+        NetworkHandler.sendToPlayer(player, new DroneChunkPacket(0, 0, -1, null));
         ChunkPos pc = player.chunkPosition();
-
         player.connection.send(new ClientboundSetChunkCacheCenterPacket(pc.x, pc.z));
-
-        int viewDist = level.getServer().getPlayerList().getViewDistance();
-        java.util.List<ChunkPos> later = new java.util.ArrayList<>();
-        for (int dx = -viewDist; dx <= viewDist; dx++) {
-            for (int dz = -viewDist; dz <= viewDist; dz++) {
-                if (Math.max(Math.abs(dx), Math.abs(dz)) <= IMMEDIATE_RETURN_RADIUS) {
-                    ChunkAccess ca = level.getChunk(pc.x + dx, pc.z + dz, ChunkStatus.FULL, false);
-                    if (ca instanceof LevelChunk lc) {
-                        player.connection.send(new ClientboundLevelChunkWithLightPacket(
-                                lc, level.getLightEngine(), null, null));
-                    }
-                } else {
-                    later.add(new ChunkPos(pc.x + dx, pc.z + dz));
-                }
-            }
-        }
-        later.sort(java.util.Comparator.comparingInt(c -> Math.max(Math.abs(c.x - pc.x), Math.abs(c.z - pc.z))));
-        PENDING_RETURN.put(player.getUUID(), new java.util.ArrayDeque<>(later));
-
         player.connection.teleport(player.getX(), player.getY(), player.getZ(),
                 player.getYRot(), player.getXRot());
     }
@@ -232,6 +328,7 @@ public class OrlanCameraViewPacket {
     }
 
     public static void tickPendingReturns(net.minecraft.server.MinecraftServer server) {
+        tickDroneQueues(server);
         if (PENDING_RETURN.isEmpty()) return;
         java.util.Iterator<java.util.Map.Entry<java.util.UUID, java.util.ArrayDeque<ChunkPos>>> it = PENDING_RETURN.entrySet().iterator();
         while (it.hasNext()) {

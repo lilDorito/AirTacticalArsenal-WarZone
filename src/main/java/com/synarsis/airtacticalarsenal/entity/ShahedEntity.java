@@ -49,6 +49,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import net.minecraft.nbt.ListTag;
 
 public class ShahedEntity extends Projectile implements GeoEntity {
@@ -85,6 +86,13 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
     private static final EntityDataAccessor<Boolean> ATTACK_COMMANDED = SynchedEntityData.defineId(ShahedEntity.class,
             EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> COMMAND = SynchedEntityData.defineId(ShahedEntity.class,
+            EntityDataSerializers.INT);
+    public static final int COMMAND_ROUTE = 0;
+    public static final int COMMAND_ATTACK = 1;
+    public static final int COMMAND_ORBIT = 2;
+    public static final int COMMAND_HEADING = 3;
+    private static final double HEADING_DISTANCE = 600.0;
     private static final EntityDataAccessor<Boolean> LOITERING = SynchedEntityData.defineId(ShahedEntity.class,
             EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> LOITER_LEFT = SynchedEntityData.defineId(ShahedEntity.class,
@@ -124,6 +132,45 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> SYNC_ROLL = SynchedEntityData.defineId(ShahedEntity.class,
             EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Integer> SKIN = SynchedEntityData.defineId(ShahedEntity.class,
+            EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> STEERING = SynchedEntityData.defineId(ShahedEntity.class,
+            EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Float> STEER_ROLL = SynchedEntityData.defineId(ShahedEntity.class,
+            EntityDataSerializers.FLOAT);
+
+    private static final Map<Integer, ShahedEntity> ACTIVE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final int STEER_TIMEOUT_TICKS = 10;
+    private static final double STEER_PITCH_UP = -60.0;
+    private static final double STEER_PITCH_DOWN = 85.0;
+    private static final double AIM_HIT_RADIUS = 2.5;
+    private static final int AIM_MAX_LEAD_TICKS = 40;
+
+    public static List<ShahedEntity> activeByOwner(Level level, java.util.UUID owner) {
+        List<ShahedEntity> result = new ArrayList<>();
+        for (ShahedEntity drone : ACTIVE.values()) {
+            if (drone.isRemoved() || !drone.isAlive() || drone.level() != level) {
+                continue;
+            }
+            Entity droneOwner = drone.getOwner();
+            if (droneOwner != null && droneOwner.getUUID().equals(owner)) {
+                result.add(drone);
+            }
+        }
+        return result;
+    }
+
+    public static void clearRegistry() {
+        ACTIVE.clear();
+    }
+
+    private Entity aimEntity;
+    private Vec3 aimPoint;
+    private BlockPos routeTarget;
+    private int resumeWaypointIndex = -1;
+    private int steerTicks;
+    private float steerYaw;
+    private float steerPitch;
 
     private final CrashDynamics crash = new CrashDynamics();
     private final com.synarsis.airtacticalarsenal.entity.crash.Durability durability =
@@ -211,13 +258,15 @@ public class ShahedEntity extends Projectile implements GeoEntity {
     }
 
     public int loiterTicksLeft() {
-        return this.level().isClientSide ? this.entityData.get(LOITER_LEFT) : Math.max(0, LOITER_MAX_TICKS - this.loiterTicks);
+        return this.level().isClientSide ? this.entityData.get(LOITER_LEFT) : Math.max(0, loiterTicksMax() - this.loiterTicks);
     }
 
     public AttackResult commandAttack(BlockPos target) {
         if (this.level().isClientSide || this.exploding || this.isRemoved() || isCrashing()) {
             return AttackResult.UNAVAILABLE;
         }
+        this.aimEntity = null;
+        this.aimPoint = null;
         if (this.flightPhase == FlightPhase.DIVING) {
             Vec3 heading = new Vec3(this.lastDirection.x, 0, this.lastDirection.z);
             Vec3 toTarget = new Vec3(target.getX() + 0.5 - this.getX(), 0, target.getZ() + 0.5 - this.getZ());
@@ -226,11 +275,420 @@ public class ShahedEntity extends Projectile implements GeoEntity {
                 return AttackResult.TOO_LATE;
             }
         }
+        rememberRoute();
         this.entityData.set(TARGET_POS, target);
         this.currentWaypointIndex = this.waypoints.size();
         this.entityData.set(ATTACK_COMMANDED, true);
+        this.entityData.set(COMMAND, COMMAND_ATTACK);
         this.entityData.set(LOITERING, false);
         return AttackResult.OK;
+    }
+
+    private double flownDistance;
+
+    public double plannedCruiseSpeed() {
+        return cruiseSpeed();
+    }
+
+    public double flownDistance() {
+        return this.flownDistance;
+    }
+
+    public int remainingRoute() {
+        return (int) Math.max(0.0, com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax(
+                com.synarsis.airtacticalarsenal.api.DroneVariants.kindOf(this)) - this.flownDistance);
+    }
+
+    public boolean canReroute() {
+        return !this.level().isClientSide && !this.exploding && !this.isRemoved() && !isCrashing()
+                && this.flightPhase != FlightPhase.WARMUP && this.flightPhase != FlightPhase.LAUNCHING;
+    }
+
+    public void updateRouteInFlight(List<BlockPos> points) {
+        if (points.isEmpty()) {
+            return;
+        }
+        this.aimEntity = null;
+        this.aimPoint = null;
+        this.routeTarget = null;
+        this.resumeWaypointIndex = -1;
+        this.entityData.set(TARGET_POS, points.get(points.size() - 1));
+        setWaypoints(new ArrayList<>(points.subList(0, points.size() - 1)));
+        this.entityData.set(ATTACK_COMMANDED, false);
+        this.entityData.set(COMMAND, COMMAND_ROUTE);
+        this.entityData.set(LOITERING, false);
+        this.loiterTicks = 0;
+        if (this.flightPhase == FlightPhase.DIVING) {
+            transitionToPhase(FlightPhase.CRUISING);
+            this.isDiving = false;
+            this.diveProgress = 0.0f;
+            this.entityData.set(IS_DIVING, false);
+        }
+    }
+
+    private void rememberRoute() {
+        if (this.routeTarget == null) {
+            this.routeTarget = this.entityData.get(TARGET_POS);
+        }
+        if (this.resumeWaypointIndex < 0) {
+            this.resumeWaypointIndex = Math.min(this.currentWaypointIndex, this.waypoints.size());
+        }
+    }
+
+    public AttackResult commandStrike(Vec3 point, Entity target) {
+        AttackResult result = commandAttack(BlockPos.containing(point));
+        if (result == AttackResult.OK) {
+            this.aimPoint = point;
+            this.aimEntity = target;
+            if (this.flightPhase == FlightPhase.CLIMBING || this.flightPhase == FlightPhase.CRUISING) {
+                transitionToPhase(FlightPhase.DIVING);
+            }
+        }
+        return result;
+    }
+
+    public AttackResult commandResume() {
+        if (this.level().isClientSide || this.exploding || this.isRemoved() || isCrashing()) {
+            return AttackResult.UNAVAILABLE;
+        }
+        if (this.routeTarget == null) {
+            return AttackResult.UNAVAILABLE;
+        }
+        this.aimEntity = null;
+        this.aimPoint = null;
+        this.entityData.set(TARGET_POS, this.routeTarget);
+        this.currentWaypointIndex = Math.max(0, Math.min(this.resumeWaypointIndex, this.waypoints.size()));
+        this.routeTarget = null;
+        this.resumeWaypointIndex = -1;
+        this.entityData.set(ATTACK_COMMANDED, false);
+        this.entityData.set(COMMAND, COMMAND_ROUTE);
+        this.entityData.set(LOITERING, false);
+        if (this.flightPhase == FlightPhase.DIVING) {
+            transitionToPhase(FlightPhase.CRUISING);
+            this.isDiving = false;
+            this.diveProgress = 0.0f;
+            this.entityData.set(IS_DIVING, false);
+        }
+        return AttackResult.OK;
+    }
+
+    public int getCommand() {
+        return this.entityData.get(COMMAND);
+    }
+
+    public AttackResult commandHeading(Vec3 direction, boolean orbit) {
+        if (this.level().isClientSide || this.exploding || this.isRemoved() || isCrashing()) {
+            return AttackResult.UNAVAILABLE;
+        }
+        Vec3 flat = new Vec3(direction.x, 0, direction.z);
+        if (flat.lengthSqr() < 1.0E-4) {
+            flat = new Vec3(this.lastDirection.x, 0, this.lastDirection.z);
+        }
+        if (flat.lengthSqr() < 1.0E-4) {
+            return AttackResult.UNAVAILABLE;
+        }
+        flat = flat.normalize();
+        double distance = Math.min(HEADING_DISTANCE, Math.max(200.0, remainingRoute()));
+        rememberRoute();
+        this.aimEntity = null;
+        this.aimPoint = null;
+        this.entityData.set(TARGET_POS, BlockPos.containing(this.getX() + flat.x * distance, this.getY(),
+                this.getZ() + flat.z * distance));
+        this.currentWaypointIndex = this.waypoints.size();
+        this.entityData.set(ATTACK_COMMANDED, false);
+        this.entityData.set(COMMAND, orbit ? COMMAND_ORBIT : COMMAND_HEADING);
+        this.entityData.set(LOITERING, false);
+        this.entityData.set(LOITER_LEFT, loiterTicksMax());
+        this.loiterTicks = 0;
+        if (this.flightPhase == FlightPhase.DIVING) {
+            transitionToPhase(FlightPhase.CRUISING);
+            this.isDiving = false;
+            this.diveProgress = 0.0f;
+            this.entityData.set(IS_DIVING, false);
+        }
+        return AttackResult.OK;
+    }
+
+    public AttackResult commandOrbit(Vec3 point, Entity target) {
+        if (this.level().isClientSide || this.exploding || this.isRemoved() || isCrashing() || !this.hasCamera()) {
+            return AttackResult.UNAVAILABLE;
+        }
+        rememberRoute();
+        this.aimPoint = point;
+        this.aimEntity = target;
+        this.entityData.set(TARGET_POS, BlockPos.containing(point));
+        this.currentWaypointIndex = this.waypoints.size();
+        this.entityData.set(ATTACK_COMMANDED, false);
+        this.entityData.set(COMMAND, COMMAND_ORBIT);
+        this.entityData.set(LOITERING, false);
+        this.entityData.set(LOITER_LEFT, loiterTicksMax());
+        this.loiterTicks = 0;
+        if (this.flightPhase == FlightPhase.DIVING) {
+            transitionToPhase(FlightPhase.CRUISING);
+            this.isDiving = false;
+            this.diveProgress = 0.0f;
+            this.entityData.set(IS_DIVING, false);
+        }
+        return AttackResult.OK;
+    }
+
+    public Entity getAimEntity() {
+        return this.aimEntity;
+    }
+
+    private void tickAim() {
+        if (this.aimEntity == null) {
+            return;
+        }
+        if (this.aimEntity.isRemoved() || !this.aimEntity.isAlive() || this.aimEntity.level() != this.level()) {
+            this.aimEntity = null;
+            return;
+        }
+        this.aimPoint = this.aimEntity.getBoundingBox().getCenter();
+        BlockPos pos = BlockPos.containing(this.aimPoint);
+        if (!pos.equals(this.entityData.get(TARGET_POS))) {
+            this.entityData.set(TARGET_POS, pos);
+        }
+    }
+
+    private Vec3 attackPoint(BlockPos target) {
+        if (this.aimPoint == null) {
+            return Vec3.atCenterOf(target).add(0, 0.5, 0);
+        }
+        if (this.aimEntity == null) {
+            return this.aimPoint;
+        }
+        double distance = this.position().distanceTo(this.aimPoint);
+        double ticks = Math.min(AIM_MAX_LEAD_TICKS, distance / Math.max(0.5, this.currentSpeed));
+        return this.aimPoint.add(this.aimEntity.getDeltaMovement().scale(ticks));
+    }
+
+    private boolean aimReached(BlockPos target) {
+        if (this.aimEntity != null && this.getBoundingBox().inflate(1.0).intersects(this.aimEntity.getBoundingBox())) {
+            return true;
+        }
+        Vec3 point = this.aimPoint != null ? this.aimPoint : Vec3.atCenterOf(target).add(0, 0.5, 0);
+        return this.position().distanceTo(point) <= AIM_HIT_RADIUS;
+    }
+
+    public boolean isSteerable() {
+        return false;
+    }
+
+    private Entity steerLock;
+
+    public static boolean onGroundTarget(Entity entity) {
+        Entity root = entity.getRootVehicle();
+        if (root instanceof ShahedEntity || root instanceof OrlanEntity
+                || root instanceof net.minecraft.world.entity.projectile.Projectile) {
+            return false;
+        }
+        if (root.onGround() || root.isInWater() || root.isInLava()) {
+            return true;
+        }
+        net.minecraft.world.phys.AABB below = root.getBoundingBox().move(0.0, -2.5, 0.0);
+        return root.level().getBlockCollisions(root, below).iterator().hasNext();
+    }
+
+    public void setSteerLock(Entity target) {
+        this.steerLock = target;
+    }
+
+    public Entity getSteerLock() {
+        return this.steerLock;
+    }
+
+    private void tickSteerLock() {
+        Entity target = this.steerLock;
+        if (target == null) {
+            return;
+        }
+        if (!isSteerable() || target.isRemoved() || !target.isAlive() || target.level() != this.level()
+                || target.distanceToSqr(this) > 1500.0 * 1500.0) {
+            this.steerLock = null;
+            return;
+        }
+        if (!canSteerNow()) {
+            return;
+        }
+        Vec3 from = this.getBoundingBox().getCenter();
+        Vec3 aim = target.getBoundingBox().getCenter();
+        double lead = Math.min(from.distanceTo(aim) / Math.max(0.5, this.currentSpeed), 40.0);
+        Vec3 dir = aim.add(target.getDeltaMovement().scale(lead)).subtract(from);
+        if (dir.lengthSqr() < 1.0E-6) {
+            return;
+        }
+        dir = dir.normalize();
+        float yaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));
+        float pitch = (float) -Math.toDegrees(Math.asin(Math.max(-1.0, Math.min(1.0, dir.y))));
+        steer(yaw, pitch);
+    }
+
+    protected boolean loitersAtTarget() {
+        return this.hasCamera() && !this.isSteerable();
+    }
+
+    protected double steerTurnRateDeg() {
+        return 6.0;
+    }
+
+    public boolean isSteering() {
+        return this.entityData.get(STEERING);
+    }
+
+    private float pendingRoll;
+    private float clientRoll;
+    private float clientRollO;
+
+    public void steer(float yaw, float pitch, float roll) {
+        this.pendingRoll = Mth.clamp(roll, -60.0f, 60.0f);
+        steer(yaw, pitch);
+    }
+
+    public float getSteerRoll(float partialTick) {
+        return Mth.lerp(partialTick, this.clientRollO, this.clientRoll);
+    }
+
+    public void steer(float yaw, float pitch) {
+        if (!isSteerable() || this.exploding || this.isRemoved() || isCrashing()) {
+            return;
+        }
+        this.steerYaw = yaw;
+        this.steerPitch = (float) Mth.clamp(pitch, STEER_PITCH_UP, STEER_PITCH_DOWN);
+        this.steerTicks = STEER_TIMEOUT_TICKS;
+        if (Math.abs(this.entityData.get(STEER_ROLL) - this.pendingRoll) > 0.5f) {
+            this.entityData.set(STEER_ROLL, this.pendingRoll);
+        }
+        if (!this.entityData.get(STEERING)) {
+            this.entityData.set(STEERING, true);
+        }
+    }
+
+    protected boolean canSteerNow() {
+        return this.flightPhase == FlightPhase.CLIMBING || this.flightPhase == FlightPhase.CRUISING
+                || this.flightPhase == FlightPhase.DIVING;
+    }
+
+    protected float steerYaw() {
+        return this.steerYaw;
+    }
+
+    protected float steerPitch() {
+        return this.steerPitch;
+    }
+
+    protected double currentSpeed() {
+        return this.currentSpeed;
+    }
+
+    protected void setCurrentSpeed(double speed) {
+        this.currentSpeed = speed;
+    }
+
+    protected Vec3 lastDirection() {
+        return this.lastDirection;
+    }
+
+    protected Vec3 steerMotion(Vec3 currentPos) {
+        Vec3 desired = Vec3.directionFromRotation(this.steerPitch, this.steerYaw).normalize();
+        Vec3 direction = turnToward(this.lastDirection, desired, this.steerTurnRateDeg());
+        double speedCap = this.steerPitch > 25.0f ? this.diveSpeed() : this.cruiseSpeed();
+        if (this.currentSpeed > speedCap) {
+            this.currentSpeed = Math.max(speedCap, this.currentSpeed - DIVE_ACCELERATION);
+        } else {
+            this.currentSpeed = Math.min(this.currentSpeed + DIVE_ACCELERATION, speedCap);
+        }
+        return direction.scale(this.currentSpeed);
+    }
+
+    protected int loiterTicksMax() {
+        return LOITER_MAX_TICKS;
+    }
+
+    protected boolean attacksAtEnd() {
+        return true;
+    }
+
+    protected void onLoiterTimeout() {
+        this.entityData.set(ATTACK_COMMANDED, true);
+        this.entityData.set(COMMAND, COMMAND_ATTACK);
+        this.entityData.set(LOITERING, false);
+    }
+
+    protected void flyHome(BlockPos home) {
+        this.aimEntity = null;
+        this.aimPoint = null;
+        this.routeTarget = null;
+        this.resumeWaypointIndex = -1;
+        this.entityData.set(TARGET_POS, home);
+        this.currentWaypointIndex = this.waypoints.size();
+        this.entityData.set(ATTACK_COMMANDED, false);
+        this.entityData.set(COMMAND, COMMAND_ROUTE);
+        this.entityData.set(LOITERING, false);
+        this.entityData.set(LOITER_LEFT, loiterTicksMax());
+        this.loiterTicks = 0;
+        if (this.flightPhase == FlightPhase.DIVING) {
+            transitionToPhase(FlightPhase.CRUISING);
+            this.isDiving = false;
+            this.diveProgress = 0.0f;
+            this.entityData.set(IS_DIVING, false);
+        }
+    }
+
+    protected void recoverAsItem(BlockPos at) {
+        if (this.level().isClientSide || this.isRemoved()) {
+            return;
+        }
+        net.minecraft.world.entity.item.ItemEntity item = new net.minecraft.world.entity.item.ItemEntity(this.level(),
+                at.getX() + 0.5, at.getY() + 1.0, at.getZ() + 0.5, createDroneItem());
+        item.setDeltaMovement(Vec3.ZERO);
+        this.level().addFreshEntity(item);
+        this.exploding = true;
+        removeSelf();
+    }
+
+    protected void onSteerEnd() {
+        this.currentWaypointIndex = this.waypoints.size();
+        this.aimEntity = null;
+        this.aimPoint = null;
+        boolean attack = attacksAtEnd();
+        this.entityData.set(ATTACK_COMMANDED, attack);
+        this.entityData.set(COMMAND, attack ? COMMAND_ATTACK : COMMAND_ROUTE);
+        this.entityData.set(LOITERING, false);
+        if (this.flightPhase == FlightPhase.CLIMBING) {
+            transitionToPhase(FlightPhase.CRUISING);
+        }
+    }
+
+    protected boolean tickFuse() {
+        return false;
+    }
+
+    protected static Vec3 turnToward(Vec3 from, Vec3 desired, double maxDegrees) {
+        Vec3 current = from.lengthSqr() > 1.0E-6 ? from.normalize() : desired;
+        double cos = Math.max(-1.0, Math.min(1.0, current.dot(desired)));
+        double angle = Math.acos(cos);
+        double maxTurn = Math.toRadians(maxDegrees);
+        if (angle <= maxTurn) {
+            return desired;
+        }
+        Vec3 axisHelper = desired.subtract(current.scale(cos));
+        if (axisHelper.lengthSqr() < 1.0E-8) {
+            axisHelper = new Vec3(0, -1, 0).subtract(current.scale(-current.y));
+            if (axisHelper.lengthSqr() < 1.0E-8) {
+                axisHelper = new Vec3(1, 0, 0);
+            }
+        }
+        Vec3 perpendicular = axisHelper.normalize();
+        return current.scale(Math.cos(maxTurn)).add(perpendicular.scale(Math.sin(maxTurn))).normalize();
+    }
+
+    public int getSkin() {
+        return this.entityData.get(SKIN);
+    }
+
+    public void setSkin(int skin) {
+        this.entityData.set(SKIN, Math.max(0, skin));
     }
 
     private Vec3 tickLoiter(Vec3 center, Vec3 currentPos) {
@@ -240,11 +698,10 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             }
             this.loiterTicks++;
             if (this.loiterTicks % 20 == 0) {
-                this.entityData.set(LOITER_LEFT, Math.max(0, LOITER_MAX_TICKS - this.loiterTicks));
+                this.entityData.set(LOITER_LEFT, Math.max(0, loiterTicksMax() - this.loiterTicks));
             }
-            if (this.loiterTicks >= LOITER_MAX_TICKS) {
-                this.entityData.set(ATTACK_COMMANDED, true);
-                this.entityData.set(LOITERING, false);
+            if (this.loiterTicks >= loiterTicksMax()) {
+                onLoiterTimeout();
             }
         }
         Vec3 toCenter = new Vec3(center.x - currentPos.x, 0, center.z - currentPos.z);
@@ -441,8 +898,9 @@ public class ShahedEntity extends Projectile implements GeoEntity {
     protected void defineSynchedData() {
         this.entityData.define(TARGET_POS, BlockPos.ZERO);
         this.entityData.define(ATTACK_COMMANDED, false);
+        this.entityData.define(COMMAND, COMMAND_ROUTE);
         this.entityData.define(LOITERING, false);
-        this.entityData.define(LOITER_LEFT, LOITER_MAX_TICKS);
+        this.entityData.define(LOITER_LEFT, loiterTicksMax());
         this.entityData.define(IS_DIVING, false);
         this.entityData.define(DIVE_MODE, "low");
         this.entityData.define(FLIGHT_PHASE_ID, 0);
@@ -461,6 +919,9 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         this.entityData.define(TARGET_CRUISE_ALT, 165.0f);
         this.entityData.define(CRASH_MODE, 0);
         this.entityData.define(SYNC_ROLL, 0.0f);
+        this.entityData.define(SKIN, 0);
+        this.entityData.define(STEERING, false);
+        this.entityData.define(STEER_ROLL, 0.0f);
     }
 
     @Override
@@ -469,8 +930,14 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             removeSelf();
             return;
         }
+        if (!this.level().isClientSide) {
+            tickSteerLock();
+        }
         if (!this.level().isClientSide && this.tickCount % 3 == 0) {
             com.synarsis.airtacticalarsenal.compat.SuperbWarfareCompat.registerForSbwRadar(this);
+        }
+        if (!this.level().isClientSide && !isOnPaintStand()) {
+            ACTIVE.putIfAbsent(this.getId(), this);
         }
 
         super.tick();
@@ -510,6 +977,10 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             return;
         }
 
+        if (!this.level().isClientSide) {
+            tickAim();
+        }
+
         BlockPos target = this.entityData.get(TARGET_POS);
         Vec3 targetVec = Vec3.atCenterOf(target);
         String mode = this.entityData.get(DIVE_MODE);
@@ -539,8 +1010,18 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         }
 
         Vec3 motion;
+        boolean steeringNow = false;
 
-        switch (this.flightPhase) {
+        if (!this.level().isClientSide && this.steerTicks > 0 && canSteerNow()) {
+            this.steerTicks--;
+            steeringNow = true;
+            motion = steerMotion(currentPos);
+            if (this.steerTicks == 0) {
+                this.entityData.set(STEERING, false);
+                this.entityData.set(STEER_ROLL, 0.0f);
+                onSteerEnd();
+            }
+        } else switch (this.flightPhase) {
             case WARMUP:
 
                 transitionToPhase(FlightPhase.LAUNCHING);
@@ -562,7 +1043,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
                 break;
             case DIVING:
 
-                Vec3 diveTarget = isAttackCommanded() ? Vec3.atCenterOf(target).add(0, 0.5, 0)
+                Vec3 diveTarget = isAttackCommanded() ? attackPoint(target)
                         : new Vec3(targetVec.x, findSurfaceY(target), targetVec.z);
                 motion = tickDivingPhase(diveTarget, currentPos);
                 break;
@@ -578,6 +1059,8 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         }
 
         if (this.level().isClientSide) {
+            this.clientRollO = this.clientRoll;
+            this.clientRoll += (this.entityData.get(STEER_ROLL) - this.clientRoll) * 0.35f;
             float syncedXRot = this.rotationSynced ? this.entityData.get(SYNC_X_ROT) : this.getXRot();
             float syncedYRot = this.rotationSynced ? this.entityData.get(SYNC_Y_ROT) : this.getYRot();
 
@@ -595,7 +1078,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             float newYRot = (float) (Math.atan2(motion.x, motion.z) * 57.29577951308232);
 
             float newXRot;
-            if (this.flightPhase == FlightPhase.CRUISING) {
+            if (this.flightPhase == FlightPhase.CRUISING && !steeringNow) {
                 newXRot = 0; 
             } else {
                 newXRot = (float) (Math.atan2(motion.y, Math.sqrt(motion.x * motion.x + motion.z * motion.z))
@@ -645,9 +1128,18 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             return;
         }
 
-        if (this.isDiving) {
+        if (tickFuse() || this.exploding || this.isRemoved()) {
+            return;
+        }
+
+        if (steeringNow && !this.level().getBlockState(this.blockPosition()).isAir()) {
+            this.explode();
+            return;
+        }
+
+        if (this.isDiving && !steeringNow) {
             if (isAttackCommanded()) {
-                if (this.position().distanceTo(Vec3.atCenterOf(target).add(0, 0.5, 0)) <= 2.5) {
+                if (aimReached(target)) {
                     this.explode();
                     return;
                 }
@@ -665,6 +1157,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         }
 
         this.setPos(this.getX() + motion.x, this.getY() + motion.y, this.getZ() + motion.z);
+        this.flownDistance += Math.sqrt(motion.x * motion.x + motion.z * motion.z);
 
         if (!this.initialPacketSent) {
             this.initialPacketSent = true;
@@ -788,7 +1281,8 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             onFinalLeg = true;
         }
 
-        if (onFinalLeg && this.hasCamera() && !isAttackCommanded()) {
+        boolean loiterLeg = onFinalLeg && this.loitersAtTarget() && !isAttackCommanded();
+        if (loiterLeg && (horizontalDist <= LOITER_RADIUS * 1.6 || this.entityData.get(LOITERING))) {
             return tickLoiter(targetVec, currentPos);
         }
         if (!this.level().isClientSide && this.entityData.get(LOITERING)) {
@@ -813,6 +1307,9 @@ public class ShahedEntity extends Projectile implements GeoEntity {
                 verticalCorrection,
                 smoothDir.z * this.currentSpeed);
 
+        if (loiterLeg) {
+            return motion;
+        }
         if (onFinalLeg && isAttackCommanded() && horizontalDist < this.diveTransitionDistance) {
             transitionToPhase(FlightPhase.DIVING);
         } else if (onFinalLeg && horizontalDist < this.diveTransitionDistance) {
@@ -853,7 +1350,8 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         Vec3 current = this.lastDirection.lengthSqr() > 1.0E-6 ? this.lastDirection.normalize() : desired;
         double cos = Math.max(-1.0, Math.min(1.0, current.dot(desired)));
         double angle = Math.acos(cos);
-        double maxTurn = Math.toRadians(DIVE_TURN_DEG_PER_TICK);
+        boolean aimed = isAttackCommanded() && this.aimPoint != null;
+        double maxTurn = Math.toRadians(aimed && angle > Math.toRadians(35.0) ? DIVE_TURN_DEG_PER_TICK * 1.6 : DIVE_TURN_DEG_PER_TICK);
         Vec3 direction;
         if (angle <= maxTurn) {
             direction = desired;
@@ -871,8 +1369,11 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
         this.diveProgress = Math.min(1.0f, this.diveProgress + 0.05f);
         double speedCap = angle > Math.toRadians(35.0) ? this.cruiseSpeed() : this.diveSpeed();
+        if (aimed && angle > Math.toRadians(35.0)) {
+            speedCap = Math.min(speedCap, Math.max(1.0, distanceToTarget * Math.toRadians(DIVE_TURN_DEG_PER_TICK * 1.6) * 0.5));
+        }
         if (this.currentSpeed > speedCap) {
-            this.currentSpeed = Math.max(speedCap, this.currentSpeed - DIVE_ACCELERATION);
+            this.currentSpeed = Math.max(speedCap, this.currentSpeed - (aimed ? DIVE_ACCELERATION * 3.0 : DIVE_ACCELERATION));
         } else {
             this.currentSpeed = Math.min(this.currentSpeed + DIVE_ACCELERATION, speedCap);
         }
@@ -936,10 +1437,25 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         }
     }
 
-    private void explode() {
-        if (this.exploding)
-            return; 
+    protected final boolean beginExplosion() {
+        if (this.exploding) {
+            return false;
+        }
         this.exploding = true;
+        if (!this.level().isClientSide) {
+            releaseCameraFirst();
+        }
+        return true;
+    }
+
+    protected final void finishExplosion() {
+        releaseCameraFirst();
+        removeSelf();
+    }
+
+    protected void explode() {
+        if (!beginExplosion())
+            return;
 
         if (!this.level().isClientSide) {
             releaseCameraFirst();
@@ -1111,6 +1627,7 @@ public class ShahedEntity extends Projectile implements GeoEntity {
             return;
         }
         if (!this.level().isClientSide) {
+            ACTIVE.remove(this.getId(), this);
 
             if (!this.exploding
                     && (reason == RemovalReason.DISCARDED || reason == RemovalReason.KILLED)
@@ -1203,6 +1720,14 @@ public class ShahedEntity extends Projectile implements GeoEntity {
         }
 
         tag.putString("ShahedColor", getShahedColor());
+        tag.putInt("AtaSkin", getSkin());
+        tag.putDouble("AtaFlown", this.flownDistance);
+        if (this.routeTarget != null) {
+            tag.putInt("RouteTargetX", this.routeTarget.getX());
+            tag.putInt("RouteTargetY", this.routeTarget.getY());
+            tag.putInt("RouteTargetZ", this.routeTarget.getZ());
+            tag.putInt("ResumeWaypoint", this.resumeWaypointIndex);
+        }
 
         tag.putBoolean("OnPaintStand", isOnPaintStand());
         if (mountedStandUuid != null) {
@@ -1292,6 +1817,12 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
         if (tag.contains("ShahedColor")) {
             setShahedColor(tag.getString("ShahedColor"));
+        }
+        setSkin(tag.getInt("AtaSkin"));
+        this.flownDistance = tag.getDouble("AtaFlown");
+        if (tag.contains("RouteTargetX")) {
+            this.routeTarget = new BlockPos(tag.getInt("RouteTargetX"), tag.getInt("RouteTargetY"), tag.getInt("RouteTargetZ"));
+            this.resumeWaypointIndex = tag.getInt("ResumeWaypoint");
         }
 
         if (tag.getBoolean("OnPaintStand")) {
@@ -1576,6 +2107,10 @@ public class ShahedEntity extends Projectile implements GeoEntity {
 
         if (this.level() instanceof ServerLevel serverLevel) {
             MissileChunkManager.updateChunksForMissile(this, serverLevel);
+            if (this.crash.ticks() % 2 == 0) {
+                NetworkHandler.sendToDimension(serverLevel, new com.synarsis.airtacticalarsenal.network.ShahedCrashSoundPacket(
+                        this.getId(), this.position(), getCrashMode().ordinal()));
+            }
         }
 
         Vec3 from = this.position();

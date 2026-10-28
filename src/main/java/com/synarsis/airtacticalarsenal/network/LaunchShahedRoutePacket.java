@@ -92,7 +92,7 @@ public class LaunchShahedRoutePacket {
             }
 
             if (!com.synarsis.airtacticalarsenal.util.RouteLimits.check(player,
-                    com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), waypoints, finalTarget), com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax())) {
+                    com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), waypoints, finalTarget), com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax(launcher.getDroneKind()))) {
                 return;
             }
             launcher.startLaunchSequenceWithRoute(player, finalTarget, diveMode, waypoints);

@@ -40,7 +40,6 @@ public class RouteTerrainRenderer {
 
     private static RouteTerrainRenderer currentInstance;
 
-    private static final int REUSE_RADIUS = 500;
     private static final int MAX_CACHED_MAPS = 8;
     private static final long CACHE_MAX_AGE_MS = 5 * 60_000L;
     private static final List<CachedMapEntry> mapCache = new ArrayList<>();
@@ -54,17 +53,18 @@ public class RouteTerrainRenderer {
         }
     }
 
-    private static CachedMapEntry findNearestCache(int x, int z) {
+    private static CachedMapEntry findNearestCache(int x, int z, int bpp) {
         long now = System.currentTimeMillis();
-        int bpp = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.routeBpp();
-        mapCache.removeIf(e -> now - e.loadedAt > CACHE_MAX_AGE_MS || e.bpp != bpp);
+        mapCache.removeIf(e -> now - e.loadedAt > CACHE_MAX_AGE_MS);
+        long reuse = com.synarsis.airtacticalarsenal.util.MapScale.reuseRadius(bpp);
         CachedMapEntry best = null;
         double bestDist = Double.MAX_VALUE;
         for (CachedMapEntry e : mapCache) {
+            if (e.bpp != bpp) continue;
             double dx = e.centerX - x;
             double dz = e.centerZ - z;
             double dist = dx * dx + dz * dz;
-            if (dist <= (long) REUSE_RADIUS * REUSE_RADIUS && dist < bestDist) {
+            if (dist <= reuse * reuse && dist < bestDist) {
                 bestDist = dist;
                 best = e;
             }
@@ -72,8 +72,8 @@ public class RouteTerrainRenderer {
         return best;
     }
 
-    public static boolean hasCachedDataNear(int x, int z) {
-        return findNearestCache(x, z) != null;
+    public static boolean hasCachedDataNear(int x, int z, int bpp) {
+        return findNearestCache(x, z, bpp) != null;
     }
 
     public static int getCachedCenterX() {
@@ -85,12 +85,12 @@ public class RouteTerrainRenderer {
         return e != null ? e.centerZ : 0;
     }
 
-    public static int getCachedCenterXNear(int x, int z) {
-        CachedMapEntry e = findNearestCache(x, z);
+    public static int getCachedCenterXNear(int x, int z, int bpp) {
+        CachedMapEntry e = findNearestCache(x, z, bpp);
         return e != null ? e.centerX : 0;
     }
-    public static int getCachedCenterZNear(int x, int z) {
-        CachedMapEntry e = findNearestCache(x, z);
+    public static int getCachedCenterZNear(int x, int z, int bpp) {
+        CachedMapEntry e = findNearestCache(x, z, bpp);
         return e != null ? e.centerZ : 0;
     }
 
@@ -98,10 +98,10 @@ public class RouteTerrainRenderer {
         mapCache.clear();
     }
 
-    public RouteTerrainRenderer(int centerX, int centerZ) {
+    public RouteTerrainRenderer(int centerX, int centerZ, int bpp) {
         this.centerX = centerX;
         this.centerZ = centerZ;
-        this.bpp = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.routeBpp();
+        this.bpp = bpp;
 
         displayTexture = new DynamicTexture(TEX_SIZE, TEX_SIZE, false);
         NativeImage d = displayTexture.getPixels();
@@ -115,7 +115,7 @@ public class RouteTerrainRenderer {
         textureRegistered = true;
         currentInstance = this;
 
-        CachedMapEntry cached = findNearestCache(centerX, centerZ);
+        CachedMapEntry cached = findNearestCache(centerX, centerZ, bpp);
         if (cached != null) {
             loadFromPngBytes(cached.pngBytes);
         }
@@ -137,14 +137,15 @@ public class RouteTerrainRenderer {
         return (TEX_SIZE / 2) * bpp;
     }
 
-    public static void handleServerData(BlockPos centerPos, int status, float progress,
+    public static void handleServerData(BlockPos centerPos, int bpp, int status, float progress,
                                         int chunkIndex, int totalChunks, byte[] data) {
         RouteTerrainRenderer inst = currentInstance;
-        if (inst == null) return;
+        if (inst == null || inst.bpp != bpp) return;
 
         double dx = inst.centerX - centerPos.getX();
         double dz = inst.centerZ - centerPos.getZ();
-        if (dx * dx + dz * dz > (long) REUSE_RADIUS * REUSE_RADIUS) return;
+        long reuse = com.synarsis.airtacticalarsenal.util.MapScale.reuseRadius(bpp);
+        if (dx * dx + dz * dz > reuse * reuse) return;
 
         if (status == 2) {
 
@@ -186,7 +187,7 @@ public class RouteTerrainRenderer {
             cacheImage = serverImg;
             cacheReady = true;
 
-            CachedMapEntry existing = findNearestCache(centerX, centerZ);
+            CachedMapEntry existing = findNearestCache(centerX, centerZ, bpp);
             if (existing != null) {
                 mapCache.remove(existing);
             }

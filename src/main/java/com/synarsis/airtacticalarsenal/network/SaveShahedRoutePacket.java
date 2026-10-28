@@ -60,7 +60,7 @@ public class SaveShahedRoutePacket {
             }
 
             if (!com.synarsis.airtacticalarsenal.util.RouteLimits.check(player,
-                    com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), waypoints), com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax())) {
+                    com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), waypoints), com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax(launcher.getDroneKind()))) {
                 return;
             }
             launcher.setSavedRoute(waypoints);

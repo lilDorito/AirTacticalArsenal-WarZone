@@ -39,6 +39,7 @@ public class OrlanCameraHandler {
     private static boolean isLocked = false;
     private static float lockProgress = 0.0f;
     private static Vec3 lockTargetPos = null;
+    private static int lockEntityId = -1;
     private static final float LOCK_DURATION_TICKS = 30.0f; 
     private static final float TRACK_SMOOTH_SPEED = 0.25f;  
 
@@ -72,6 +73,13 @@ public class OrlanCameraHandler {
             Entity orlan = mc.level.getEntity(orlanEntityId);
             if (orlan != null) {
                 mc.setCameraEntity(orlan);
+                if (orlan instanceof com.synarsis.airtacticalarsenal.entity.ShahedEntity strike && strike.isSteerable()
+                        && mc.player != null) {
+                    mc.player.setYRot(-orlan.getYRot());
+                    mc.player.setXRot(Math.max(-60.0f, Math.min(85.0f, -orlan.getXRot())));
+                    mc.player.yRotO = mc.player.getYRot();
+                    mc.player.xRotO = mc.player.getXRot();
+                }
             }
 
         }
@@ -135,8 +143,24 @@ public class OrlanCameraHandler {
         boolean near = (drone != null && drone.position().distanceToSqr(pos) < 144.0)
                 || (camera != null && camera != mc.player && camera.position().distanceToSqr(pos) < 144.0);
         if (near) {
-            stopCameraView();
+            signalLost(true);
         }
+    }
+
+    private static boolean pendingLost = false;
+
+    public static void signalLost(boolean notifyServer) {
+        if (!cameraActive) {
+            return;
+        }
+        int frame = getLinkedDrone() instanceof OrlanEntity ? 0xCC00CC00 : 0xCCFF5533;
+        if (notifyServer) {
+            stopCameraView();
+        } else {
+            forceStopCameraLocal();
+        }
+        pendingLost = false;
+        Minecraft.getInstance().setScreen(new com.synarsis.airtacticalarsenal.client.gui.NoSignalScreen(frame));
     }
 
     public static boolean isCameraActive() {
@@ -188,7 +212,12 @@ public class OrlanCameraHandler {
     public static void tick() {
 
         if (pendingStop) {
-            stopCameraView();
+            if (pendingLost) {
+                pendingLost = false;
+                signalLost(true);
+            } else {
+                stopCameraView();
+            }
             return;
         }
 
@@ -212,6 +241,7 @@ public class OrlanCameraHandler {
             if (nullEntityTicks > NULL_ENTITY_GRACE_TICKS) {
 
                 pendingStop = true;
+                pendingLost = true;
             }
         }
     }
@@ -254,7 +284,11 @@ public class OrlanCameraHandler {
     public static double getSmoothZ() { return smoothZ; }
 
     private static float minCameraPitch() {
-        return getLinkedDrone() instanceof com.synarsis.airtacticalarsenal.entity.ShahedEntity ? -30.0f : MIN_CAMERA_PITCH;
+        Entity drone = getLinkedDrone();
+        if (drone instanceof com.synarsis.airtacticalarsenal.entity.ShahedEntity strike) {
+            return strike.isSteerable() ? -60.0f : -30.0f;
+        }
+        return MIN_CAMERA_PITCH;
     }
 
     public static float getCameraPitch() {
@@ -263,6 +297,22 @@ public class OrlanCameraHandler {
 
     public static float getCameraYaw() {
         return cameraYaw;
+    }
+
+    private static float cameraRoll;
+    private static float cameraRollO;
+
+    public static float getCameraRoll() {
+        return cameraActive ? cameraRoll : 0.0f;
+    }
+
+    public static float getCameraRoll(float partialTick) {
+        return cameraActive ? Mth.lerp(partialTick, cameraRollO, cameraRoll) : 0.0f;
+    }
+
+    public static void setCameraRoll(float roll) {
+        cameraRollO = cameraRoll;
+        cameraRoll = roll;
     }
 
     public static void setCameraPitch(float pitch) {
@@ -278,6 +328,24 @@ public class OrlanCameraHandler {
         isLocked = false;
         lockProgress = 0.0f;
         lockTargetPos = null;
+        lockEntityId = -1;
+    }
+
+    public static void followTarget(Vec3 point, int entityId) {
+        if (!cameraActive || point == null) return;
+        isLocking = false;
+        isLocked = true;
+        lockProgress = 1.0f;
+        lockTargetPos = point;
+        lockEntityId = entityId;
+    }
+
+    public static void releaseFollow() {
+        resetLockOn();
+    }
+
+    public static int getLockEntityId() {
+        return lockEntityId;
     }
 
     public static boolean handleLockKey(int action) {
@@ -320,6 +388,15 @@ public class OrlanCameraHandler {
         if (!isLocked || lockTargetPos == null) return false;
         Entity orlan = getLinkedDrone();
         if (orlan == null) return false;
+        if (lockEntityId >= 0) {
+            Minecraft mc = Minecraft.getInstance();
+            Entity followed = mc.level != null ? mc.level.getEntity(lockEntityId) : null;
+            if (followed != null && followed.isAlive()) {
+                lockTargetPos = CameraTargets.lerpedCenter(followed, partialTick);
+            } else {
+                lockEntityId = -1;
+            }
+        }
 
         Vec3 eyePos = orlan.getEyePosition(partialTick);
         double dx = lockTargetPos.x - eyePos.x;

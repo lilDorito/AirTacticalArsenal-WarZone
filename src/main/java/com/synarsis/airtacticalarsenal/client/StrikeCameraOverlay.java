@@ -22,6 +22,7 @@ public final class StrikeCameraOverlay {
     public static void render(GuiGraphics g, int width, int height, ShahedEntity drone) {
         Minecraft mc = Minecraft.getInstance();
         OrlanCameraOverlay.renderNightVision(g, mc, width, height);
+        CameraTargetOverlay.render(g, width, height, drone);
 
         int border = 32;
         g.fill(0, 0, width, border, 0xDD000000);
@@ -35,11 +36,17 @@ public final class StrikeCameraOverlay {
 
         int cx = width / 2;
         int cy = height / 2;
-        g.fill(cx - 14, cy, cx - 4, cy + 1, FRAME);
-        g.fill(cx + 5, cy, cx + 15, cy + 1, FRAME);
-        g.fill(cx, cy - 14, cx + 1, cy - 4, FRAME);
-        g.fill(cx, cy + 5, cx + 1, cy + 15, FRAME);
-        g.fill(cx - 1, cy - 1, cx + 2, cy + 2, 0xFFFF2222);
+        boolean crosshair = StrikeAimClient.aimDrone() != drone
+                && !com.synarsis.airtacticalarsenal.api.DroneVariantsClient.hidesCrosshair(drone.getType());
+        if (crosshair) {
+            g.fill(cx - 14, cy, cx - 4, cy + 1, FRAME);
+            g.fill(cx + 5, cy, cx + 15, cy + 1, FRAME);
+            g.fill(cx, cy - 14, cx + 1, cy - 4, FRAME);
+            g.fill(cx, cy + 5, cx + 1, cy + 15, FRAME);
+            g.fill(cx - 1, cy - 1, cx + 2, cy + 2, 0xFFFF2222);
+        } else if (StrikeAimClient.aimDrone() == drone && !StrikeAimClient.isDragging()) {
+            g.fill(cx, cy, cx + 1, cy + 1, 0xCCFFFFFF);
+        }
 
         int left = border + 6;
         int top = border + 6;
@@ -73,21 +80,41 @@ public final class StrikeCameraOverlay {
 
         String state;
         int stateColor;
-        if (drone.isAttackCommanded()) {
+        if (drone.isSteerable() && StrikeAimClient.autopilot(drone)) {
+            state = Tr.s("hud.ata.strike.state.autopilot");
+            stateColor = 0xFF55DDFF;
+        } else if (drone.isSteering()) {
+            state = Tr.s("hud.ata.strike.state.steer");
+            stateColor = 0xFF55DDFF;
+        } else if (drone.isAttackCommanded()) {
             state = Tr.s("hud.ata.strike.state.attack");
             stateColor = 0xFFFF3333;
         } else if (drone.isLoitering()) {
             int seconds = drone.loiterTicksLeft() / 20;
             state = Tr.s("hud.ata.strike.state.loiter", String.format("%02d:%02d", seconds / 60, seconds % 60));
             stateColor = 0xFFFFDD55;
+        } else if (drone.getCommand() == ShahedEntity.COMMAND_ORBIT) {
+            state = Tr.s("hud.ata.strike.state.loiter_route");
+            stateColor = 0xFFFFDD55;
+        } else if (drone.getCommand() == ShahedEntity.COMMAND_HEADING) {
+            state = Tr.s("hud.ata.strike.state.heading");
+            stateColor = 0xFF55DDFF;
         } else {
             state = Tr.s("hud.ata.strike.state.route");
             stateColor = DIM;
         }
         g.drawString(mc.font, state, cx - mc.font.width(state) / 2, border + 30, stateColor, true);
 
-        String hint = Tr.s("hud.ata.strike.controls", StrikeCameraClient.diveHint().getString(),
-                OrlanCameraHandler.visionName());
+        String hint;
+        if (drone.isSteerable()) {
+            hint = Tr.s(StrikeAimClient.autopilot(drone) ? "hud.ata.strike.autopilot_controls" : "hud.ata.strike.steer_controls",
+                    OrlanCameraHandler.visionName());
+        } else if (StrikeAimClient.selectMode()) {
+            hint = Tr.s("hud.ata.strike.select_controls", OrlanCameraHandler.visionName());
+        } else {
+            hint = Tr.s("hud.ata.strike.controls", StrikeCameraClient.diveHint().getString(),
+                    OrlanCameraHandler.visionName());
+        }
         int bottom = height - border - 14;
         g.fill(cx - mc.font.width(hint) / 2 - 3, bottom - 2, cx + mc.font.width(hint) / 2 + 3, bottom + 10, PANEL);
         g.drawString(mc.font, hint, cx - mc.font.width(hint) / 2, bottom, DIM, true);
@@ -103,7 +130,9 @@ public final class StrikeCameraOverlay {
         }
 
         OrlanCameraOverlay.renderCompass(g, mc, cx, border + 14, OrlanCameraHandler.getCameraYaw());
-        OrlanCameraOverlay.renderLockOnUI(g, mc, cx, cy - 60, pos, width);
+        if (StrikeAimClient.aimDrone() != drone) {
+            OrlanCameraOverlay.renderLockOnUI(g, mc, cx, cy - 60, pos, width);
+        }
     }
 
     private static String phaseKey(ShahedEntity.FlightPhase phase) {

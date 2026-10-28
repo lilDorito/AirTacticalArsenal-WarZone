@@ -31,9 +31,9 @@ public class ServerTerrainScanner {
     private volatile byte[] pngBytes;
     private final MapRefresher refresher;
 
-    public ServerTerrainScanner(BlockPos radarPos) {
+    public ServerTerrainScanner(BlockPos radarPos, int bpp) {
         this.radarPos = radarPos;
-        this.bpp = com.synarsis.airtacticalarsenal.util.MapScale.serverRadarBpp();
+        this.bpp = bpp;
         this.originX = radarPos.getX() - (CACHE_SIZE / 2) * bpp;
         this.originZ = radarPos.getZ() - (CACHE_SIZE / 2) * bpp;
         this.refresher = new MapRefresher(CACHE_SIZE, bpp, originX, originZ);
@@ -46,9 +46,10 @@ public class ServerTerrainScanner {
     public static synchronized ServerTerrainScanner getOrCreate(BlockPos pos, ServerLevel level) {
         String k = key(pos);
         ServerTerrainScanner scanner = INSTANCES.get(k);
-        if (scanner != null && scanner.bpp == com.synarsis.airtacticalarsenal.util.MapScale.serverRadarBpp()) return scanner;
+        int bpp = com.synarsis.airtacticalarsenal.util.MapScale.serverRadarBpp(level.getWorldBorder(), pos.getX(), pos.getZ());
+        if (scanner != null && scanner.bpp == bpp) return scanner;
 
-        scanner = new ServerTerrainScanner(pos);
+        scanner = new ServerTerrainScanner(pos, bpp);
         byte[] cached = scanner.tryLoadFromFile(level);
         if (cached != null) {
             scanner.pngBytes = cached;

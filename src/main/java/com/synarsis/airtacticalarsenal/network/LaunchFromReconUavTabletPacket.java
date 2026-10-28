@@ -108,29 +108,15 @@ public class LaunchFromReconUavTabletPacket {
             if (waypoints != null) fullRoute.addAll(waypoints);
             fullRoute.add(targetPos);
             if (!com.synarsis.airtacticalarsenal.util.RouteLimits.check(player,
-                    com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), fullRoute), com.synarsis.airtacticalarsenal.util.RouteLimits.orlanMax())) {
+                    com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), fullRoute), com.synarsis.airtacticalarsenal.util.RouteLimits.orlanMax(launcher.getDroneKind()))) {
                 return;
             }
 
-            Vec3 launchPos = launcher.railLaunchPos();
-            com.synarsis.airtacticalarsenal.api.DroneVariants.ReconFactory factory = com.synarsis.airtacticalarsenal.api.DroneVariants.recon(launcher.getDroneKind());
-            OrlanEntity orlan = factory != null
-                    ? factory.create(level, launchPos, targetPos, launcherYaw, launcher.blockPosition(), launcher.getStoredDroneStack())
-                    : new OrlanEntity(level, launchPos, targetPos, launcherYaw, launcher.blockPosition());
-            orlan.setOwner(player);
-            orlan.setOwnerUUID(player.getUUID().toString());
-            if (waypoints != null && !waypoints.isEmpty()) {
-                orlan.setWaypoints(waypoints);
+            if (launcher.isLaunching()) {
+                return;
             }
-            orlan.setRailPitch(launcher.railPitchDeg());
-            orlan.isLegitSpawn = true;
-            level.addFreshEntity(orlan);
-
-            launcher.removeDrone();
-
-            player.displayClientMessage(
-                    Component.translatable("message.ata.orlan.launched", orlan.getDroneName(), targetPos.getX(), targetPos.getZ()),
-                    true);
+            launcher.startReconLaunch(player, targetPos, waypoints);
+            player.displayClientMessage(Component.translatable("message.ata.launch.success"), true);
         });
         ctx.get().setPacketHandled(true);
     }

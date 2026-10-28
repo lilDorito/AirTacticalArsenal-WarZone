@@ -67,5 +67,8 @@ public class DroneFarFieldSound extends AbstractTickableSoundInstance {
             this.volume *= crash.crashVolumeFactor();
             this.pitch *= crash.crashPitchFactor();
         }
+        if (host instanceof DopplerSource doppler) {
+            this.pitch *= doppler.dopplerFactor();
+        }
     }
 }

@@ -15,14 +15,16 @@ public class RouteMapDataPacket {
     public static final int STATUS_QUEUED = 2;
 
     private final BlockPos centerPos;
+    private final int bpp;
     private final int status;
     private final float progress;
     private final int chunkIndex;
     private final int totalChunks;
     private final byte[] data;
 
-    public RouteMapDataPacket(BlockPos centerPos, int status, float progress, byte[] data) {
+    public RouteMapDataPacket(BlockPos centerPos, int bpp, int status, float progress, byte[] data) {
         this.centerPos = centerPos;
+        this.bpp = bpp;
         this.status = status;
         this.progress = progress;
         this.chunkIndex = 0;
@@ -30,8 +32,9 @@ public class RouteMapDataPacket {
         this.data = data;
     }
 
-    public RouteMapDataPacket(BlockPos centerPos, int status, int chunkIndex, int totalChunks, byte[] data) {
+    public RouteMapDataPacket(BlockPos centerPos, int bpp, int status, int chunkIndex, int totalChunks, byte[] data) {
         this.centerPos = centerPos;
+        this.bpp = bpp;
         this.status = status;
         this.progress = 1.0f;
         this.chunkIndex = chunkIndex;
@@ -41,6 +44,7 @@ public class RouteMapDataPacket {
 
     public RouteMapDataPacket(FriendlyByteBuf buf) {
         this.centerPos = buf.readBlockPos();
+        this.bpp = buf.readVarInt();
         this.status = buf.readByte();
         this.progress = buf.readFloat();
         this.chunkIndex = buf.readVarInt();
@@ -56,6 +60,7 @@ public class RouteMapDataPacket {
 
     public void encode(FriendlyByteBuf buf) {
         buf.writeBlockPos(centerPos);
+        buf.writeVarInt(bpp);
         buf.writeByte(status);
         buf.writeFloat(progress);
         buf.writeVarInt(chunkIndex);
@@ -72,15 +77,15 @@ public class RouteMapDataPacket {
         NetworkEvent.Context ctx = supplier.get();
         ctx.enqueueWork(() -> {
             DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> () ->
-                    handleClient(centerPos, status, progress, chunkIndex, totalChunks, data));
+                    handleClient(centerPos, bpp, status, progress, chunkIndex, totalChunks, data));
         });
         return true;
     }
 
     @OnlyIn(Dist.CLIENT)
-    private static void handleClient(BlockPos centerPos, int status, float progress,
+    private static void handleClient(BlockPos centerPos, int bpp, int status, float progress,
                                      int chunkIndex, int totalChunks, byte[] data) {
         com.synarsis.airtacticalarsenal.client.radar.RouteTerrainRenderer.handleServerData(
-                centerPos, status, progress, chunkIndex, totalChunks, data);
+                centerPos, bpp, status, progress, chunkIndex, totalChunks, data);
     }
 }

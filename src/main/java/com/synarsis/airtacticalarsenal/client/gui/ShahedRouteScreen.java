@@ -99,7 +99,8 @@ public class ShahedRouteScreen extends AtaScaledScreen {
 
     private List<com.synarsis.airtacticalarsenal.client.ClientWaypointManager.SavedRoute> cachedSavedRoutes = new ArrayList<>();
 
-    private final BlockPos mapCenter;
+    private BlockPos mapCenter;
+    private int mapBpp = -1;
 
     private String statusMessage = "";
     private int statusTicks = 0;
@@ -114,10 +115,19 @@ public class ShahedRouteScreen extends AtaScaledScreen {
     private int profileX, profileY, profileW, profileH;
     private static final int DEFAULT_WAYPOINT_ALT = 165;
 
+    private final int droneEntityId;
+
     public ShahedRouteScreen(Screen parent, List<BlockPos> positions, List<Float> yaws,
             List<Boolean> drones, List<List<BlockPos>> routes,
             Consumer<List<List<BlockPos>>> onSaveCallback) {
+        this(parent, positions, yaws, drones, routes, onSaveCallback, -1);
+    }
+
+    public ShahedRouteScreen(Screen parent, List<BlockPos> positions, List<Float> yaws,
+            List<Boolean> drones, List<List<BlockPos>> routes,
+            Consumer<List<List<BlockPos>>> onSaveCallback, int droneEntityId) {
         super(Component.literal(""));
+        this.droneEntityId = droneEntityId;
         this.parentScreen = parent;
         this.onSaveCallback = onSaveCallback;
         this.launcherPositions = new ArrayList<>(positions);
@@ -131,13 +141,7 @@ public class ShahedRouteScreen extends AtaScaledScreen {
         this.viewCenterX = firstPos.getX();
         this.viewCenterZ = firstPos.getZ();
 
-        if (RouteTerrainRenderer.hasCachedDataNear(firstPos.getX(), firstPos.getZ())) {
-            this.mapCenter = new BlockPos(
-                    RouteTerrainRenderer.getCachedCenterXNear(firstPos.getX(), firstPos.getZ()), 0,
-                    RouteTerrainRenderer.getCachedCenterZNear(firstPos.getX(), firstPos.getZ()));
-        } else {
-            this.mapCenter = firstPos;
-        }
+        this.mapCenter = firstPos;
 
         for (int i = 0; i < allRoutes.size(); i++) {
             autoPlaceFirstWaypoint(i);
@@ -147,6 +151,8 @@ public class ShahedRouteScreen extends AtaScaledScreen {
     private void autoPlaceFirstWaypoint(int routeIndex) {
         if (!allRoutes.get(routeIndex).isEmpty())
             return;
+        if (droneEntityId != -1)
+            return;
         BlockPos lPos = launcherPositions.get(routeIndex);
         float yaw = launcherYaws.get(routeIndex);
         double rad = Math.toRadians(yaw);
@@ -154,6 +160,24 @@ public class ShahedRouteScreen extends AtaScaledScreen {
         int wx = lPos.getX() + (int) (-Math.sin(rad) * dist);
         int wz = lPos.getZ() + (int) (Math.cos(rad) * dist);
         allRoutes.get(routeIndex).add(new BlockPos(wx, DEFAULT_WAYPOINT_ALT, wz));
+    }
+
+    private int routeMax = -1;
+
+    private boolean interceptor;
+
+    public ShahedRouteScreen asInterceptor(boolean interceptor) {
+        this.interceptor = interceptor;
+        return this;
+    }
+
+    public ShahedRouteScreen withRouteMax(int max) {
+        this.routeMax = max;
+        return this;
+    }
+
+    private int routeMax() {
+        return routeMax > 0 ? routeMax : com.synarsis.airtacticalarsenal.client.ClientRouteLimits.shahed();
     }
 
     private List<BlockPos> currentRoute() {
@@ -189,9 +213,17 @@ public class ShahedRouteScreen extends AtaScaledScreen {
         clipMaxY = clipMinY + MAP_SIZE;
 
         if (terrainRenderer == null) {
-            terrainRenderer = new RouteTerrainRenderer(mapCenter.getX(), mapCenter.getZ());
+            BlockPos firstPos = launcherPositions.get(0);
+            mapBpp = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.routeBpp(
+                    (int) Math.ceil(routeMax() * 1.05), firstPos.getX(), firstPos.getZ());
+            if (RouteTerrainRenderer.hasCachedDataNear(firstPos.getX(), firstPos.getZ(), mapBpp)) {
+                mapCenter = new BlockPos(RouteTerrainRenderer.getCachedCenterXNear(firstPos.getX(), firstPos.getZ(), mapBpp), 0,
+                        RouteTerrainRenderer.getCachedCenterZNear(firstPos.getX(), firstPos.getZ(), mapBpp));
+            }
+            terrainRenderer = new RouteTerrainRenderer(mapCenter.getX(), mapCenter.getZ(), mapBpp);
+            scale = Math.min(scale, maxScale());
             if (!terrainRenderer.hasCacheData()) {
-                NetworkHandler.sendToServer(new RequestRouteMapPacket(launcherPositions.get(0)));
+                NetworkHandler.sendToServer(new RequestRouteMapPacket(launcherPositions.get(0), mapBpp));
             }
         }
 
@@ -420,7 +452,7 @@ public class ShahedRouteScreen extends AtaScaledScreen {
                 return;
             }
             BlockPos lPos = currentLauncherPos();
-            if (currentRoute().isEmpty()) {
+            if (currentRoute().isEmpty() && droneEntityId == -1) {
                 double distToLauncher = Math.sqrt(
                         Math.pow(wx - lPos.getX(), 2) + Math.pow(wz - lPos.getZ(), 2));
                 if (distToLauncher < MIN_FIRST_POINT_DISTANCE) {
@@ -431,7 +463,7 @@ public class ShahedRouteScreen extends AtaScaledScreen {
                     setStatus(Tr.s("gui.ata.route.max_first", MAX_FIRST_POINT_DISTANCE));
                     return;
                 }
-            } else {
+            } else if (!currentRoute().isEmpty()) {
                 BlockPos prevPoint = currentRoute().get(currentRoute().size() - 1);
                 double distToPrev = Math.sqrt(
                         Math.pow(wx - prevPoint.getX(), 2) + Math.pow(wz - prevPoint.getZ(), 2));
@@ -445,9 +477,9 @@ public class ShahedRouteScreen extends AtaScaledScreen {
             int wpIdx = currentRoute().size() - 1;
             requestSegmentHeightForWaypoint(wpIdx);
             double totalDist = calculateTotalDistance();
-            if (totalDist > com.synarsis.airtacticalarsenal.client.ClientRouteLimits.shahed()) {
+            if (totalDist > routeMax()) {
                 currentRoute().remove(currentRoute().size() - 1);
-                setStatus(Tr.s("gui.ata.route.exceeds_max", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.shahed()));
+                setStatus(Tr.s("gui.ata.route.exceeds_max", routeMax()));
                 return;
             }
             coordXField.setValue("");
@@ -473,13 +505,13 @@ public class ShahedRouteScreen extends AtaScaledScreen {
     private int mapToWorldX(double screenX) {
         int guiLeft = (this.width - GUI_WIDTH) / 2;
         int mapCenterX = guiLeft + MAP_MARGIN + MAP_SIZE / 2;
-        return (int) ((screenX - mapCenterX) * scale + viewCenterX);
+        return (int) MapBorder.clampX((screenX - mapCenterX) * scale + viewCenterX);
     }
 
     private int mapToWorldZ(double screenZ) {
         int guiTop = (this.height - GUI_HEIGHT) / 2;
         int mapCenterZ = guiTop + MAP_MARGIN + 20 + MAP_SIZE / 2;
-        return (int) ((screenZ - mapCenterZ) * scale + viewCenterZ);
+        return (int) MapBorder.clampZ((screenZ - mapCenterZ) * scale + viewCenterZ);
     }
 
     private boolean isOnMap(double mouseX, double mouseY) {
@@ -513,7 +545,7 @@ public class ShahedRouteScreen extends AtaScaledScreen {
                     BlockPos newPoint = new BlockPos(wx, DEFAULT_WAYPOINT_ALT, wz);
                     BlockPos lPos = currentLauncherPos();
 
-                    if (currentRoute().isEmpty()) {
+                    if (currentRoute().isEmpty() && droneEntityId == -1) {
                         double distToLauncher = Math.sqrt(
                                 Math.pow(wx - lPos.getX(), 2) + Math.pow(wz - lPos.getZ(), 2));
                         if (distToLauncher < MIN_FIRST_POINT_DISTANCE) {
@@ -524,7 +556,7 @@ public class ShahedRouteScreen extends AtaScaledScreen {
                             setStatus(Tr.s("gui.ata.route.max_first_long", MAX_FIRST_POINT_DISTANCE));
                             return true;
                         }
-                    } else {
+                    } else if (!currentRoute().isEmpty()) {
                         BlockPos prevPoint = currentRoute().get(currentRoute().size() - 1);
                         double distToPrev = Math.sqrt(
                                 Math.pow(wx - prevPoint.getX(), 2) + Math.pow(wz - prevPoint.getZ(), 2));
@@ -539,9 +571,9 @@ public class ShahedRouteScreen extends AtaScaledScreen {
 
                     requestSegmentHeightForWaypoint(wpIdx);
                     double totalDist = calculateTotalDistance();
-                    if (totalDist > com.synarsis.airtacticalarsenal.client.ClientRouteLimits.shahed()) {
+                    if (totalDist > routeMax()) {
                         currentRoute().remove(currentRoute().size() - 1);
-                        setStatus(Tr.s("gui.ata.route.exceeds_max", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.shahed()));
+                        setStatus(Tr.s("gui.ata.route.exceeds_max", routeMax()));
                     }
                     return true;
                 } else {
@@ -587,6 +619,8 @@ public class ShahedRouteScreen extends AtaScaledScreen {
 
             viewCenterX -= dragX * scale;
             viewCenterZ -= dragY * scale;
+            viewCenterX = MapBorder.clampX(viewCenterX);
+            viewCenterZ = MapBorder.clampZ(viewCenterZ);
             return true;
         }
         return super.mouseDraggedScaled(mouseX, mouseY, button, dragX, dragY);
@@ -851,7 +885,7 @@ public class ShahedRouteScreen extends AtaScaledScreen {
             mapRequestTicks++;
             if (mapRequestTicks >= MAP_REQUEST_INTERVAL) {
                 mapRequestTicks = 0;
-                NetworkHandler.sendToServer(new RequestRouteMapPacket(launcherPositions.get(0)));
+                NetworkHandler.sendToServer(new RequestRouteMapPacket(launcherPositions.get(0), mapBpp));
             }
         }
     }
@@ -882,7 +916,9 @@ public class ShahedRouteScreen extends AtaScaledScreen {
         g.fill(guiLeft, guiTop, guiLeft + 2, guiTop + GUI_HEIGHT, BORDER_COLOR);
         g.fill(guiLeft + GUI_WIDTH - 2, guiTop, guiLeft + GUI_WIDTH, guiTop + GUI_HEIGHT, BORDER_COLOR);
 
-        String title = launcherPositions.size() > 1 ? Tr.s("gui.ata.route.title_shahed_multi") : Tr.s("gui.ata.route.title_shahed");
+        String title = interceptor
+                ? Tr.s(launcherPositions.size() > 1 ? "gui.ata.route.title_interceptor_multi" : "gui.ata.route.title_interceptor")
+                : launcherPositions.size() > 1 ? Tr.s("gui.ata.route.title_shahed_multi") : Tr.s("gui.ata.route.title_shahed");
         int titleW = this.font.width(title);
         g.drawString(this.font, title, guiLeft + (GUI_WIDTH - titleW) / 2, guiTop + 6, BORDER_COLOR, false);
 
@@ -937,6 +973,8 @@ public class ShahedRouteScreen extends AtaScaledScreen {
     private void renderMap(GuiGraphics g, int mapX, int mapY) {
         g.fill(mapX, mapY, mapX + MAP_SIZE, mapY + MAP_SIZE, 0xFF0A0A0A);
         renderTerrainTexture(g, mapX, mapY);
+        MapBorder.shade(g, mapX, mapY, mapX + MAP_SIZE, mapY + MAP_SIZE,
+                mapX + MAP_SIZE / 2, mapY + MAP_SIZE / 2, viewCenterX, viewCenterZ, scale);
 
         renderLaunchZone(g, mapX, mapY);
 
@@ -1177,7 +1215,7 @@ public class ShahedRouteScreen extends AtaScaledScreen {
             g.drawString(this.font, Tr.s("gui.ata.route.dist_time", Math.round(totalDist), time), x, y, 0xAAAAAA, false);
             y += 12;
 
-            g.drawString(this.font, Tr.s("gui.ata.route.max", com.synarsis.airtacticalarsenal.client.ClientRouteLimits.shahed()), x,
+            g.drawString(this.font, Tr.s("gui.ata.route.max", routeMax()), x,
                     y, 0x666666, false);
             y += 11;
 
@@ -1476,9 +1514,10 @@ public class ShahedRouteScreen extends AtaScaledScreen {
         return false;
     }
 
-    private static double maxScale() {
-        int radius = Math.max(com.synarsis.airtacticalarsenal.client.ClientRouteLimits.shahed(),
-                com.synarsis.airtacticalarsenal.client.ClientRouteLimits.orlan());
-        return Math.max(80.0, radius * 1.1 / (MAP_SIZE / 2.0));
+    private double maxScale() {
+        BlockPos firstPos = launcherPositions.get(0);
+        double reach = Math.max(80.0 * (MAP_SIZE / 2.0), routeMax() * 1.1);
+        reach = Math.min(reach, com.synarsis.airtacticalarsenal.client.ClientRouteLimits.borderReach(firstPos.getX(), firstPos.getZ()) * 1.1);
+        return Math.max(MIN_SCALE, reach / (MAP_SIZE / 2.0));
     }
 }

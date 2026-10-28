@@ -85,9 +85,14 @@ public final class SbwExplosionSound {
     public static void playAirBurst(Vec3 pos) {
         ResourceLocation air = new ResourceLocation("superbwarfare", "explosion_air");
         if (SuperbWarfareCompat.isLoaded() && net.minecraftforge.registries.ForgeRegistries.SOUND_EVENTS.containsKey(air)) {
-            playSingle(pos, air, 1200.0, FALLOFF, 1.0f, 0.9f + (float) Math.random() * 0.2f);
+            playSingle(pos, air, 900.0, 1.1, 0.35f, 0.9f + (float) Math.random() * 0.2f);
         } else {
-            playAta(pos, 700.0, 1.25f + (float) Math.random() * 0.1f);
+            net.minecraft.sounds.SoundEvent[] pool = {
+                    com.synarsis.airtacticalarsenal.sound.ModSounds.EXPLOSION_1.get(),
+                    com.synarsis.airtacticalarsenal.sound.ModSounds.EXPLOSION_2.get(),
+                    com.synarsis.airtacticalarsenal.sound.ModSounds.EXPLOSION_3.get()};
+            playSingle(pos, pool[(int) (Math.random() * pool.length)].getLocation(), 600.0, 1.1, 0.35f,
+                    1.25f + (float) Math.random() * 0.1f);
         }
     }
 

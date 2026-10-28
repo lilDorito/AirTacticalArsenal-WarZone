@@ -89,8 +89,8 @@ public class LaunchShahedByRoutePacket {
                     continue;
                 }
 
-                if (com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), route) > com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax()) {
-                    com.synarsis.airtacticalarsenal.util.RouteLimits.check(player, com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), route), com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax());
+                if (com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), route) > com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax(launcher.getDroneKind())) {
+                    com.synarsis.airtacticalarsenal.util.RouteLimits.check(player, com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), route), com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax(launcher.getDroneKind()));
                     failed++;
                     continue;
                 }

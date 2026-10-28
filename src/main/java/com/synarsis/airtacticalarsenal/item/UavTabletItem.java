@@ -36,7 +36,6 @@ public class UavTabletItem extends Item {
     private static final String TAG_CAMERA_MODE = "CameraMode";
 
     public static final int MAX_LAUNCHERS = 10;
-    private static final double STRIKE_SEARCH_RADIUS = 5000.0;
 
     public UavTabletItem(Properties properties) {
         super(properties.stacksTo(1));
@@ -104,7 +103,8 @@ public class UavTabletItem extends Item {
                     launcher.hasDrone() ? launcher.getDroneRole() : UavLauncherEntity.ROLE_NONE,
                     nameKey,
                     launcher.weight() == UavWeight.HEAVY,
-                    launcher.hasSavedRoute() ? new ArrayList<>(launcher.getSavedRoute()) : new ArrayList<>()));
+                    launcher.hasSavedRoute() ? new ArrayList<>(launcher.getSavedRoute()) : new ArrayList<>(),
+                    launcher.hasDrone() ? launcher.getDroneKind() : ""));
         }
         if (valid.size() != linked.size()) {
             setLinkedLaunchers(stack, valid);
@@ -112,19 +112,28 @@ public class UavTabletItem extends Item {
 
         List<OpenUavTabletPacket.FlyingInfo> flying = new ArrayList<>();
         for (OrlanEntity orlan : OrlanEntity.getActiveOrlansByOwner(player.getUUID())) {
-            BlockPos target = orlan.getTargetPos();
+            if (orlan.level() != level) {
+                continue;
+            }
+            OrlanEntity.FlightPhase reconPhase = orlan.getFlightPhase();
+            BlockPos target = reconPhase == OrlanEntity.FlightPhase.LANDED ? orlan.blockPosition()
+                    : reconPhase == OrlanEntity.FlightPhase.RETURNING || reconPhase == OrlanEntity.FlightPhase.LANDING
+                    && orlan.getLauncherPos() != null ? orlan.getLauncherPos() : orlan.getTargetPos();
             flying.add(new OpenUavTabletPacket.FlyingInfo(orlan.getId(), true, orlan.getDroneNameKey(),
                     (int) orlan.getX(), (int) orlan.getZ(),
                     target != null ? target.getX() : (int) orlan.getX(), target != null ? target.getZ() : (int) orlan.getZ(),
-                    orlan.getFlightPhase().ordinal(), orlan.getRemainingFlightTicks(), true));
+                    orlan.getFlightPhase().ordinal(), orlan.getRemainingFlightTicks(), true, DroneVariants.kindOf(orlan)));
         }
-        List<ShahedEntity> strikes = level.getEntitiesOfClass(ShahedEntity.class,
-                player.getBoundingBox().inflate(STRIKE_SEARCH_RADIUS),
-                e -> e.isAlive() && e.getOwner() == player);
-        for (ShahedEntity shahed : strikes) {
+        int parkedId = -2;
+        for (OrlanEntity.LandedDrone parked : OrlanEntity.parkedByOwner(level, player.getUUID())) {
+            flying.add(new OpenUavTabletPacket.FlyingInfo(parkedId--, true, parked.nameKey(), parked.x(), parked.z(),
+                    parked.x(), parked.z(), OrlanEntity.FlightPhase.LANDED.ordinal(), 0, false, parked.kind()));
+        }
+        for (ShahedEntity shahed : ShahedEntity.activeByOwner(level, player.getUUID())) {
+            BlockPos strikeTarget = shahed.getStrikeTarget();
             flying.add(new OpenUavTabletPacket.FlyingInfo(shahed.getId(), false, shahed.getDroneNameKey(),
-                    (int) shahed.getX(), (int) shahed.getZ(), (int) shahed.getX(), (int) shahed.getZ(),
-                    shahed.getFlightPhase().ordinal(), 0, shahed.hasCamera()));
+                    (int) shahed.getX(), (int) shahed.getZ(), strikeTarget.getX(), strikeTarget.getZ(),
+                    shahed.getFlightPhase().ordinal(), shahed.remainingRoute(), shahed.hasCamera(), DroneVariants.kindOf(shahed)));
         }
 
         NetworkHandler.sendToPlayer(player, new OpenUavTabletPacket(launchers, flying, refresh));
@@ -201,6 +210,46 @@ public class UavTabletItem extends Item {
             setLinkedLaunchers(stack, launchers);
         }
         return removed;
+    }
+
+    public static void forgetLauncher(UavLauncherEntity gone) {
+        if (gone.getServer() == null) {
+            return;
+        }
+        Level level = gone.level();
+        BlockPos at = gone.blockPosition();
+        for (ServerPlayer player : gone.getServer().getPlayerList().getPlayers()) {
+            boolean changed = false;
+            List<ItemStack> stacks = new ArrayList<>(player.getInventory().items);
+            stacks.addAll(player.getInventory().offhand);
+            for (ItemStack stack : stacks) {
+                if (!(stack.getItem() instanceof UavTabletItem)) {
+                    continue;
+                }
+                List<BlockPos> linked = getLinkedLaunchers(stack);
+                boolean removed = linked.removeIf(pos -> pos.equals(at)
+                        || (player.level() == level && pos.distSqr(at) <= 12 && otherLauncher(level, pos, gone) == null));
+                if (removed) {
+                    setLinkedLaunchers(stack, linked);
+                    changed = true;
+                }
+            }
+            if (changed) {
+                ItemStack held = heldTablet(player);
+                if (held != null) {
+                    open(player, held, true);
+                }
+            }
+        }
+    }
+
+    private static UavLauncherEntity otherLauncher(Level level, BlockPos pos, UavLauncherEntity except) {
+        for (UavLauncherEntity launcher : level.getEntitiesOfClass(UavLauncherEntity.class, new AABB(pos).inflate(2.0), UavLauncherEntity::isAlive)) {
+            if (launcher != except) {
+                return launcher;
+            }
+        }
+        return null;
     }
 
     public static List<BlockPos> getLinkedLaunchers(ItemStack stack) {

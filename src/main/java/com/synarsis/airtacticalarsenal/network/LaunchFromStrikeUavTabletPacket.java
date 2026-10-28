@@ -95,7 +95,7 @@ public class LaunchFromStrikeUavTabletPacket {
             }
 
             if (!com.synarsis.airtacticalarsenal.util.RouteLimits.check(player,
-                    com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), java.util.List.of(targetPos)), com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax())) {
+                    com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), java.util.List.of(targetPos)), com.synarsis.airtacticalarsenal.util.RouteLimits.shahedMax(launcher.getDroneKind()))) {
                 return;
             }
             launcher.startLaunchSequence(player, targetPos, diveMode);

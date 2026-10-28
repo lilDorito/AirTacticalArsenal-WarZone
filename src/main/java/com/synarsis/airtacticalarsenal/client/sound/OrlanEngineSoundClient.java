@@ -11,7 +11,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class OrlanEngineSoundClient extends AbstractTickableSoundInstance implements CrashModulated {
+public class OrlanEngineSoundClient extends AbstractTickableSoundInstance implements CrashModulated, DopplerSource {
 
     private final int entityId;
     private boolean stopped = false;
@@ -21,6 +21,12 @@ public class OrlanEngineSoundClient extends AbstractTickableSoundInstance implem
     private final float volumeScale;
     private final float pitchScale;
     private final com.synarsis.airtacticalarsenal.api.DroneVariantsClient.EngineSound custom;
+    private final SoundPropagation propagation = new SoundPropagation();
+
+    @Override
+    public float dopplerFactor() {
+        return this.propagation.factor();
+    }
 
     public OrlanEngineSoundClient(int entityId, double x, double y, double z) {
         this(entityId, x, y, z, null);
@@ -92,11 +98,15 @@ public class OrlanEngineSoundClient extends AbstractTickableSoundInstance implem
         Entity entity = mc.level.getEntity(entityId);
         if (entity != null && !entity.isRemoved()) {
             ticksNotFound = 0;
-            this.x = entity.getX();
-            this.y = entity.getY();
-            this.z = entity.getZ();
-            double dist = mc.player.position().distanceTo(entity.position());
+            this.propagation.push(entity.position());
+            this.propagation.resolve();
+            Vec3 heard = this.propagation.heard(entity.position());
+            this.x = heard.x;
+            this.y = heard.y;
+            this.z = heard.z;
+            double dist = mc.player.position().distanceTo(heard);
             updateVolumeByDistance(dist);
+            this.pitch *= this.propagation.factor();
             if (entity instanceof com.synarsis.airtacticalarsenal.entity.OrlanEntity orlan && orlan.isCrashing()) {
                 crashTicks++;
                 float vf;
@@ -118,7 +128,7 @@ public class OrlanEngineSoundClient extends AbstractTickableSoundInstance implem
                 crashVolume = vf;
                 crashPitch = pf;
                 this.volume *= vf;
-                this.pitch = pf * this.pitchScale;
+                this.pitch = pf * this.pitchScale * this.propagation.factor();
             }
         } else {
             ticksNotFound++;

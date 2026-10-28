@@ -12,7 +12,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class ShahedEngineSoundClient extends AbstractTickableSoundInstance implements CrashModulated {
+public class ShahedEngineSoundClient extends AbstractTickableSoundInstance implements CrashModulated, DopplerSource {
     private final int entityId;
     private final Vec3 startPos;
     private final BlockPos targetPos;
@@ -59,6 +59,22 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance imple
     private final float volumeScale;
     private final float pitchScale;
     private final com.synarsis.airtacticalarsenal.api.DroneVariantsClient.EngineSound custom;
+    private final SoundPropagation propagation = new SoundPropagation();
+    private Vec3 pendingExplosion;
+    private int explosionCountdown;
+
+    @Override
+    public float dopplerFactor() {
+        return this.propagation.factor();
+    }
+
+    private void applyHeard() {
+        this.propagation.resolve();
+        Vec3 heard = this.propagation.heard(this.currentDronePos);
+        this.x = heard.x;
+        this.y = heard.y;
+        this.z = heard.z;
+    }
 
     public ShahedEngineSoundClient(int entityId, Vec3 currentPos, BlockPos targetPos, String diveMode, int engineSound) {
         this(entityId, currentPos, targetPos, diveMode, engineSound, null);
@@ -161,7 +177,11 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance imple
     }
 
     public boolean isExploded() {
-        return this.exploded;
+        return this.exploded || this.pendingExplosion != null;
+    }
+
+    public Vec3 sourcePosition() {
+        return this.currentDronePos;
     }
 
     @Override
@@ -198,6 +218,22 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance imple
         }
         if (this.exploded) {
             this.handleExplosionSound();
+            return;
+        }
+        if (this.pendingExplosion != null) {
+            this.propagation.push(this.pendingExplosion);
+            applyHeard();
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null) {
+                Vec3 heard = this.propagation.heard(this.pendingExplosion);
+                this.volume = this.calculateVolume(mc.player.position().distanceTo(heard)) * this.currentVolumeMultiplier;
+                this.pitch = this.currentPitch * this.pitchScale * this.propagation.factor();
+            }
+            if (--this.explosionCountdown <= 0) {
+                Vec3 at = this.pendingExplosion;
+                this.pendingExplosion = null;
+                explodeNow(at);
+            }
             return;
         }
         this.updatePosition();
@@ -256,7 +292,12 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance imple
             if (entity instanceof com.synarsis.airtacticalarsenal.entity.ShahedEntity crashing
                     && !entity.isRemoved() && crashing.isCrashing()) {
                 this.ticksEntityNotFound = 0;
-                tickCrashing(crashing, player);
+                tickCrashing(crashing.getCrashMode(), crashing.position(), player);
+                return;
+            }
+            if ((entity == null || entity.isRemoved()) && this.farCrashMode != null) {
+                this.ticksEntityNotFound = 0;
+                tickCrashing(this.farCrashMode, this.farCrashPos, player);
                 return;
             }
             if (entity != null && !entity.isRemoved()) {
@@ -340,14 +381,13 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance imple
             }
         }
 
-        this.x = this.currentDronePos.x;
-        this.y = this.currentDronePos.y;
-        this.z = this.currentDronePos.z;
+        this.propagation.push(this.currentDronePos);
+        applyHeard();
 
         Vec3 playerPos = player.position();
-        double dx = this.currentDronePos.x - playerPos.x;
-        double dy = (this.currentDronePos.y - playerPos.y) * 0.3;
-        double dz = this.currentDronePos.z - playerPos.z;
+        double dx = this.x - playerPos.x;
+        double dy = (this.y - playerPos.y) * 0.3;
+        double dz = this.z - playerPos.z;
         double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
         float diveProgress = this.localDiveProgress;
@@ -402,7 +442,7 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance imple
                     this.targetVolumeMultiplier);
         }
 
-        this.pitch = this.currentPitch * this.pitchScale;
+        this.pitch = this.currentPitch * this.pitchScale * this.propagation.factor();
         float baseVolume = this.calculateVolume(distance);
         this.volume = baseVolume * this.currentVolumeMultiplier;
 
@@ -413,17 +453,32 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance imple
 
     private int crashTicks = 0;
 
-    private void tickCrashing(com.synarsis.airtacticalarsenal.entity.ShahedEntity shahed, LocalPlayer player) {
+    private com.synarsis.airtacticalarsenal.entity.crash.CrashDynamics.Mode farCrashMode;
+    private Vec3 farCrashPos = Vec3.ZERO;
+
+    public void farCrash(Vec3 pos, com.synarsis.airtacticalarsenal.entity.crash.CrashDynamics.Mode mode) {
+        this.farCrashMode = mode;
+        this.farCrashPos = pos;
+    }
+
+    private void tickCrashing(com.synarsis.airtacticalarsenal.entity.crash.CrashDynamics.Mode crashMode, Vec3 dronePos, LocalPlayer player) {
         this.crashTicks++;
-        this.currentDronePos = shahed.position();
-        this.x = this.currentDronePos.x;
-        this.y = this.currentDronePos.y;
-        this.z = this.currentDronePos.z;
-        double distance = player.position().distanceTo(this.currentDronePos);
+        this.currentDronePos = dronePos;
+        this.propagation.push(this.currentDronePos);
+        applyHeard();
+        double distance = player.position().distanceTo(new Vec3(this.x, this.y, this.z));
         float t = this.crashTicks;
         float factor;
         float pitch;
-        switch (shahed.getCrashMode()) {
+        boolean jet = this.custom != null && this.custom.range() >= 599.0;
+        if (jet && crashMode == com.synarsis.airtacticalarsenal.entity.crash.CrashDynamics.Mode.ENGINE_OUT) {
+            factor = Math.max(0.0f, 1.0f - t / 90.0f) * (0.8f + 0.2f * Math.abs((float) Math.sin(t * 1.3f)));
+            pitch = this.currentPitch * (Math.max(0.45f, 1.0f - t * 0.007f) + 0.06f * (float) Math.sin(t * 1.1f));
+        } else if (jet) {
+            factor = 0.78f + 0.22f * Math.abs((float) Math.sin(t * 1.7f));
+            pitch = this.currentPitch * (1.05f + Math.min(0.25f, t * 0.006f)
+                    + 0.10f * (float) Math.sin(t * 0.9f) + 0.05f * (float) Math.sin(t * 2.6f));
+        } else switch (crashMode) {
             case ENGINE_OUT -> {
                 factor = Math.max(0.0f, 1.0f - t / 60.0f) * (0.85f + 0.15f * (float) Math.sin(t * 0.45f));
                 pitch = Math.max(0.7f, this.currentPitch - t * 0.004f);
@@ -439,7 +494,7 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance imple
         }
         this.crashVolume = factor;
         this.crashPitch = this.currentPitch > 0.01f ? pitch / this.currentPitch : 1.0f;
-        this.pitch = pitch * this.pitchScale;
+        this.pitch = pitch * this.pitchScale * this.propagation.factor();
         this.volume = calculateVolume(distance) * factor;
     }
 
@@ -495,6 +550,19 @@ public class ShahedEngineSoundClient extends AbstractTickableSoundInstance imple
     }
 
     public void markExploded(Vec3 position) {
+        if (this.exploded || this.stopped || this.pendingExplosion != null) {
+            return;
+        }
+        int lag = this.propagation.delayTicks();
+        if (lag > 2) {
+            this.pendingExplosion = position;
+            this.explosionCountdown = lag;
+            return;
+        }
+        explodeNow(position);
+    }
+
+    private void explodeNow(Vec3 position) {
         if (this.exploded || this.stopped) {
             return;
         }

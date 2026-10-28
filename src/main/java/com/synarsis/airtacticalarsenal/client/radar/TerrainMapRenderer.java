@@ -46,7 +46,7 @@ public class TerrainMapRenderer {
     public TerrainMapRenderer(int radarX, int radarZ) {
         this.radarX = radarX;
         this.radarZ = radarZ;
-        this.bpp = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.radarBpp();
+        this.bpp = com.synarsis.airtacticalarsenal.client.ClientRouteLimits.radarBpp(radarX, radarZ);
         this.cacheOriginX = radarX - (CACHE_SIZE / 2) * bpp;
         this.cacheOriginZ = radarZ - (CACHE_SIZE / 2) * bpp;
 

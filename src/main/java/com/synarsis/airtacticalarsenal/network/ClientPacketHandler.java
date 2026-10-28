@@ -69,6 +69,13 @@ public class ClientPacketHandler {
         });
     }
 
+    public static void handleShahedCrashSound(int entityId, Vec3 position, int mode) {
+        ShahedEngineSoundClient sound = activeSounds.get(entityId);
+        if (sound != null && !sound.isStopped()) {
+            sound.farCrash(position, com.synarsis.airtacticalarsenal.entity.crash.CrashDynamics.Mode.of(mode));
+        }
+    }
+
     public static void handleShahedRemove(int entityId) {
         Minecraft removeMc = Minecraft.getInstance();
         if (removeMc.level != null) {
@@ -105,7 +112,7 @@ public class ClientPacketHandler {
             if (sound.isStopped())
                 continue;
 
-            Vec3 soundPos = new Vec3(sound.getX(), sound.getY(), sound.getZ());
+            Vec3 soundPos = sound.sourcePosition();
             double dist = soundPos.distanceTo(explosionPos);
             if (dist < closestDistance && dist < 150.0) {
                 closestDistance = dist;

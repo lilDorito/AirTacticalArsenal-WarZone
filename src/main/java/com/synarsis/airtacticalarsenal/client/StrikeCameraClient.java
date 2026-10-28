@@ -43,6 +43,11 @@ public final class StrikeCameraClient {
         return lastSent;
     }
 
+    public static void markSent(Vec3 point) {
+        lastSent = point;
+        needLockTicks = 0;
+    }
+
     public static boolean showNeedLock() {
         return needLockTicks > 0;
     }
@@ -82,7 +87,7 @@ public final class StrikeCameraClient {
         boolean down = mc.screen == null && diveKey().isDown();
         boolean pressed = down && !wasDown;
         wasDown = down;
-        if (!pressed) {
+        if (!pressed || drone.isSteerable() || StrikeAimClient.selectMode()) {
             return;
         }
         Vec3 target = OrlanCameraHandler.isLocked() ? OrlanCameraHandler.getLockTargetPos() : null;
@@ -102,7 +107,7 @@ public final class StrikeCameraClient {
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onInteraction(InputEvent.InteractionKeyMappingTriggered event) {
-        if (viewed() == null) {
+        if (!OrlanCameraHandler.isCameraActive()) {
             return;
         }
         event.setSwingHand(false);

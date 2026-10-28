@@ -37,6 +37,7 @@ public class OrlanCameraOverlay {
         RenderSystem.enableBlend();
 
         renderNightVision(guiGraphics, mc, screenWidth, screenHeight);
+        CameraTargetOverlay.render(guiGraphics, screenWidth, screenHeight, orlan);
 
         int borderSize = 32;
         int borderColor = 0xDD000000;

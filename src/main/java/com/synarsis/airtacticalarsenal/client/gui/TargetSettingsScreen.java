@@ -43,6 +43,7 @@ public class TargetSettingsScreen extends AtaScaledScreen {
     private Button cancelButton;
     private Button saveWaypointButton;
     private Button deleteWaypointButton;
+    private Button mapButton;
 
     private final Button[] routeButtons = new Button[5];
     private int scrollOffset = 0;
@@ -70,6 +71,16 @@ public class TargetSettingsScreen extends AtaScaledScreen {
         BlockPos currentTarget = parentScreen.getLauncherTarget(launcherPos);
         String defaultX = currentTarget != null ? String.valueOf(currentTarget.getX()) : "0";
         String defaultZ = currentTarget != null ? String.valueOf(currentTarget.getZ()) : "0";
+        if (this.xCoordInput != null && this.zCoordInput != null) {
+            defaultX = this.xCoordInput.getValue();
+            defaultZ = this.zCoordInput.getValue();
+        }
+        if (this.pendingX != null && this.pendingZ != null) {
+            defaultX = String.valueOf(this.pendingX);
+            defaultZ = String.valueOf(this.pendingZ);
+            this.pendingX = null;
+            this.pendingZ = null;
+        }
 
         ClientWaypointManager.load();
         cachedSavedRoutes = ClientWaypointManager.getRoutes(ClientWaypointManager.SystemType.ISKANDER);
@@ -116,6 +127,10 @@ public class TargetSettingsScreen extends AtaScaledScreen {
         this.deleteWaypointButton = Button.builder(Component.translatable("gui.ata.button.delete_caps"), b -> onDeleteWaypoint())
                 .bounds(rightX + 115, guiTop + 115, 55, 20).build();
         this.addWidget(this.deleteWaypointButton);
+
+        this.mapButton = Button.builder(Component.translatable("gui.ata.missile_map.open"), b -> openMap())
+                .bounds(guiLeft + 10, guiTop + 158, 130, 20).build();
+        this.addWidget(this.mapButton);
 
         this.cancelButton = Button.builder(Component.translatable("gui.ata.button.cancel_caps"), b -> onCancel())
                 .bounds(rightX, guiTop + 180, 80, 20).build();
@@ -274,6 +289,30 @@ public class TargetSettingsScreen extends AtaScaledScreen {
         }
     }
 
+    private void openMap() {
+        Integer x = parse(this.xCoordInput.getValue());
+        Integer z = parse(this.zCoordInput.getValue());
+        if (x != null && z != null && x == 0 && z == 0) {
+            x = null;
+            z = null;
+        }
+        Minecraft.getInstance().setScreen(new MissileTargetMapScreen(this, launcherPos, x, z, (px, pz) -> {
+            this.pendingX = px;
+            this.pendingZ = pz;
+        }));
+    }
+
+    private Integer pendingX;
+    private Integer pendingZ;
+
+    private static Integer parse(String value) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     private void onCancel() {
         Minecraft.getInstance().setScreen(parentScreen);
     }
@@ -357,6 +396,7 @@ public class TargetSettingsScreen extends AtaScaledScreen {
         this.saveWaypointButton.render(guiGraphics, mouseX, mouseY, partialTick);
         this.deleteWaypointButton.render(guiGraphics, mouseX, mouseY, partialTick);
         this.cancelButton.render(guiGraphics, mouseX, mouseY, partialTick);
+        this.mapButton.render(guiGraphics, mouseX, mouseY, partialTick);
         this.saveButton.render(guiGraphics, mouseX, mouseY, partialTick);
         for (Button b : routeButtons) {
             if (b.visible)

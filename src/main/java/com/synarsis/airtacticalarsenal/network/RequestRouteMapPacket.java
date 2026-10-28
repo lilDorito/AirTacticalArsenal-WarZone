@@ -11,17 +11,21 @@ import java.util.function.Supplier;
 
 public class RequestRouteMapPacket {
     private final BlockPos centerPos;
+    private final int bpp;
 
-    public RequestRouteMapPacket(BlockPos centerPos) {
+    public RequestRouteMapPacket(BlockPos centerPos, int bpp) {
         this.centerPos = centerPos;
+        this.bpp = bpp;
     }
 
     public RequestRouteMapPacket(FriendlyByteBuf buf) {
         this.centerPos = buf.readBlockPos();
+        this.bpp = buf.readVarInt();
     }
 
     public void encode(FriendlyByteBuf buf) {
         buf.writeBlockPos(centerPos);
+        buf.writeVarInt(bpp);
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> supplier) {
@@ -31,29 +35,30 @@ public class RequestRouteMapPacket {
             if (player == null) return;
             ServerLevel level = player.serverLevel();
 
-            ServerRouteMapScanner scanner = ServerRouteMapScanner.getOrCreate(centerPos, level);
+            int scale = ServerRouteMapScanner.sanitizeBpp(bpp);
+            ServerRouteMapScanner scanner = ServerRouteMapScanner.getOrCreate(centerPos, scale, level);
             BlockPos actualCenter = scanner.getCenterPos();
 
             if (scanner.isReady()) {
                 byte[] png = scanner.getPngBytes();
                 if (png != null) {
-                    sendPngToPlayer(player, png, actualCenter);
+                    sendPngToPlayer(player, png, actualCenter, scale);
                 }
             } else {
-                int queuePos = ServerRouteMapScanner.getQueuePosition(centerPos);
+                int queuePos = ServerRouteMapScanner.getQueuePosition(centerPos, scale);
                 if (queuePos > 1) {
                     NetworkHandler.sendToPlayer(player,
-                            new RouteMapDataPacket(actualCenter, RouteMapDataPacket.STATUS_QUEUED, (float)(queuePos - 1), null));
+                            new RouteMapDataPacket(actualCenter, scale, RouteMapDataPacket.STATUS_QUEUED, (float)(queuePos - 1), null));
                 } else {
                     NetworkHandler.sendToPlayer(player,
-                            new RouteMapDataPacket(actualCenter, RouteMapDataPacket.STATUS_BUILDING, scanner.getProgress(), null));
+                            new RouteMapDataPacket(actualCenter, scale, RouteMapDataPacket.STATUS_BUILDING, scanner.getProgress(), null));
                 }
             }
         });
         return true;
     }
 
-    private void sendPngToPlayer(ServerPlayer player, byte[] png, BlockPos regionCenter) {
+    private void sendPngToPlayer(ServerPlayer player, byte[] png, BlockPos regionCenter, int scale) {
         int chunkSize = 250000;
         int totalChunks = (png.length + chunkSize - 1) / chunkSize;
 
@@ -63,7 +68,7 @@ public class RequestRouteMapPacket {
             byte[] chunk = new byte[len];
             System.arraycopy(png, offset, chunk, 0, len);
             NetworkHandler.sendToPlayer(player,
-                    new RouteMapDataPacket(regionCenter, RouteMapDataPacket.STATUS_DATA, i, totalChunks, chunk));
+                    new RouteMapDataPacket(regionCenter, scale, RouteMapDataPacket.STATUS_DATA, i, totalChunks, chunk));
         }
     }
 }

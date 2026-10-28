@@ -9,6 +9,178 @@ patched SBW 0.8.7.1 / AshVehicles 4.2 builds) are the author's private forks. Th
 named here only because this fork is tested against them, and anything said about them applies only with
 those builds. See the README's "WarZone versions" section.
 
+## 1.3.3-warzone
+
+### Strike drone cameras
+- The camera of a strike drone works like a seeker. The mouse turns the camera as usual; there is no crosshair,
+  only a small dot in the middle. Click to dive on what is under the dot, or hold a mouse button and move the
+  mouse to draw a box from the middle (the view holds still while you draw). A box around one person, mob or
+  vehicle follows that target as it moves, leading it; anything else aims at the ground under the middle of the
+  box. The left button dives, the right button circles over the point or follows the target. Draw a new box at
+  any time and the drone goes there instead; the dive starts at once, even while the drone is still climbing.
+- R calls off the dive or the circling and sends the drone back along its route. Space frees the camera from the
+  target, the wheel zooms, Left Alt leaves.
+- The chosen box stays on the target with its distance (red for a dive, yellow for circling).
+- Squares and boxes are placed with the exact view the frame was drawn with, so they sit on the targets on every
+  drone, fast ones included.
+- Drone cameras now see much further: the chunks and the people, mobs and vehicles around the drone are sent out
+  to at least 16 chunks (256 blocks), or to your render distance if it is higher, up to 32. The minimum is
+  `droneCameraChunkRadius` in `ata-common.toml` (16-32). New chunks are streamed nearest first: the server asks
+  for them in the background with its own chunk tickets (never waiting on a load) and sends 8 per tick, and your
+  game applies them a few per frame within a small time budget, so flying into new ground no longer makes the
+  picture hitch.
+- The drone camera moves smoothly every frame: the server sends the drone's position every tick stamped with
+  the server tick, and the camera plays it back on a steady clock 100 ms behind, so late or bunched-up updates
+  and short server hitches no longer make it speed up, jerk or snap back. Recon drones get the same.
+- People, mobs and vehicles seen through a drone camera are updated every tick when they move (before: every
+  3 ticks), so moving targets and the camera following them no longer judder.
+- The ground seen through a drone camera is kept apart from the ground around you. Your own area stays loaded
+  the whole time, so leaving the camera no longer reloads it and the world around you is there at once.
+- A box drawn where there is no loaded ground (the sky, or terrain too far away) now sends the drone that way:
+  the left button flies it there, the right button flies it there and then circles. The camera shows
+  "FLYING TO SELECTED DIRECTION" or "LOITERING · flying there" instead of "ATTACKING".
+- Drones, vehicles and mobs seen through a drone camera now show their current state: before, their synced data
+  (a drone's heading and dive angle, flight phase, damage, a vehicle's state) stayed as it was when they first
+  came into view, so other drones never pitched down in a dive and flew sideways to where they faced. The
+  camera drone's own state is kept in sync the same way, so the camera's status line no longer stays on
+  "ATTACKING" or "LOITERING" after you give the drone another order.
+- A box drawn where your camera shows no ground always sends the drone that way, even if there is loaded ground
+  out of your sight; it also frees the camera from the previous target.
+- Circling a new point (right button) restarts the loiter clock.
+- Banking a steered drone (A/D) rolls and turns the camera smoothly every frame instead of in 20 steps a second.
+- The camera no longer jumps ahead for a moment when the drone you fly passes the edge of the area around you
+  (the game drops and re-adds the drone there); this was most visible on fast steered drones. R no longer
+  locks the camera onto the ground while you steer a drone by hand.
+- When the drone you watch is destroyed, crashes or hits its target, the camera no longer drops you out at once:
+  the picture inside the camera frame turns into black, flickering VHS noise with a red **NO SIGNAL**, without the drone's HUD.
+  Left Alt leaves it, as before. Recon drones that land or are picked up still just close the camera.
+- Air bursts (interceptor and missile hits on drones) are much quieter up close and fade out sooner.
+- Add-on drones that blow up their own way (the Alexa Spatium's hit, for one) drop the camera before their bang
+  plays, so you hear it from where you stand instead of at full volume from inside the exploding drone.
+- The strike-dive key bind has a short name ("Strike drone: dive"); the long one pushed every name in the
+  Controls screen off its left edge.
+- Strike drones with a camera can lock a ground target with X: people, mobs and vehicles on the ground (never
+  anything in the air). The target nearest the middle of the view, within 45°, is framed in yellow; X locks it and
+  the drone goes for it, following it as it moves. Box-select drones dive on it as with a drawn box; drones you
+  steer by hand (FP-1) fly themselves into it while you keep the camera free. X again or R drops the lock.
+- Dives aimed from the camera turn tighter and slow down when needed, so close targets are hit instead of
+  circled.
+- Strike drones that loiter only start the loiter clock once they reach the circle over their last point;
+  before that the camera shows it as on its route.
+- Mouse clicks in any drone camera no longer use the item in your hand (the UAV Tablet opened again).
+- The camera legend is shorter.
+- The old controls (hold R to lock, press X to dive) are still there: set `strikeAim = "KEY"` in
+  `ata-client.toml`.
+- Drone cameras mark the people, mobs and vehicles they can see with white squares (green for you and your team).
+  `targetSquares = false` turns the squares off.
+- The camera no longer snaps your aim back to the middle every second or so.
+
+### Steered drones
+- Steered drones (FP-1, Alexa Spatium) start on autopilot: they fly their route until you press Space to take
+  over, and Space hands them back.
+- Add-on drones can be flown by hand (`isSteerable`): in their camera the drone turns toward where you look,
+  and A/D bank it left and right (the camera rolls with it and the drone turns into the bank).
+  Space hands it to the autopilot, which flies it on to the last point of its route (Space again takes it back).
+  Leave the camera and it does the same and dives there.
+
+### Strategic Map
+- The UAV Tablet has a **Strategic Map** button: a terrain map of every drone you launched, wherever it is, not
+  only those near you. Each drone shows its item icon and a dashed line to its target; drones close together
+  share one icon with a count. Click an icon for the list of drones under it, then a drone to open its camera, or
+  the large ↩ to call a recon drone back. Drag to pan, scroll to zoom, **Center on me** to come back. The hint
+  line only lists the → route button and the map controls.
+- Recon drones flying home point at their launcher. Landed recon drones are drawn without a line and stay on the
+  map and in the tablet even after their chunk unloads (until the server restarts).
+- The tablet's IN FLIGHT list also shows strike drones that are far away now.
+- The drone list that opens on the map is as wide as its longest line instead of a fixed width.
+
+### New route in flight
+- Strike drones with a camera have a datalink: the tablet's IN FLIGHT list and the Strategic Map have a → button
+  for them (and for recon drones) that opens the route map from the drone's position. The new route may be as
+  long as the drone has range left, and replaces the old one, calling off a dive or a loiter.
+
+### Salvos
+- A tablet still links up to 10 launchers of both kinds, but a salvo is one kind only: checking (Shift+click) a
+  launcher of the other kind starts a new selection, Select all picks the kind of the selected launcher, and the
+  other kind is dimmed in the list.
+- The **Strike salvo / Recon salvo** button launches the checked ready launchers (or all ready ones of that kind),
+  up to 10. Under it: **Gap** between launches (0-10 s), **Spread** of the final targets (0-50 blocks, fanned out
+  around the target so the drones don't all hit one spot) and **ToT** (time on target: launches are staggered so
+  all drones arrive together, by route length and each drone's speed). The schedule runs on the server; you need
+  to stay within tablet range of each launcher until it fires.
+- Interceptor drones (registered with `DroneVariants.registerInterceptor`) get a purple dot in the tablet's
+  launcher list and are never part of a salvo.
+- The route screen of an interceptor is titled "INTERCEPTOR ROUTE".
+- Interceptors also read "interceptor" in purple on the selected launcher's card, and their frame and target line
+  on the Strategic Map are purple. Add-ons can change what a strike drone does at the end of its route:
+  `loiterTicksMax()`, `attacksAtEnd()`, `onLoiterTimeout()`, with `flyHome(pos)` and `recoverAsItem(pos)`.
+- Launchers without a route of their own join the salvo with the main launcher's route (the selected one, or the
+  first checked launcher that has a route); their first points are skipped if they lie behind that launcher.
+- Launchers far from you (outside the simulation distance) used to spin up and then stay on the rails, because
+  their countdown only ran while their chunk was active. A launch now keeps its launcher's chunk active until the
+  drone is away, for salvos and single launches. Each launcher spins up and plays its engine only when its own
+  turn in the salvo comes.
+- Add-on drones on launchers no longer all spin their propellers when the first launcher of a salvo spins up:
+  `DroneVariantsClient.launcherDummy(type, launcher)` gives every launcher its own display model.
+
+### Missile Targeting Map
+- `iskanderMaxRange` in `ata-common.toml` can now be set up to 20000 blocks (was 10000); the default stays 5000.
+- The Iskander target screen has a **TARGETING MAP** button: a terrain map around the launchpad with the maximum
+  range as a red circle and the minimum range as a dashed ring (both from the server config). Click to set the
+  target, **USE TARGET** fills in the coordinates.
+
+### Alert Siren
+- The siren sounds its alarm once (about 30 seconds) each time it is switched on, then stays quiet while the
+  signal stays on. When the signal ends, the alarm stops and the siren plays the all-clear signal twice instead.
+  With a radar in automatic mode that is once per raid, the all-clear when the sky is clear again; in manual mode
+  **DECLARE ALL CLEAR** (the old cancel button) ends the alert and gives the all-clear. Plain redstone works the
+  same way.
+
+### Maps and the world border
+- Route maps are sized by the range of the drones on the chosen launchers, so a drone with a longer route limit
+  gets a bigger map. The Strategic Map covers the longest range of any drone.
+- The world border is a hard limit for every map: route maps, the Strategic Map and the Air Defense Radar map
+  never reach past it, and in a small world they get small (and sharp) too. Outside the border the map is shaded
+  and a red line marks it; you can't pan past it, and a route point clicked beyond it lands on it.
+
+### Launches
+- A launcher that is destroyed or picked up is taken off every UAV Tablet linked to it right away (tablets
+  carried by players online); an open tablet or Strategic Map updates at once.
+- The Orlan's propeller spins up on the Light UAV Launcher before launch, like the Shahed's.
+- Recon drones wait 5 seconds on the launcher before they go, like strike drones. Jet flames start small and grow
+  while the drone waits on the launcher. The engine sound on the launcher fades out over two seconds after
+  takeoff instead of cutting off.
+
+### Drone sounds
+- Drone engines get a Doppler shift (higher while coming at you, lower after passing) and reach you with the
+  delay of sound travelling through air: a far drone is heard where it was a moment ago, and its engine stops
+  when the sound of its explosion arrives, not when the explosion is drawn. `dopplerStrength` (0 turns it off) and
+  `soundTravelDelay` in `ata-client.toml`. The engine sounds themselves are unchanged.
+- The Shahed and the Orlan have a muffled far layer, so they stay audible as a faint drone out to 900 and 520
+  blocks.
+- Add-on drones can register their engine sounds by class (light, heavy, jet) and measured loudness, so drones of
+  one class sound equally loud and carry equally far.
+- Jet drones that are shot down scream: while they fall or spin the turbojet stays loud and its pitch wavers and
+  climbs; with the engine knocked out it spools down instead. A drone shot down far away keeps sending its fall
+  to every player, so its far engine sound changes too, and its explosion is heard from afar.
+- Jet drones blast fire out of the nozzle while they wait on the launcher: anyone standing right behind gets set
+  on fire and hurt, more as the engine spools up. The jet flame and trail are hidden for the player watching
+  through that drone's own camera.
+- `DroneVariants.registerJetBlast` marks a drone as a jet for that launch blast.
+
+### For add-on drones
+- `DroneVariants.registerRouteScale`: a drone can have its own route limit as a multiple of the Shahed's or
+  Orlan's. The server sends the values to players (network protocol 28), and the route screens check the limit
+  of the drones on the chosen launchers.
+- `DroneVariants.registerSkins`: a drone picks one of several textures at random each time it is put on a
+  launcher, and keeps it in flight.
+- `DroneVariantsClient.registerJetExhaust`: a flame from a jet's nozzle while its engine runs. With AshVehicles
+  installed it uses AshVehicles' afterburner texture, otherwise vanilla flames.
+- `DroneVariantsClient.registerCameraOverlay`: an extra layer in a drone's camera view, and `hideCrosshair` for
+  drones that draw their own sight.
+- `DroneItemRenderer`: holds an add-on drone as its 3D model in hand, on the ground and in item frames, sized
+  like the Shahed; the inventory keeps the flat icon (with a `forge:separate_transforms` item model).
+
 ## 1.3.2-warzone
 
 ### Item style and vehicle radar traits
@@ -141,13 +313,13 @@ those builds. See the README's "WarZone versions" section.
 
 ### Engine sounds per drone
 - Add-ons can give their drones their own engine loop, volume and pitch (`DroneVariantsClient.registerEngineSound`).
-  Variants without one keep the Shahed or Orlan sound. MH Warfare WarZone uses it for its drones.
+  Variants without one keep the Shahed or Orlan sound.
 - Add-ons can also add a far-field loop (`registerFarSound`): a second, distant layer that fades in past a set
   distance and carries to a set range, follows the drone and fades out with it.
 
 ### Hit zones for add-on drones
 - The Orlan's hit zone (engine, wings, nose, body) now comes from `crashZoneAt(hitPos)`, which drones built on it
-  can override; the Shahed already had `determineHitZone`. MH Warfare WarZone uses both to read zones from its
+  can override; the Shahed already had `determineHitZone`. Add-ons can use both to read zones from their own
   part hitboxes instead of the Shahed-sized guesses.
 
 ### Smoother launch
@@ -185,7 +357,6 @@ those builds. See the README's "WarZone versions" section.
 ### Interceptor hits
 - API for add-on interceptor drones: `interceptorHit(healthFraction, attacker, hitPos)` on the Shahed and Orlan (and
   every drone built on them) deals a share of the drone's health as a heavy hit that can bring it down at once.
-  MH Warfare WarZone's Sting and P1-SUN use it.
 
 ### Manual radar alerts
 - **ALARM OUTPUT: ON/OFF** is replaced by **ALERTS: AUTO / MANUAL**. Auto works as before. Manual never starts an

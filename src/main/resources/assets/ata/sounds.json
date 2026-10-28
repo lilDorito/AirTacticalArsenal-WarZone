@@ -12,7 +12,7 @@
       }
     ]
   },
-    "shahed_engine_2": {
+  "shahed_engine_2": {
     "subtitle": "subtitles.ata.shahed_engine",
     "sounds": [
       {
@@ -152,6 +152,41 @@
         "pitch": 1.0,
         "weight": 1,
         "attenuation_distance": 1500
+      }
+    ]
+  },
+  "shahed_engine_far": {
+    "sounds": [
+      {
+        "name": "ata:shahed_engine_far",
+        "stream": false,
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1
+      }
+    ]
+  },
+  "orlan_engine_far": {
+    "sounds": [
+      {
+        "name": "ata:orlan_engine_far",
+        "stream": false,
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1
+      }
+    ]
+  },
+  "all_clear": {
+    "subtitle": "subtitles.ata.all_clear",
+    "sounds": [
+      {
+        "name": "ata:all_clear",
+        "stream": false,
+        "volume": 1.0,
+        "pitch": 1.0,
+        "weight": 1,
+        "attenuation_distance": 300
       }
     ]
   }

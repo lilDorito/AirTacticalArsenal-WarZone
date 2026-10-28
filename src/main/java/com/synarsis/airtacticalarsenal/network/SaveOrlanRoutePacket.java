@@ -60,7 +60,7 @@ public class SaveOrlanRoutePacket {
             }
 
             if (!com.synarsis.airtacticalarsenal.util.RouteLimits.check(player,
-                    com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), waypoints), com.synarsis.airtacticalarsenal.util.RouteLimits.orlanMax())) {
+                    com.synarsis.airtacticalarsenal.util.RouteLimits.pathLength(launcher.blockPosition(), waypoints), com.synarsis.airtacticalarsenal.util.RouteLimits.orlanMax(launcher.getDroneKind()))) {
                 return;
             }
             launcher.setSavedRoute(waypoints);

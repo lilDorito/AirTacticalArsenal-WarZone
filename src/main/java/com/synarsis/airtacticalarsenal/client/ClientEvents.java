@@ -38,6 +38,20 @@ public class ClientEvents {
     }
 
     @SubscribeEvent
+    public static void onClientSetup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {
+        event.enqueueWork(() -> {
+            com.synarsis.airtacticalarsenal.api.DroneVariantsClient.registerFarSound(
+                    new net.minecraft.resources.ResourceLocation("ata", "shahed"),
+                    com.synarsis.airtacticalarsenal.sound.ModSounds.SHAHED_ENGINE_FAR, -19.7f,
+                    com.synarsis.airtacticalarsenal.api.DroneVariantsClient.SoundClass.HEAVY);
+            com.synarsis.airtacticalarsenal.api.DroneVariantsClient.registerFarSound(
+                    new net.minecraft.resources.ResourceLocation("ata", "orlan"),
+                    com.synarsis.airtacticalarsenal.sound.ModSounds.ORLAN_ENGINE_FAR, -19.9f,
+                    com.synarsis.airtacticalarsenal.api.DroneVariantsClient.SoundClass.LIGHT);
+        });
+    }
+
+    @SubscribeEvent
     public static void registerOverlays(net.minecraftforge.client.event.RegisterGuiOverlaysEvent event) {
         event.registerAbove(net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.HOTBAR.id(), "vehicle_radar",
                 com.synarsis.airtacticalarsenal.client.radar.VehicleRadarHud.OVERLAY);
@@ -52,6 +66,10 @@ public class ClientEvents {
     @SubscribeEvent
     public static void registerParticles(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(ModParticles.DEBRIS.get(), DebrisParticle.Provider::new);
+        event.registerSpriteSet(ModParticles.JET_FLAME.get(),
+                sprites -> new com.synarsis.airtacticalarsenal.particle.JetFlameParticle.Provider(sprites, 0.55f));
+        event.registerSpriteSet(ModParticles.JET_FLAME_LARGE.get(),
+                sprites -> new com.synarsis.airtacticalarsenal.particle.JetFlameParticle.Provider(sprites, 0.95f));
         System.out.println("[ATA] Debris particle registered!");
     }
 }
