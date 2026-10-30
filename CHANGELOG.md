@@ -180,6 +180,7 @@ those builds. See the README's "WarZone versions" section.
   drones that draw their own sight.
 - `DroneItemRenderer`: holds an add-on drone as its 3D model in hand, on the ground and in item frames, sized
   like the Shahed; the inventory keeps the flat icon (with a `forge:separate_transforms` item model).
+- `OrlanEntity.flightTicksMax()`: a recon drone can have its own flight time instead of `orlanFlightTimeMinutes`.
 
 ## 1.3.2-warzone
 

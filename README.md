@@ -67,7 +67,7 @@ Each one keeps the original mod id, so ATA treats it like the public version it'
 
 | WarZone version | Based on | What differs |
 |-----------------|----------|--------------|
-| SuperbWarfare WarZone `0.8.9.2-warzone-1.0.1` | SuperbWarfare 0.8.9.2 | own balance and fixes; lists ATA in `scan_white_list` by default; sends ATA drones and missiles to players beyond entity range, so they show on the tactical map and seekers can lock them from afar |
+| SuperbWarfare WarZone `0.8.9.2-warzone-1.0.2` | SuperbWarfare 0.8.9.2 | own balance and fixes; lists ATA in `scan_white_list` by default; sends ATA drones and missiles to players beyond entity range, so they show on the tactical map and seekers can lock them from afar |
 | AshVehicles WarZone `4.6-warzone-1.0.1` | AshVehicles 4.6 | own weapon loadouts and balance, fixes |
 | MCSP WarZone `1.0.10-warzone-1.0.1` | MCSP 1.0.10 | own balance, fixes |
 | [SBW] Electronic Warfare WarZone `1.2.0-warzone` | [SBW] Electronic Warfare 1.1.1 merged with SBW Drone Warfare 1.0.6 | adds the ZALA KUB-BLA (light strike) and Bayraktar TB2 (heavy recon with missiles) through ATA's add-on drone API; its jammers, nets and direction finder act on ATA drones and radars |
@@ -177,9 +177,14 @@ The full history is in [CHANGELOG.md](CHANGELOG.md). In short:
   to its target (or back to its launcher) and a drop-down to open its camera; landed recon drones stay listed
 - **Strike drone cameras**: click, or hold a button and move the mouse to draw a box: left to dive on a point or a
   person or vehicle (the drone flies straight at the middle of the box and follows it), right to circle over it,
-  R to go back to the route; people, mobs and vehicles in view are marked with squares
+  R to go back to the route; people, mobs and vehicles in view are marked with squares; **X** locks the person,
+  mob or vehicle on the ground nearest the middle of the view and the drone follows it (X or R drops the lock)
+- **Smooth drone camera**: smooth every frame, sees 16-32 chunks around the drone with terrain streamed in
+  without hitching; a destroyed drone or a hit turns the view into **NO SIGNAL** noise (Left Alt leaves)
 - **Salvos and new routes in flight**: one tablet launches up to 10 drones of one kind with a gap, a target spread
-  or time on target, and gives camera-equipped drones a new route in flight
+  or time on target (launchers without a route of their own take the main one's), and gives camera-equipped
+  drones a new route in flight
+- **Interceptors** (add-on drones): purple in the tablet and on the Strategic Map, never part of a salvo
 - **Maps and the world border**: route maps are as big as the range of the drones on the chosen launchers, and
   no map reaches past the world border; outside it is shaded and a red line marks it
 - **Missile Targeting Map**: click the target on a terrain map with the missile's range rings
@@ -378,7 +383,7 @@ The compat code detects what is installed at runtime, so one jar covers all of t
 
 | Mod | Public versions | WarZone versions (private) |
 |-----|-----------------|----------------------------|
-| SuperbWarfare | 0.8.8 (incl. hotfix / final), 0.8.9 (snapshot, release, final), 0.8.9.1, 0.8.9.2 | 0.8.7.1 patched build, 0.8.9.2-warzone-1.0.1 |
+| SuperbWarfare | 0.8.8 (incl. hotfix / final), 0.8.9 (snapshot, release, final), 0.8.9.1, 0.8.9.2 | 0.8.7.1 patched build, 0.8.9.2-warzone-1.0.1 and 1.0.2 |
 | AshVehicles | 4.3, 4.5, 4.6 | 4.2 patched build, 4.6-warzone-1.0.1 |
 | MCSP | no MCSP-specific code: its vehicles and missiles are handled as SuperbWarfare ones | 1.0.10-warzone-1.0.1 |
 

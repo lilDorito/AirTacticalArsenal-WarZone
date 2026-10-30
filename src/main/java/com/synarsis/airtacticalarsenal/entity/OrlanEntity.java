@@ -208,7 +208,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
     private boolean initialPacketSent = false;
     private boolean destroyed = false;
 
-    private int localFlightTimer = getMaxFlightTicks();
+    private int localFlightTimer = flightTicksMax();
 
     private float maxHealth = this.maxHealthValue();
 
@@ -265,6 +265,10 @@ public class OrlanEntity extends Projectile implements GeoEntity {
 
     public float maxHealthValue() {
         return DEFAULT_MAX_HEALTH;
+    }
+
+    protected int flightTicksMax() {
+        return getMaxFlightTicks();
     }
 
     public ItemStack createDroneItem() {
@@ -399,7 +403,7 @@ public class OrlanEntity extends Projectile implements GeoEntity {
         this.entityData.define(IS_DAMAGED, false);
         this.entityData.define(LINKED_PLAYER, "");
         this.entityData.define(OWNER_UUID_DATA, "");
-        this.entityData.define(FLIGHT_TIMER, getMaxFlightTicks());
+        this.entityData.define(FLIGHT_TIMER, flightTicksMax());
         this.entityData.define(LAUNCHER_POS_DATA, BlockPos.ZERO);
         this.entityData.define(TARGET_ALTITUDE_DATA, (float) this.patrolAltitude());
         this.entityData.define(SKIN, 0);
